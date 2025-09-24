@@ -7,8 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=B77026AA-3DE5-395B-8634-4AB051C0DEF1"></script>
     <style>
-        /* 기존 스타일 */
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; } /* 전체 화면을 위해 추가 */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
         .routine-card {
             margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white;
@@ -42,8 +41,6 @@
             width: 30px; height: 30px; font-weight: bold; cursor: pointer;
             display: flex; align-items: center; justify-content: center; z-index: 10; flex-shrink: 0;
         }
-        
-        /* 시작 화면 및 지도 화면 스타일 */
         .fullscreen-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         }
@@ -53,7 +50,7 @@
             align-items: center;
         }
         #health-tracker-app {
-            overflow-y: auto; /* 헬스 앱은 내용이 길어질 수 있으므로 스크롤 허용 */
+            overflow-y: auto;
             height: 100vh;
         }
     </style>
@@ -123,41 +120,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const dietBtn = document.getElementById('diet-btn');
     const healthBtn = document.getElementById('health-btn');
     const backBtn = document.getElementById('back-to-selection-btn');
-    let vworldMap; // 지도 객체를 저장할 변수
+    let vworldMap = null;
 
-    // 2. 지도 생성 함수
     const initVWorldMap = () => {
-        // 지도가 이미 생성되었다면 다시 생성하지 않음
+        // 지도가 이미 생성되었다면 다시 실행하지 않음
         if (vworldMap) return;
+
+        // vw 객체가 로드되었는지 확인
+        if (typeof vw === 'undefined' || typeof vw.Map === 'undefined') {
+            alert('지도 API를 불러오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            return;
+        }
         
-        vworldMap = new vw.Map("vworld-map", {
-            basemapType: vw.BasemapType.GRAPHIC, // 지도 타입
-            controlDensity: vw.ControlDensity.EMPTY, // 컨트롤 밀도
-            interactionDensity: vw.InteractionDensity.BASIC, // 인터렉션 밀도
-            controls: [ // 컨트롤 추가
-                new vw.Control.Zoom(),
-                new vw.Control.ScaleLine()
-            ],
-            // 서울 시청 좌표
-            center: new vw.Point(126.9780, 37.5665),
-            zoom: 15
-        });
+        try {
+            vworldMap = new vw.Map("vworld-map", {
+                basemapType: vw.BasemapType.GRAPHIC,
+                controlDensity: vw.ControlDensity.EMPTY,
+                interactionDensity: vw.InteractionDensity.BASIC,
+                controls: [new vw.Control.Zoom(), new vw.Control.ScaleLine()],
+                center: new vw.Point(126.9780, 37.5665), // 서울 시청 좌표
+                zoom: 15
+            });
+        } catch (e) {
+            console.error("지도 생성 중 오류가 발생했습니다:", e);
+            alert("지도 생성 중 오류가 발생했습니다. 개발자 콘솔을 확인해 주세요.");
+        }
     };
 
-    // '헬스' 버튼 클릭 시
     healthBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         healthTrackerApp.classList.remove('hidden');
     });
 
-    // '다이어트' 버튼 클릭 시
     dietBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         dietMapScreen.classList.remove('hidden');
-        initVWorldMap(); // 지도를 화면에 표시한 후 생성
+        // 지도를 표시한 후 잠시 지연을 주어 안정적으로 생성되도록 함
+        setTimeout(initVWorldMap, 100); 
     });
 
-    // '뒤로가기' 버튼 클릭 시
     backBtn.addEventListener('click', () => {
         dietMapScreen.classList.add('hidden');
         selectionScreen.classList.remove('hidden');
