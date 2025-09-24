@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다이어트 지도</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&autoload=false"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div id="map" style="width: 100%; height: 100%;"></div>
+    <button id="back-to-main-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-10">
+        ← 뒤로가기
+    </button>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const backBtn = document.getElementById('back-to-main-btn');
+        let kakaoMap = null;
+        let userMarker = null;
+
+        const initKakaoMap = () => {
+            const container = document.getElementById('map');
+            const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780);
+
+            if (!kakaoMap) {
+                const options = { center: defaultCenter, level: 5 };
+                kakaoMap = new kakao.maps.Map(container, options);
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const userPosition = new kakao.maps.LatLng(lat, lon);
+                    kakaoMap.setCenter(userPosition);
+                    if (userMarker) userMarker.setMap(null);
+                    userMarker = new kakao.maps.Marker({ map: kakaoMap, position: userPosition });
+                }, () => {
+                    alert('위치 정보를 가져올 수 없습니다. 기본 위치로 표시됩니다.');
+                });
+            }
+        };
+
+        // 페이지가 로드되면 바로 지도 API 로딩 시작
+        kakao.maps.load(() => {
+            initKakaoMap();
+        });
+
+        // 뒤로가기 버튼 클릭 시 main.html로 이동
+        backBtn.addEventListener('click', () => {
+            window.location.href = 'main.html';
+        });
+    });
+</script>
+
+</body>
+</html>
