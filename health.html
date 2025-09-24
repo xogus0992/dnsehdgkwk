@@ -65,7 +65,6 @@
     document.addEventListener('DOMContentLoaded', () => {
         const backBtn = document.getElementById('back-to-main-btn');
 
-        // 뒤로가기 버튼 클릭 시 main.html로 이동
         backBtn.addEventListener('click', () => {
             window.location.href = 'index.html';
         });
@@ -86,9 +85,41 @@
         const saveRoutinesToStorage = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(routines)); } catch (err) { console.error('로컬 저장 실패', err); } };
         const loadRoutinesFromStorage = () => { try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return; const parsed = JSON.parse(raw); if (Array.isArray(parsed)) { routines = parsed; } } catch (err) { console.error('로컬 불러오기 실패', err); } };
         const populateExercises = () => { exerciseSelect.innerHTML = ''; Object.keys(exercisesData).forEach(category => { const optgroup = document.createElement('optgroup'); optgroup.label = category; exercisesData[category].forEach(exercise => { const option = document.createElement('option'); option.value = exercise; option.textContent = exercise; optgroup.appendChild(option); }); exerciseSelect.appendChild(optgroup); }); };
-        const displayCurrentExercises = () => { currentExercisesList.innerHTML = ''; if (currentExercises.length === 0) { currentExercisesList.innerHTML = '<p>아직 추가된 운동이 없습니다.</p>'; return; } currentExercises.forEach((ex, index) => { const item = document.createElement('div'); item.className = 'exercise-item'; item.draggable = true; item.dataset.index = index; const weightText = (ex.weight === 0 || ex.weight === null) ? '체중' : `${ex.weight}kg`; const volume = ex.weight * ex.reps * ex.sets; item.innerHTML = `<span>${ex.name} (${weightText} x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`; currentExercisesList.appendChild(item); }); };
-        const displaySavedRoutines = () => { routineList.innerHTML = ''; if (routines.length === 0) { routineList.innerHTML = '<p class="text-gray-600">저장된 루틴이 없습니다.</p>'; return; } routines.forEach((routine, index) => { const routineItem = document.createElement('div'); routineItem.className = 'saved-routine-item'; routineItem.dataset.index = index; routineItem.innerHTML = `<span class="saved-routine-title">${routine.title}</span><button class="delete-btn" data-index="${index}">X</button>`; routineList.appendChild(routineItem); }); };
-        const createAndShowModal = (index) => { const routine = routines[index]; const modalOverlay = document.createElement('div'); modalOverlay.className = 'modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'modal-content'; const modalTitle = document.createElement('h3'); modalTitle.textContent = routine.title; const modalExercises = document.createElement('div'); let totalVolume = 0; routine.exercises.forEach(ex => { const volume = ex.weight * ex.reps * ex.sets; totalVolume += volume; const item = document.createElement('div'); item.className = 'modal-exercise-item'; item.innerHTML = `<span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`; modalExercises.appendChild(item); }); const modalTotalVolume = document.createElement('p'); modalTotalVolume.className = 'total-volume'; modalTotalVolume.textContent = `총 볼륨: ${totalVolume}`; const modalCloseBtn = document.createElement('button'); modalCloseBtn.className = 'mt-6 w-full bg-gray-300 text-gray-800 p-2 rounded hover:bg-gray-400'; modalCloseBtn.textContent = '닫기'; modalContent.appendChild(modalTitle); modalContent.appendChild(modalExercises); modalContent.appendChild(modalTotalVolume); modalContent.appendChild(modalCloseBtn); modalOverlay.appendChild(modalContent); document.body.appendChild(modalOverlay); const closeModal = () => { document.body.removeChild(modalOverlay); }; modalCloseBtn.addEventListener('click', closeModal); modalOverlay.addEventListener('click', (event) => { if (event.target === modalOverlay) { closeModal(); } }); };
+        const displayCurrentExercises = () => { currentExercisesList.innerHTML = ''; if (currentExercises.length === 0) { currentExercisesList.innerHTML = '<p>아직 추가된 운동이 없습니다.</p>'; return; } currentExercises.forEach((ex, index) => { const item = document.createElement('div'); item.className = 'exercise-item'; item.draggable = true; item.dataset.index = index; const weightText = (ex.weight === 0 || ex.weight === null) ? '체중' : `${ex.weight}kg`; const volume = ex.weight * ex.reps * ex.sets; item.innerHTML = `<span>${ex.name} (${weightText} x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}kg</span>`; currentExercisesList.appendChild(item); }); };
+        
+        // ==================================================================
+        // 💡 이 부분이 수정되었습니다. (displaySavedRoutines 함수)
+        // ==================================================================
+        const displaySavedRoutines = () => {
+            routineList.innerHTML = '';
+            if (routines.length === 0) {
+                routineList.innerHTML = '<p class="text-gray-600">저장된 루틴이 없습니다.</p>';
+                return;
+            }
+            routines.forEach((routine, index) => {
+                const routineItem = document.createElement('div');
+                routineItem.className = 'saved-routine-item';
+                routineItem.dataset.index = index;
+
+                // 1. 해당 루틴의 총 볼륨을 계산합니다.
+                let totalVolume = 0;
+                routine.exercises.forEach(ex => {
+                    totalVolume += ex.weight * ex.reps * ex.sets;
+                });
+
+                // 2. 계산된 총 볼륨을 HTML에 추가합니다.
+                routineItem.innerHTML = `
+                    <span class="saved-routine-title">${routine.title}</span>
+                    <div class="flex items-center">
+                        <span class="text-gray-600 font-semibold mr-4">총 볼륨: ${totalVolume}kg</span>
+                        <button class="delete-btn" data-index="${index}">X</button>
+                    </div>
+                `;
+                routineList.appendChild(routineItem);
+            });
+        };
+        
+        const createAndShowModal = (index) => { const routine = routines[index]; const modalOverlay = document.createElement('div'); modalOverlay.className = 'modal-overlay'; const modalContent = document.createElement('div'); modalContent.className = 'modal-content'; const modalTitle = document.createElement('h3'); modalTitle.textContent = routine.title; const modalExercises = document.createElement('div'); let totalVolume = 0; routine.exercises.forEach(ex => { const volume = ex.weight * ex.reps * ex.sets; totalVolume += volume; const item = document.createElement('div'); item.className = 'modal-exercise-item'; item.innerHTML = `<span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}kg</span>`; modalExercises.appendChild(item); }); const modalTotalVolume = document.createElement('p'); modalTotalVolume.className = 'total-volume'; modalTotalVolume.textContent = `총 볼륨: ${totalVolume}kg`; const modalCloseBtn = document.createElement('button'); modalCloseBtn.className = 'mt-6 w-full bg-gray-300 text-gray-800 p-2 rounded hover:bg-gray-400'; modalCloseBtn.textContent = '닫기'; modalContent.appendChild(modalTitle); modalContent.appendChild(modalExercises); modalContent.appendChild(modalTotalVolume); modalContent.appendChild(modalCloseBtn); modalOverlay.appendChild(modalContent); document.body.appendChild(modalOverlay); const closeModal = () => { document.body.removeChild(modalOverlay); }; modalCloseBtn.addEventListener('click', closeModal); modalOverlay.addEventListener('click', (event) => { if (event.target === modalOverlay) { closeModal(); } }); };
         const addExercise = () => { const name = exerciseSelect.value; const weight = parseFloat(weightInput.value) || 0; const reps = parseInt(repsInput.value) || 0; const sets = parseInt(setsInput.value) || 0; if (!name || reps <= 0 || sets <= 0) { alert('운동, 횟수(>0), 세트를 모두 올바르게 입력해주세요.'); return; } currentExercises.push({ name, weight, reps, sets }); displayCurrentExercises(); weightInput.value = ''; repsInput.value = ''; setsInput.value = ''; weightInput.focus(); };
         addExerciseBtn.addEventListener('click', addExercise);
         [weightInput, repsInput, setsInput].forEach(input => { input.addEventListener('keydown', (event) => { if (event.key === 'Enter') addExercise(); }); });
@@ -107,5 +138,4 @@
 </script>
 
 </body>
-
 </html>
