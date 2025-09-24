@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나의 운동 볼륨 기록</title>
+    <title>운동 기록 시작하기</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=B77026AA-3DE5-395B-8634-4AB051C0DEF1"></script>
     <style>
+        /* 기존 스타일 */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; } /* 전체 화면을 위해 추가 */
         .routine-card {
             margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white;
@@ -15,8 +18,6 @@
             cursor: grab; user-select: none;
         }
         .exercise-item.dragging { opacity: 0.5; background-color: #e0e7ff; }
-        
-        /* 팝업(모달) 스타일 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
@@ -29,8 +30,6 @@
         .modal-content h3 { font-size: 1.75rem; font-weight: bold; margin-bottom: 20px; }
         .modal-exercise-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
         .total-volume { text-align: right; font-size: 1.2rem; font-weight: bold; margin-top: 15px; color: #3b82f6; }
-
-        /* 저장된 루틴 아이템 스타일 */
         .saved-routine-item {
             display: flex; justify-content: space-between; align-items: center; padding: 20px;
             background-color: white; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px;
@@ -43,56 +42,137 @@
             width: 30px; height: 30px; font-weight: bold; cursor: pointer;
             display: flex; align-items: center; justify-content: center; z-index: 10; flex-shrink: 0;
         }
+        
+        /* 시작 화면 및 지도 화면 스타일 */
+        .fullscreen-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #selection-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #health-tracker-app {
+            overflow-y: auto; /* 헬스 앱은 내용이 길어질 수 있으므로 스크롤 허용 */
+            height: 100vh;
+        }
     </style>
 </head>
-<body class="bg-gray-100 pb-10">
-    <header class="bg-blue-600 text-white p-4 text-center">
-        <h1 class="text-3xl font-semibold">나의 운동 볼륨 기록</h1>
-    </header>
+<body class="bg-gray-100">
 
-    <section class="mt-8 px-4 max-w-2xl mx-auto">
-        <h2 class="text-2xl font-bold">새로운 루틴 만들기</h2>
-        <div class="routine-card">
-            <div class="mb-4">
-                <label for="routine-title" class="block text-gray-700 font-bold">루틴 이름</label>
-                <input type="text" id="routine-title" placeholder="예: 불타는 하체 데이" class="w-full p-2 border rounded mt-1">
-            </div>
-            <div class="border-t border-b py-4 my-4">
-                <h4 class="text-lg font-semibold text-gray-800 mb-2">운동 추가하기</h4>
-                <select id="exercise-select" class="w-full p-2 border rounded"></select>
-                <div class="flex space-x-2 mt-2">
-                    <input type="number" id="exercise-weight" placeholder="무게(kg)" class="w-1/3 p-2 border rounded">
-                    <input type="number" id="exercise-sets" placeholder="세트" class="w-1/3 p-2 border rounded">
-                    <input type="number" id="exercise-reps" placeholder="횟수" class="w-1/3 p-2 border rounded">
-                </div>
-                <button id="add-exercise-btn" class="mt-4 w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600">운동 추가</button>
-            </div>
-            <div id="current-exercises-container">
-                <h4 class="text-lg font-semibold text-gray-800">추가된 운동 (드래그해서 순서 변경)</h4>
-                <div id="current-exercises-list" class="mt-2 text-gray-600">
-                    <p>아직 추가된 운동이 없습니다.</p>
-                </div>
-            </div>
-            <button id="save-routine-btn" class="mt-6 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-lg font-bold">이 루틴 저장하기</button>
+    <div id="selection-screen" class="fullscreen-container">
+        <div class="flex space-x-8">
+            <button id="diet-btn" class="w-48 h-48 bg-green-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
+                다이어트
+            </button>
+            <button id="health-btn" class="w-48 h-48 bg-blue-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
+                헬스
+            </button>
         </div>
-    </section>
+    </div>
 
-    <section class="mt-8 px-4 max-w-2xl mx-auto">
-        <h2 class="text-2xl font-bold">저장된 나의 루틴</h2>
-        <div id="routine-list"></div>
-    </section>
+    <div id="diet-map-screen" class="fullscreen-container hidden">
+        <div id="vworld-map" style="width: 100%; height: 100%;"></div>
+        <button id="back-to-selection-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-10">
+            ← 뒤로가기
+        </button>
+    </div>
 
-    <script>
+    <div id="health-tracker-app" class="hidden">
+        <header class="bg-blue-600 text-white p-4 text-center">
+            <h1 class="text-3xl font-semibold">나의 운동 볼륨 기록</h1>
+        </header>
+        <section class="mt-8 px-4 max-w-2xl mx-auto">
+            <h2 class="text-2xl font-bold">새로운 루틴 만들기</h2>
+            <div class="routine-card">
+                <div class="mb-4">
+                    <label for="routine-title" class="block text-gray-700 font-bold">루틴 이름</label>
+                    <input type="text" id="routine-title" placeholder="예: 불타는 하체 데이" class="w-full p-2 border rounded mt-1">
+                </div>
+                <div class="border-t border-b py-4 my-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">운동 추가하기</h4>
+                    <select id="exercise-select" class="w-full p-2 border rounded"></select>
+                    <div class="flex space-x-2 mt-2">
+                        <input type="number" id="exercise-weight" placeholder="무게(kg)" class="w-1/3 p-2 border rounded">
+                        <input type="number" id="exercise-reps" placeholder="횟수" class="w-1/3 p-2 border rounded">
+                        <input type="number" id="exercise-sets" placeholder="세트" class="w-1/3 p-2 border rounded">
+                    </div>
+                    <button id="add-exercise-btn" class="mt-4 w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600">운동 추가</button>
+                </div>
+                <div id="current-exercises-container">
+                    <h4 class="text-lg font-semibold text-gray-800">추가된 운동 (드래그해서 순서 변경)</h4>
+                    <div id="current-exercises-list" class="mt-2 text-gray-600">
+                        <p>아직 추가된 운동이 없습니다.</p>
+                    </div>
+                </div>
+                <button id="save-routine-btn" class="mt-6 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-lg font-bold">이 루틴 저장하기</button>
+            </div>
+        </section>
+        <section class="mt-8 px-4 max-w-2xl mx-auto pb-10">
+            <h2 class="text-2xl font-bold">저장된 나의 루틴</h2>
+            <div id="routine-list"></div>
+        </section>
+    </div>
+
+<script>
 document.addEventListener('DOMContentLoaded', () => {
+    // --- 화면 전환 로직 ---
+    const selectionScreen = document.getElementById('selection-screen');
+    const healthTrackerApp = document.getElementById('health-tracker-app');
+    const dietMapScreen = document.getElementById('diet-map-screen');
+    const dietBtn = document.getElementById('diet-btn');
+    const healthBtn = document.getElementById('health-btn');
+    const backBtn = document.getElementById('back-to-selection-btn');
+    let vworldMap; // 지도 객체를 저장할 변수
+
+    // 2. 지도 생성 함수
+    const initVWorldMap = () => {
+        // 지도가 이미 생성되었다면 다시 생성하지 않음
+        if (vworldMap) return;
+        
+        vworldMap = new vw.Map("vworld-map", {
+            basemapType: vw.BasemapType.GRAPHIC, // 지도 타입
+            controlDensity: vw.ControlDensity.EMPTY, // 컨트롤 밀도
+            interactionDensity: vw.InteractionDensity.BASIC, // 인터렉션 밀도
+            controls: [ // 컨트롤 추가
+                new vw.Control.Zoom(),
+                new vw.Control.ScaleLine()
+            ],
+            // 서울 시청 좌표
+            center: new vw.Point(126.9780, 37.5665),
+            zoom: 15
+        });
+    };
+
+    // '헬스' 버튼 클릭 시
+    healthBtn.addEventListener('click', () => {
+        selectionScreen.classList.add('hidden');
+        healthTrackerApp.classList.remove('hidden');
+    });
+
+    // '다이어트' 버튼 클릭 시
+    dietBtn.addEventListener('click', () => {
+        selectionScreen.classList.add('hidden');
+        dietMapScreen.classList.remove('hidden');
+        initVWorldMap(); // 지도를 화면에 표시한 후 생성
+    });
+
+    // '뒤로가기' 버튼 클릭 시
+    backBtn.addEventListener('click', () => {
+        dietMapScreen.classList.add('hidden');
+        selectionScreen.classList.remove('hidden');
+    });
+
+
+    // --- 기존 헬스 앱 로직 ---
     const exercisesData = {
         "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스", "덤벨 플라이", "푸쉬업", "케이블 크로스오버"],
         "등": ["데드리프트", "풀업", "바벨 로우", "랫 풀 다운", "시티드 케이블 로우"],
         "어깨": ["오버헤드 프레스", "사이드 레터럴 레이즈", "벤트 오버 레터럴 레이즈", "프론트 레이즈"],
-        "하체": ["스쿼트", "런지", "레그 프레스", "레그 익스텐션", "레그 컬", "카프 레이즈"],
-        "팔": ["바벨 컬", "덤벨 컬", "케이블 푸쉬다운", "라잉 트라이셉스 익스텐션"]
+        "하체": ["스쿼트", "런지", "레그 프레스", "레그 익стен션", "레그 컬", "카프 레이즈"],
+        "팔": ["바벨 컬", "덤벨 컬", "케이블 푸쉬다운", "라잉 트라이셉스 익стен션"]
     };
 
-    // DOM 요소 가져오기
     const exerciseSelect = document.getElementById('exercise-select');
     const routineTitleInput = document.getElementById('routine-title');
     const weightInput = document.getElementById('exercise-weight');
@@ -103,11 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentExercisesList = document.getElementById('current-exercises-list');
     const routineList = document.getElementById('routine-list');
 
-    // 데이터 변수
     let currentExercises = [];
     let routines = [];
 
-    // 함수 정의
     const populateExercises = () => {
         const categories = ["가슴", "등", "어깨", "하체", "팔"];
         categories.forEach(category => {
@@ -150,20 +228,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // 클릭 시 팝업 창을 '새롭게 생성'하고 내용을 채우는 함수
     const createAndShowModal = (index) => {
         const routine = routines[index];
-        
-        // 팝업의 모든 요소를 JavaScript로 직접 생성
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'modal-overlay';
-
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
-
         const modalTitle = document.createElement('h3');
         modalTitle.textContent = routine.title;
-
         const modalExercises = document.createElement('div');
         let totalVolume = 0;
         routine.exercises.forEach(ex => {
@@ -174,34 +246,22 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `<span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`;
             modalExercises.appendChild(item);
         });
-        
         const modalTotalVolume = document.createElement('p');
         modalTotalVolume.className = 'total-volume';
         modalTotalVolume.textContent = `총 볼륨: ${totalVolume}`;
-
         const modalCloseBtn = document.createElement('button');
         modalCloseBtn.className = 'mt-6 w-full bg-gray-300 text-gray-800 p-2 rounded hover:bg-gray-400';
         modalCloseBtn.textContent = '닫기';
-
-        // 생성된 요소들을 조립
         modalContent.appendChild(modalTitle);
         modalContent.appendChild(modalExercises);
         modalContent.appendChild(modalTotalVolume);
         modalContent.appendChild(modalCloseBtn);
         modalOverlay.appendChild(modalContent);
-
-        // 완성된 팝업을 body에 추가하여 화면에 표시
         document.body.appendChild(modalOverlay);
-
-        // 팝업 닫기 이벤트 설정 (팝업이 생성될 때마다 새로 설정)
-        const closeModal = () => {
-            document.body.removeChild(modalOverlay);
-        };
+        const closeModal = () => { document.body.removeChild(modalOverlay); };
         modalCloseBtn.addEventListener('click', closeModal);
         modalOverlay.addEventListener('click', (event) => {
-            if (event.target === modalOverlay) {
-                closeModal();
-            }
+            if (event.target === modalOverlay) { closeModal(); }
         });
     };
 
@@ -219,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
         weightInput.focus();
     };
 
-    // --- 이벤트 리스너 설정 ---
     addExerciseBtn.addEventListener('click', addExercise);
     
     [weightInput, repsInput, setsInput].forEach(input => {
@@ -230,9 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = routineTitleInput.value.trim();
         if (!title) { alert('루틴 이름을 입력해주세요.'); return; }
         if (currentExercises.length === 0) { alert('하나 이상의 운동을 추가해주세요.'); return; }
-        
         routines.push({ title, exercises: [...currentExercises] });
-        
         currentExercises = [];
         routineTitleInput.value = '';
         displayCurrentExercises();
@@ -242,9 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     routineList.addEventListener('click', (event) => {
         const routineItem = event.target.closest('.saved-routine-item');
         if (!routineItem) return;
-
         const index = routineItem.dataset.index;
-
         if (event.target.classList.contains('delete-btn')) {
             event.stopPropagation();
             if (confirm('정말로 이 루틴을 삭제하시겠습니까?')) {
@@ -252,11 +307,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 displaySavedRoutines();
             }
         } else {
-            createAndShowModal(index); // 팝업 생성 및 표시 함수 호출
+            createAndShowModal(index);
         }
     });
     
-    // (드래그 앤 드롭 로직)
     let draggedIndex = null;
     currentExercisesList.addEventListener('dragstart', (e) => {
         draggedIndex = parseInt(e.target.dataset.index);
@@ -278,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.dragging')?.classList.remove('dragging');
     });
 
-    // --- 초기 실행 ---
     populateExercises();
     displaySavedRoutines();
 });
