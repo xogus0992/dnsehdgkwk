@@ -6,7 +6,7 @@
     <title>운동 기록 시작하기</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
     
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&autoload=false"></script>
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
@@ -61,7 +61,7 @@
     <div id="selection-screen" class="fullscreen-container">
         <div class="flex space-x-8">
             <button id="diet-btn" class="w-48 h-48 bg-green-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
-                다이어트
+                다이어트3
             </button>
             <button id="health-btn" class="w-48 h-48 bg-blue-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
                 헬스
@@ -130,74 +130,65 @@ document.addEventListener('DOMContentLoaded', () => {
     let userMarker = null;
 
     const initKakaoMap = () => {
-        try {
-            const container = document.getElementById('map');
-            const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780);
+        const container = document.getElementById('map');
+        const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780);
 
-            if (!kakaoMap) {
-                const options = {
-                    center: defaultCenter,
-                    level: 5
-                };
-                kakaoMap = new kakao.maps.Map(container, options);
-            } else {
-                kakaoMap.setCenter(defaultCenter);
-                kakaoMap.relayout();
-            }
+        if (!kakaoMap) {
+            const options = {
+                center: defaultCenter,
+                level: 5
+            };
+            kakaoMap = new kakao.maps.Map(container, options);
+        } else {
+            kakaoMap.setCenter(defaultCenter);
+            kakaoMap.relayout();
+        }
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const userPosition = new kakao.maps.LatLng(lat, lon);
-                    kakaoMap.setCenter(userPosition);
-                    if (userMarker) {
-                        userMarker.setMap(null);
-                    }
-                    userMarker = new kakao.maps.Marker({
-                        map: kakaoMap,
-                        position: userPosition
-                    });
-                }, () => {
-                    alert('위치 정보를 가져올 수 없습니다. 기본 위치로 표시됩니다.');
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const userPosition = new kakao.maps.LatLng(lat, lon);
+                kakaoMap.setCenter(userPosition);
+                if (userMarker) {
+                    userMarker.setMap(null);
+                }
+                userMarker = new kakao.maps.Marker({
+                    map: kakaoMap,
+                    position: userPosition
                 });
-            }
-        } catch (error) {
-            // 이 catch 블록은 API 키가 잘못되었을 때 실행됩니다.
-            console.error("카카오 지도 생성 실패:", error);
-            alert("지도 로딩에 실패했습니다. API 키와 등록된 사이트 주소를 확인해주세요.");
-            // 오류 발생 시, 다시 선택 화면으로 돌려보냅니다.
-            dietMapScreen.classList.add('hidden');
-            selectionScreen.classList.remove('hidden');
+            }, () => {
+                alert('위치 정보를 가져올 수 없습니다. 기본 위치로 표시됩니다.');
+            });
         }
     };
 
-    // '헬스' 버튼 클릭 시
     healthBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         healthTrackerApp.classList.remove('hidden');
     });
 
-    // '다이어트' 버튼 클릭 시
     dietBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         dietMapScreen.classList.remove('hidden');
-        setTimeout(initKakaoMap, 100);
+        
+        // 💡 가장 안전한 방법: kakao.maps.load()를 사용하여 API가 완전히 로드된 후 지도를 생성합니다.
+        kakao.maps.load(() => {
+            initKakaoMap();
+        });
     });
 
-    // 다이어트 화면 '뒤로가기' 버튼 클릭 시
     dietBackBtn.addEventListener('click', () => {
         dietMapScreen.classList.add('hidden');
         selectionScreen.classList.remove('hidden');
     });
 
-    // 헬스 화면 '뒤로가기' 버튼 클릭 시
     healthBackBtn.addEventListener('click', () => {
         healthTrackerApp.classList.add('hidden');
         selectionScreen.classList.remove('hidden');
     });
 
-    // --- 기존 헬스 앱 로직 ---
+    // --- 이하 헬스 앱 로직은 이전과 동일 ---
     const exercisesData = {
         "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스", "덤벨 플라이", "푸쉬업", "케이블 크로스오버"],
         "등": ["데드리프트", "풀업", "바벨 로우", "랫 풀 다운", "시티드 케이블 로우"],
