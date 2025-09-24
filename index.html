@@ -54,9 +54,6 @@
         #health-tracker-app {
             overflow-y: auto;
         }
-
-        /* 지도 내부에서 컨트롤이 잘 보이도록 안전 마진 추가 (선택사항) */
-        #map { min-height: 200px; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -129,16 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const dietBackBtn = document.getElementById('back-to-selection-from-diet-btn');
     const healthBackBtn = document.getElementById('back-to-selection-from-health-btn');
 
-    // 카카오 지도 생성 함수 (수정됨: 현재위치 기반 + 리사이즈/마커 중복 제거 처리)
+    // ==================================================================
+    // 💡 이 부분이 수정되었습니다. (initKakaoMap 함수)
+    // ==================================================================
     let kakaoMap = null;
-    // 전역 유저 마커 참조 (중복 마커 제거용)
-    window._userMarker = window._userMarker || null;
+    let userMarker = null;
 
     const initKakaoMap = () => {
         const container = document.getElementById('map');
-        const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780); // 서울시청
+        const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780); // 기본 위치: 서울시청
 
-        // 처음 생성 시
+        // 지도가 처음 생성될 때
         if (!kakaoMap) {
             const options = {
                 center: defaultCenter,
@@ -146,42 +144,36 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             kakaoMap = new kakao.maps.Map(container, options);
         } else {
-            // 이미 생성된 경우 사이즈 재계산 (컨테이너가 보여지면서 크기가 바뀔 때 필요)
-            kakao.maps.event.trigger(kakaoMap, 'resize');
+            // 이미 지도가 있다면 기본 위치로 설정하고 화면 크기에 맞게 재조정
+            kakaoMap.setCenter(defaultCenter);
+            kakaoMap.relayout();
         }
 
-        // 현재 위치를 시도해서 가져오고, 성공하면 중심을 이동하고 마커를 찍음
+        // 현재 위치 가져오기 시도
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                const userLatLng = new kakao.maps.LatLng(lat, lon);
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const userPosition = new kakao.maps.LatLng(lat, lon);
+                
+                // 지도의 중심을 사용자의 현재 위치로 이동
+                kakaoMap.setCenter(userPosition);
 
-                // 리사이즈 재실행 후 중심 설정
-                kakao.maps.event.trigger(kakaoMap, 'resize');
-                kakaoMap.setCenter(userLatLng);
-
-                // 이전 마커가 있다면 제거
-                if (window._userMarker) {
-                    try { window._userMarker.setMap(null); } catch (e) {}
+                // 이전에 있던 마커 제거
+                if (userMarker) {
+                    userMarker.setMap(null);
                 }
-                window._userMarker = new kakao.maps.Marker({
+
+                // 현재 위치에 새로운 마커 생성
+                userMarker = new kakao.maps.Marker({
                     map: kakaoMap,
-                    position: userLatLng
+                    position: userPosition
                 });
 
-            }, (err) => {
-                // 위치 권한 거부/에러 시 기본 위치로 표시
-                console.warn('geolocation error:', err);
-                kakao.maps.event.trigger(kakaoMap, 'resize');
-                kakaoMap.setCenter(defaultCenter);
-                // (원하면 alert을 띄울 수 있음)
-                // alert('위치 정보를 불러올 수 없어 기본 위치(서울시청)로 표시됩니다.');
-            }, { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 });
-        } else {
-            // 브라우저가 geolocation 미지원인 경우
-            kakao.maps.event.trigger(kakaoMap, 'resize');
-            kakaoMap.setCenter(defaultCenter);
+            }, () => {
+                // 위치 정보 가져오기 실패 시 알림
+                alert('위치 정보를 가져올 수 없습니다. 기본 위치로 표시됩니다.');
+            });
         }
     };
 
@@ -195,9 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dietBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         dietMapScreen.classList.remove('hidden');
-        // 화면이 보여진 이후에 지도를 초기화/리사이즈해야 올바르게 표시됩니다.
-        // 약간의 딜레이를 주어 CSS가 적용된 뒤 초기화합니다.
-        setTimeout(initKakaoMap, 200);
+        setTimeout(initKakaoMap, 100);
     });
 
     // 다이어트 화면 '뒤로가기' 버튼 클릭 시
@@ -212,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectionScreen.classList.remove('hidden');
     });
 
-    // --- 기존 헬스 앱 로직 (원본 UI/스타일 유지) ---
+    // --- 기존 헬스 앱 로직 ---
     const exercisesData = {
         "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스", "덤벨 플라이", "푸쉬업", "케이블 크로스오버"],
         "등": ["데드리프트", "풀업", "바벨 로우", "랫 풀 다운", "시티드 케이블 로우"],
@@ -268,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = exercise;
                 optgroup.appendChild(option);
             });
-            // ✅ optgroup을 select에 추가
             exerciseSelect.appendChild(optgroup);
         });
     };
@@ -283,9 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'exercise-item';
             item.draggable = true;
             item.dataset.index = index;
-            const weight = (ex.weight === 0 || ex.weight === null) ? '체중' : `${ex.weight}kg`;
+            const weightText = (ex.weight === 0 || ex.weight === null) ? '체중' : `${ex.weight}kg`;
             const volume = ex.weight * ex.reps * ex.sets;
-            item.innerHTML = `<span>${ex.name} (${weight} x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`;
+            item.innerHTML = `<span>${ex.name} (${weightText} x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`;
             currentExercisesList.appendChild(item);
         });
     };
@@ -344,11 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addExercise = () => {
         const name = exerciseSelect.value;
-        // weight은 선택적(체중 운동 등)이라 0 허용
         const weight = parseFloat(weightInput.value) || 0;
         const reps = parseInt(repsInput.value) || 0;
         const sets = parseInt(setsInput.value) || 0;
-        // 유효성 검사: 운동 이름, reps, sets 필요
         if (!name || reps <= 0 || sets <= 0) {
             alert('운동, 횟수(>0), 세트를 모두 올바르게 입력해주세요.'); return;
         }
@@ -368,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = routineTitleInput.value.trim();
         if (!title) { alert('루틴 이름을 입력해주세요.'); return; }
         if (currentExercises.length === 0) { alert('하나 이상의 운동을 추가해주세요.'); return; }
-        // 깊은 복사 (필요 시 JSON으로도)
         routines.push({ title, exercises: JSON.parse(JSON.stringify(currentExercises)) });
         currentExercises = [];
         routineTitleInput.value = '';
@@ -394,53 +380,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // -------------------------
-    // 드래그 & 드롭 안정화
-    // -------------------------
     let draggedIndex = null;
-
     currentExercisesList.addEventListener('dragstart', (e) => {
         const item = e.target.closest('.exercise-item');
         if (!item) return;
         draggedIndex = Number(item.dataset.index);
         item.classList.add('dragging');
-        // Firefox 등에서 필요할 수 있음
-        try { e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
     });
-
     currentExercisesList.addEventListener('dragover', (e) => {
-        e.preventDefault(); // 드롭 허용
+        e.preventDefault();
     });
-
-    function getDropIndexFromEvent(e) {
-        const items = Array.from(currentExercisesList.querySelectorAll('.exercise-item'));
+    const getDropIndexFromEvent = (e) => {
+        const items = Array.from(currentExercisesList.querySelectorAll('.exercise-item:not(.dragging)'));
         if (items.length === 0) return 0;
-        let closestIdx = 0;
-        let smallestDist = Infinity;
-        for (let i = 0; i < items.length; i++) {
-            const rect = items[i].getBoundingClientRect();
-            const centerY = rect.top + rect.height / 2;
-            const dist = Math.abs(e.clientY - centerY);
-            if (dist < smallestDist) { smallestDist = dist; closestIdx = i; }
-        }
-        const rectClosest = items[closestIdx].getBoundingClientRect();
-        const offset = e.clientY - (rectClosest.top + rectClosest.height / 2);
-        return offset < 0 ? closestIdx : closestIdx + 1;
-    }
-
+        const closest = items.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = e.clientY - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+        return closest ? items.indexOf(closest) : items.length;
+    };
     currentExercisesList.addEventListener('drop', (e) => {
         e.preventDefault();
         if (draggedIndex === null) return;
         const dropIndex = getDropIndexFromEvent(e);
         const [movedItem] = currentExercises.splice(draggedIndex, 1);
-        let insertIndex = dropIndex;
-        if (draggedIndex < dropIndex) insertIndex = dropIndex - 1;
-        if (insertIndex < 0) insertIndex = 0;
-        currentExercises.splice(insertIndex, 0, movedItem);
+        currentExercises.splice(dropIndex, 0, movedItem);
         draggedIndex = null;
         displayCurrentExercises();
     });
-
     currentExercisesList.addEventListener('dragend', () => {
         document.querySelector('.exercise-item.dragging')?.classList.remove('dragging');
         draggedIndex = null;
@@ -450,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
     populateExercises();
     loadRoutinesFromStorage();
     displaySavedRoutines();
-    displayCurrentExercises();
 });
 </script>
 </body>
