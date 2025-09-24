@@ -4,19 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>다이어트 지도</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
   <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services,drawing&autoload=false"></script>
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
 
 <!-- 지도 영역 -->
-<div id="map" style="width: 100px; height: 100px;"></div>
+<div id="map"></div>
 
 <!-- UI 영역 -->
-<div class="absolute top-4 right-4 bg-white p-4 rounded shadow-md z-10 space-y-2">
+<div class="absolute top-4 right-4 bg-white p-4 rounded shadow-md z-50 space-y-2 w-64">
   <div>
     <label class="block">🍔 오늘 먹은 칼로리 (kcal)</label>
     <input id="inputCalories" type="number" placeholder="예: 500" class="border px-2 py-1 w-full" />
@@ -26,35 +27,27 @@
     <input id="inputWeight" type="number" placeholder="예: 70" class="border px-2 py-1 w-full" />
   </div>
   <div>
-    <label class="block">🎯 목적지 (위도,경도)</label>
-    <input id="inputDest" type="text" placeholder="예: 37.5665,126.9780" class="border px-2 py-1 w-full" />
+    <label class="block">🎯 목적지</label>
+    <input id="inputDest" type="text" placeholder="도로명 주소 입력" class="border px-2 py-1 w-full" />
+    <ul id="addrResults" class="border mt-1 max-h-32 overflow-y-auto"></ul>
   </div>
   <button id="recommendBtn" class="bg-green-500 text-white px-4 py-2 rounded w-full">🔥 추천 거리 계산</button>
 </div>
 
 <!-- 뒤로가기 버튼 -->
-<button id="back-to-main-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-10">
+<button id="back-to-main-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-50">
   ← 뒤로가기
 </button>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const backBtn = document.getElementById('back-to-main-btn');
-    const recommendBtn = document.getElementById('recommendBtn');
     let kakaoMap = null;
     let userMarker = null;
     let userLatLng = null;
     let polylineA, polylineB, polylineC;
+    const routeLengths = { a: 1.0, b: 2.0, c: 3.5 };
 
-    const routeLengths = {
-      a: 1.0, // km
-      b: 2.0,
-      c: 3.5
-    };
-
-    const calculateCalories = (weight, distanceKm) => {
-      return (0.05 * weight * distanceKm).toFixed(2);
-    };
+    const calculateCalories = (weight, distanceKm) => (0.05 * weight * distanceKm).toFixed(2);
 
     const drawRoute = (destLatLng, offsetLat, offsetLng, color) => {
       const linePath = [
@@ -65,7 +58,6 @@
         ),
         destLatLng
       ];
-
       const polyline = new kakao.maps.Polyline({
         path: linePath,
         strokeWeight: 5,
@@ -73,7 +65,6 @@
         strokeOpacity: 0.8,
         strokeStyle: 'solid'
       });
-
       polyline.setMap(kakaoMap);
       return polyline;
     };
@@ -82,10 +73,8 @@
       const container = document.getElementById('map');
       const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780);
 
-      if (!kakaoMap) {
-        const options = { center: defaultCenter, level: 5 };
-        kakaoMap = new kakao.maps.Map(container, options);
-      }
+      const options = { center: defaultCenter, level: 5 };
+      kakaoMap = new kakao.maps.Map(container, options);
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
@@ -95,68 +84,83 @@
           kakaoMap.setCenter(userLatLng);
           if (userMarker) userMarker.setMap(null);
           userMarker = new kakao.maps.Marker({ map: kakaoMap, position: userLatLng });
-        }, () => {
-          alert('위치 정보를 가져올 수 없습니다. 기본 위치로 표시됩니다.');
-          userLatLng = defaultCenter;
-        });
+        }, () => { userLatLng = defaultCenter; });
+      } else {
+        userLatLng = defaultCenter;
       }
     };
 
-    // 지도 API 로드 후 초기화
-    kakao.maps.load(() => {
-      initKakaoMap();
-    });
+    kakao.maps.load(() => { initKakaoMap(); });
 
     // 뒤로가기
-    backBtn.addEventListener('click', () => {
+    document.getElementById('back-to-main-btn').addEventListener('click', () => {
       window.location.href = 'index.html';
     });
 
-    // 추천 버튼 클릭 시 실행
-    recommendBtn.addEventListener('click', () => {
-      const kcalInput = parseFloat(document.getElementById('inputCalories').value);
-      const weight = parseFloat(document.getElementById('inputWeight').value);
-      const destInput = document.getElementById('inputDest').value;
+    // 주소 검색
+    const ps = new kakao.maps.services.Places();
+    const inputDest = document.getElementById('inputDest');
+    const addrResults = document.getElementById('addrResults');
 
-      if (!userLatLng) {
-        alert("현재 위치 정보를 가져오는 중입니다. 잠시 후 다시 시도해주세요.");
-        return;
-      }
+    inputDest.addEventListener('input', () => {
+      const query = inputDest.value;
+      if (!query) { addrResults.innerHTML = ''; return; }
 
-      if (isNaN(kcalInput) || isNaN(weight) || !destInput.includes(',')) {
-        alert("입력을 정확히 확인해주세요.");
-        return;
-      }
+      ps.keywordSearch(query, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          addrResults.innerHTML = '';
+          data.forEach(place => {
+            const li = document.createElement('li');
+            li.textContent = place.place_name;
+            li.className = 'px-2 py-1 hover:bg-gray-200 cursor-pointer';
+            li.addEventListener('click', () => {
+              inputDest.value = place.place_name;
+              addrResults.innerHTML = '';
+              const destLatLng = new kakao.maps.LatLng(place.y, place.x);
+              // 기존 라인 제거
+              [polylineA, polylineB, polylineC].forEach(p => p && p.setMap(null));
+              // 칼로리 계산
+              const weight = parseFloat(document.getElementById('inputWeight').value);
+              const kcalInput = parseFloat(document.getElementById('inputCalories').value);
+              const calA = calculateCalories(weight, routeLengths.a);
+              const calB = calculateCalories(weight, routeLengths.b);
+              const calC = calculateCalories(weight, routeLengths.c);
+              let message = '';
+              if (kcalInput <= calA) { polylineA = drawRoute(destLatLng, 0.001, 0.001, 'green'); message = `✅ 최단 거리 A (${routeLengths.a} km, 약 ${calA} kcal)`; }
+              else if (kcalInput <= calB) { polylineB = drawRoute(destLatLng, 0.002, -0.001, 'green'); message = `✅ 중간 거리 B (${routeLengths.b} km, 약 ${calB} kcal)`; }
+              else { polylineC = drawRoute(destLatLng, -0.002, 0.002, 'green'); message = `✅ 긴 거리 C (${routeLengths.c} km, 약 ${calC} kcal)`; }
+              alert(message);
+            });
+            addrResults.appendChild(li);
+          });
+        }
+      });
+    });
 
-      const [lat, lng] = destInput.split(',').map(Number);
-      const destLatLng = new kakao.maps.LatLng(lat, lng);
-
-      // 기존 라인 제거
-      [polylineA, polylineB, polylineC].forEach(p => p && p.setMap(null));
-
-      // 칼로리 계산
-      const calA = calculateCalories(weight, routeLengths.a);
-      const calB = calculateCalories(weight, routeLengths.b);
-      const calC = calculateCalories(weight, routeLengths.c);
-
-      let message = '';
-      if (kcalInput <= calA) {
-        polylineA = drawRoute(destLatLng, 0.001, 0.001, 'green');
-        message = `✅ 최단 거리 A 추천 (${routeLengths.a} km, 약 ${calA} kcal 소모)`;
-      } else if (kcalInput <= calB) {
-        polylineB = drawRoute(destLatLng, 0.002, -0.001, 'green');
-        message = `✅ 중간 거리 B 추천 (${routeLengths.b} km, 약 ${calB} kcal 소모)`;
-      } else {
-        polylineC = drawRoute(destLatLng, -0.002, 0.002, 'green');
-        message = `✅ 긴 거리 C 추천 (${routeLengths.c} km, 약 ${calC} kcal 소모)`;
-      }
-
-      alert(message);
+    // 추천 버튼 클릭 시 기존 라인 표시
+    document.getElementById('recommendBtn').addEventListener('click', () => {
+      if (!inputDest.value) { alert("목적지를 입력해주세요."); return; }
+      const ps = new kakao.maps.services.Places();
+      ps.keywordSearch(inputDest.value, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const place = data[0];
+          const destLatLng = new kakao.maps.LatLng(place.y, place.x);
+          [polylineA, polylineB, polylineC].forEach(p => p && p.setMap(null));
+          const weight = parseFloat(document.getElementById('inputWeight').value);
+          const kcalInput = parseFloat(document.getElementById('inputCalories').value);
+          const calA = calculateCalories(weight, routeLengths.a);
+          const calB = calculateCalories(weight, routeLengths.b);
+          const calC = calculateCalories(weight, routeLengths.c);
+          let message = '';
+          if (kcalInput <= calA) { polylineA = drawRoute(destLatLng, 0.001, 0.001, 'green'); message = `✅ 최단 거리 A (${routeLengths.a} km, 약 ${calA} kcal)`; }
+          else if (kcalInput <= calB) { polylineB = drawRoute(destLatLng, 0.002, -0.001, 'green'); message = `✅ 중간 거리 B (${routeLengths.b} km, 약 ${calB} kcal)`; }
+          else { polylineC = drawRoute(destLatLng, -0.002, 0.002, 'green'); message = `✅ 긴 거리 C (${routeLengths.c} km, 약 ${calC} kcal)`; }
+          alert(message);
+        }
+      });
     });
   });
 </script>
 
 </body>
 </html>
-
-
