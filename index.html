@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>운동 기록 시작하기</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=B77026AA-3DE5-395B-8634-4AB051C0DEF1"></script>
+    
+    <script src="https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=E10F1C25-6520-3661-8C6A-DD2100ED8CC5"></script> 
+
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
         .routine-card {
@@ -51,7 +53,6 @@
         }
         #health-tracker-app {
             overflow-y: auto;
-            height: 100vh;
         }
     </style>
 </head>
@@ -70,13 +71,16 @@
 
     <div id="diet-map-screen" class="fullscreen-container hidden">
         <div id="vworld-map" style="width: 100%; height: 100%;"></div>
-        <button id="back-to-selection-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-10">
+        <button id="back-to-selection-from-diet-btn" class="absolute top-4 left-4 bg-white p-2 rounded-md shadow-lg z-10">
             ← 뒤로가기
         </button>
     </div>
 
-    <div id="health-tracker-app" class="hidden">
-        <header class="bg-blue-600 text-white p-4 text-center">
+    <div id="health-tracker-app" class="fullscreen-container hidden">
+        <header class="bg-blue-600 text-white p-4 text-center relative">
+            <button id="back-to-selection-from-health-btn" class="absolute top-1/2 left-4 -translate-y-1/2 bg-white text-blue-600 p-2 rounded-md shadow-lg z-10">
+                ← 뒤로가기
+            </button>
             <h1 class="text-3xl font-semibold">나의 운동 볼륨 기록</h1>
         </header>
         <section class="mt-8 px-4 max-w-2xl mx-auto">
@@ -119,51 +123,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const dietMapScreen = document.getElementById('diet-map-screen');
     const dietBtn = document.getElementById('diet-btn');
     const healthBtn = document.getElementById('health-btn');
-    const backBtn = document.getElementById('back-to-selection-btn');
+    const dietBackBtn = document.getElementById('back-to-selection-from-diet-btn');
+    const healthBackBtn = document.getElementById('back-to-selection-from-health-btn');
+
+    // 지도 생성 함수 주석 해제
     let vworldMap = null;
-
     const initVWorldMap = () => {
-        // 지도가 이미 생성되었다면 다시 실행하지 않음
         if (vworldMap) return;
-
-        // vw 객체가 로드되었는지 확인
         if (typeof vw === 'undefined' || typeof vw.Map === 'undefined') {
-            alert('지도 API를 불러오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            alert('지도 API를 불러오는 데 실패했습니다. 키가 정확한지, URL 등록이 올바른지 확인해주세요.');
             return;
         }
-        
         try {
             vworldMap = new vw.Map("vworld-map", {
                 basemapType: vw.BasemapType.GRAPHIC,
-                controlDensity: vw.ControlDensity.EMPTY,
-                interactionDensity: vw.InteractionDensity.BASIC,
-                controls: [new vw.Control.Zoom(), new vw.Control.ScaleLine()],
-                center: new vw.Point(126.9780, 37.5665), // 서울 시청 좌표
+                center: new vw.Point(126.9780, 37.5665),
                 zoom: 15
             });
         } catch (e) {
-            console.error("지도 생성 중 오류가 발생했습니다:", e);
-            alert("지도 생성 중 오류가 발생했습니다. 개발자 콘솔을 확인해 주세요.");
+            console.error("지도 생성 중 오류:", e);
+            alert("지도 생성 중 오류가 발생했습니다. API 키와 등록된 URL을 다시 확인해주세요.");
         }
     };
 
+    // '헬스' 버튼 클릭 시
     healthBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         healthTrackerApp.classList.remove('hidden');
     });
 
+    // '다이어트' 버튼 클릭 시
     dietBtn.addEventListener('click', () => {
         selectionScreen.classList.add('hidden');
         dietMapScreen.classList.remove('hidden');
-        // 지도를 표시한 후 잠시 지연을 주어 안정적으로 생성되도록 함
+        // 지도 생성 함수 호출 주석 해제
         setTimeout(initVWorldMap, 100); 
     });
 
-    backBtn.addEventListener('click', () => {
+    // 다이어트 화면 '뒤로가기' 버튼 클릭 시
+    dietBackBtn.addEventListener('click', () => {
         dietMapScreen.classList.add('hidden');
         selectionScreen.classList.remove('hidden');
     });
 
+    // 헬스 화면 '뒤로가기' 버튼 클릭 시
+    healthBackBtn.addEventListener('click', () => {
+        healthTrackerApp.classList.add('hidden');
+        selectionScreen.classList.remove('hidden');
+    });
 
     // --- 기존 헬스 앱 로직 ---
     const exercisesData = {
