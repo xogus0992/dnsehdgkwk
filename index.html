@@ -94,9 +94,9 @@
                     <h4 class="text-lg font-semibold text-gray-800 mb-2">운동 추가하기</h4>
                     <select id="exercise-select" class="w-full p-2 border rounded"></select>
                     <div class="flex space-x-2 mt-2">
-                        <input type="number" id="exercise-weight" placeholder="무게(kg)" class="w-1/3 p-2 border rounded">
-                        <input type="number" id="exercise-reps" placeholder="횟수" class="w-1/3 p-2 border rounded">
-                        <input type="number" id="exercise-sets" placeholder="세트" class="w-1/3 p-2 border rounded">
+                        <input type="number" id="exercise-weight" placeholder="무게(kg, 선택)" class="w-1/3 p-2 border rounded" min="0" step="0.5">
+                        <input type="number" id="exercise-reps" placeholder="횟수" class="w-1/3 p-2 border rounded" min="1">
+                        <input type="number" id="exercise-sets" placeholder="세트" class="w-1/3 p-2 border rounded" min="1">
                     </div>
                     <button id="add-exercise-btn" class="mt-4 w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600">운동 추가</button>
                 </div>
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initKakaoMap = () => {
         // 지도가 이미 생성되었다면, 화면 크기에 맞게 재조정만 수행
         if (kakaoMap) {
-            kakaoMap.relayout();
+            kakao.maps.event.trigger(kakaoMap, 'resize');
             return;
         }
 
@@ -174,8 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
         "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스", "덤벨 플라이", "푸쉬업", "케이블 크로스오버"],
         "등": ["데드리프트", "풀업", "바벨 로우", "랫 풀 다운", "시티드 케이블 로우"],
         "어깨": ["오버헤드 프레스", "사이드 레터럴 레이즈", "벤트 오버 레터럴 레이즈", "프론트 레이즈"],
-        "하체": ["스쿼트", "런지", "레그 프레스", "레그 익стен션", "레그 컬", "카프 레이즈"],
-        "팔": ["바벨 컬", "덤벨 컬", "케이블 푸쉬다운", "라잉 트라이셉스 익стен션"]
+        "하체": ["스쿼트", "런지", "레그 프레스", "레그 익스텐션", "레그 컬", "카프 레이즈"],
+        "팔": ["바벨 컬", "덤벨 컬", "케이블 푸쉬다운", "라잉 트라이셉스 익스텐션"]
     };
 
     const exerciseSelect = document.getElementById('exercise-select');
@@ -191,9 +191,32 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentExercises = [];
     let routines = [];
 
+    const STORAGE_KEY = 'my_fitness_routines_v1';
+
+    const saveRoutinesToStorage = () => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(routines));
+        } catch (err) {
+            console.error('로컬 저장 실패', err);
+        }
+    };
+
+    const loadRoutinesFromStorage = () => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                routines = parsed;
+            }
+        } catch (err) {
+            console.error('로컬 불러오기 실패', err);
+        }
+    };
+
     const populateExercises = () => {
-        const categories = ["가슴", "등", "어깨", "하체", "팔"];
-        categories.forEach(category => {
+        exerciseSelect.innerHTML = '';
+        Object.keys(exercisesData).forEach(category => {
             const optgroup = document.createElement('optgroup');
             optgroup.label = category;
             exercisesData[category].forEach(exercise => {
@@ -202,7 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = exercise;
                 optgroup.appendChild(option);
             });
-            exerciseSelect.appendChild(option);
+            // ✅ optgroup을 select에 추가
+            exerciseSelect.appendChild(optgroup);
         });
     };
     
@@ -216,14 +240,19 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'exercise-item';
             item.draggable = true;
             item.dataset.index = index;
+            const weight = (ex.weight === 0 || ex.weight === null) ? '체중' : `${ex.weight}kg`;
             const volume = ex.weight * ex.reps * ex.sets;
-            item.innerHTML = `<span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`;
+            item.innerHTML = `<span>${ex.name} (${weight} x ${ex.reps}회 x ${ex.sets}세트)</span><span class="font-semibold">볼륨: ${volume}</span>`;
             currentExercisesList.appendChild(item);
         });
     };
 
     const displaySavedRoutines = () => {
         routineList.innerHTML = '';
+        if (routines.length === 0) {
+            routineList.innerHTML = '<p class="text-gray-600">저장된 루틴이 없습니다.</p>';
+            return;
+        }
         routines.forEach((routine, index) => {
             const routineItem = document.createElement('div');
             routineItem.className = 'saved-routine-item';
@@ -272,11 +301,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addExercise = () => {
         const name = exerciseSelect.value;
+        // weight은 선택적(체중 운동 등)이라 0 허용
         const weight = parseFloat(weightInput.value) || 0;
         const reps = parseInt(repsInput.value) || 0;
         const sets = parseInt(setsInput.value) || 0;
-        if (!name || reps === 0 || sets === 0) {
-            alert('운동, 횟수, 세트를 모두 입력해주세요.'); return;
+        // 유효성 검사: 운동 이름, reps, sets 필요
+        if (!name || reps <= 0 || sets <= 0) {
+            alert('운동, 횟수(>0), 세트를 모두 올바르게 입력해주세요.'); return;
         }
         currentExercises.push({ name, weight, reps, sets });
         displayCurrentExercises();
@@ -294,51 +325,89 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = routineTitleInput.value.trim();
         if (!title) { alert('루틴 이름을 입력해주세요.'); return; }
         if (currentExercises.length === 0) { alert('하나 이상의 운동을 추가해주세요.'); return; }
-        routines.push({ title, exercises: [...currentExercises] });
+        // 깊은 복사 (필요 시 JSON으로도)
+        routines.push({ title, exercises: JSON.parse(JSON.stringify(currentExercises)) });
         currentExercises = [];
         routineTitleInput.value = '';
         displayCurrentExercises();
         displaySavedRoutines();
+        saveRoutinesToStorage();
+        alert('루틴이 저장되었습니다.');
     });
 
     routineList.addEventListener('click', (event) => {
         const routineItem = event.target.closest('.saved-routine-item');
         if (!routineItem) return;
-        const index = routineItem.dataset.index;
+        const index = Number(routineItem.dataset.index);
         if (event.target.classList.contains('delete-btn')) {
             event.stopPropagation();
             if (confirm('정말로 이 루틴을 삭제하시겠습니까?')) {
                 routines.splice(index, 1);
                 displaySavedRoutines();
+                saveRoutinesToStorage();
             }
         } else {
             createAndShowModal(index);
         }
     });
     
+    // -------------------------
+    // 드래그 & 드롭 안정화
+    // -------------------------
     let draggedIndex = null;
+
     currentExercisesList.addEventListener('dragstart', (e) => {
-        draggedIndex = parseInt(e.target.dataset.index);
-        e.target.classList.add('dragging');
-    });
-    currentExercisesList.addEventListener('dragover', (e) => e.preventDefault());
-    currentExercisesList.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const droppedOn = e.target.closest('.exercise-item');
-        if (droppedOn) {
-            const droppedIndex = parseInt(droppedOn.dataset.index);
-            const draggedItem = currentExercises.splice(draggedIndex, 1)[0];
-            currentExercises.splice(droppedIndex, 0, draggedItem);
-            displayCurrentExercises();
-        }
-        document.querySelector('.dragging')?.classList.remove('dragging');
-    });
-    currentExercisesList.addEventListener('dragend', () => {
-        document.querySelector('.dragging')?.classList.remove('dragging');
+        const item = e.target.closest('.exercise-item');
+        if (!item) return;
+        draggedIndex = Number(item.dataset.index);
+        item.classList.add('dragging');
+        // Firefox 등에서 필요할 수 있음
+        try { e.dataTransfer.setData('text/plain', ''); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
     });
 
+    currentExercisesList.addEventListener('dragover', (e) => {
+        e.preventDefault(); // 드롭 허용
+    });
+
+    function getDropIndexFromEvent(e) {
+        const items = Array.from(currentExercisesList.querySelectorAll('.exercise-item'));
+        if (items.length === 0) return 0;
+        let closestIdx = 0;
+        let smallestDist = Infinity;
+        for (let i = 0; i < items.length; i++) {
+            const rect = items[i].getBoundingClientRect();
+            const centerY = rect.top + rect.height / 2;
+            const dist = Math.abs(e.clientY - centerY);
+            if (dist < smallestDist) { smallestDist = dist; closestIdx = i; }
+        }
+        const rectClosest = items[closestIdx].getBoundingClientRect();
+        const offset = e.clientY - (rectClosest.top + rectClosest.height / 2);
+        return offset < 0 ? closestIdx : closestIdx + 1;
+    }
+
+    currentExercisesList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (draggedIndex === null) return;
+        const dropIndex = getDropIndexFromEvent(e);
+        const [movedItem] = currentExercises.splice(draggedIndex, 1);
+        let insertIndex = dropIndex;
+        if (draggedIndex < dropIndex) insertIndex = dropIndex - 1;
+        if (insertIndex < 0) insertIndex = 0;
+        currentExercises.splice(insertIndex, 0, movedItem);
+        draggedIndex = null;
+        displayCurrentExercises();
+    });
+
+    currentExercisesList.addEventListener('dragend', () => {
+        document.querySelector('.exercise-item.dragging')?.classList.remove('dragging');
+        draggedIndex = null;
+    });
+
+    // 초기 로드
     populateExercises();
+    loadRoutinesFromStorage();
     displaySavedRoutines();
+    displayCurrentExercises();
 });
 </script>
 </body>
