@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 운동 기록</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        body { overflow-y: auto; scroll-behavior: smooth; }
+        .card { margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white; }
+        #calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day { text-align: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        .calendar-day:hover { background-color: #f0f9ff; }
+        .calendar-day.selected { background-color: #3b82f6; color: white; font-weight: bold; }
+        .calendar-day.has-log { border-bottom: 3px solid #63b3ed; }
+        .calendar-day.today { box-shadow: 0 0 0 2px #3b82f6 inset; }
+        .set-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; }
+        .set-complete-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d1d5db; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
+        .set-complete-btn.completed { background-color: #48bb78; border-color: #48bb78; color: white; }
+    </style>
+</head>
+<body class="bg-gray-100 pb-20">
+
+    <header class="bg-blue-600 text-white p-4 text-center relative">
+        <button id="back-to-main-btn" class="absolute top-1/2 left-4 -translate-y-1/2 bg-white text-blue-600 p-2 rounded-md shadow-lg z-10">← 뒤로가기</button>
+        <h1 class="text-3xl font-semibold">나의 운동 기록</h1>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4">
+        <section id="calendar-section" class="card">
+            <div class="flex justify-between items-center mb-4">
+                <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded">&lt;</button>
+                <h3 id="calendar-title" class="text-xl font-bold"></h3>
+                <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded">&gt;</button>
+            </div>
+            <div class="grid grid-cols-7 text-center font-bold mb-2 text-sm text-gray-500">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div id="calendar"></div>
+        </section>
+
+        <div class="grid md:grid-cols-2 gap-6 mt-8">
+            <section>
+                <h2 id="daily-log-title" class="text-2xl font-bold"></h2>
+                <div id="daily-log-list" class="card min-h-[200px]"></div>
+            </section>
+            <section>
+                <h2 class="text-2xl font-bold">나의 루틴 템플릿</h2>
+                <div id="routine-template-list" class="card min-h-[200px]"></div>
+            </section>
+        </div>
+        
+        <section class="card mt-8">
+            <h2 class="text-2xl font-bold mb-4">부위별 볼륨 통계</h2>
+            <select id="stats-body-part-select" class="w-full p-2 border rounded mb-4"></select>
+            <div class="h-64"><canvas id="volume-chart"></canvas></div>
+        </section>
+    </main>
+
+    <div id="workout-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
+             <div class="flex justify-between items-center mb-4">
+                <h3 id="workout-modal-title" class="text-2xl font-bold"></h3>
+                <button id="close-workout-modal-btn" class="text-2xl font-bold">&times;</button>
+             </div>
+             <div id="workout-modal-list"></div>
+             <div class="mt-6 border-t pt-4 flex items-center justify-between">
+                <span id="timer-display" class="text-4xl font-mono">01:00</span>
+                <div class="flex space-x-2">
+                    <button id="timer-start-btn" class="px-4 py-2 bg-green-500 text-white rounded w-24">시작</button>
+                    <button id="finish-workout-btn" class="px-4 py-2 bg-blue-600 text-white rounded">운동 완료</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="template-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+             <h3 id="template-modal-title" class="text-2xl font-bold mb-4">새 루틴 템플릿 만들기</h3>
+             <input type="text" id="template-title-input" placeholder="루틴 이름 (예: 가슴 불태우기)" class="w-full p-2 border rounded mb-4">
+             <h4 class="font-bold mb-2">운동 목록</h4>
+             <div id="template-exercise-list" class="flex-grow overflow-y-auto mb-4 border-t border-b py-2"></div>
+             <h4 class="font-bold mb-2">운동 추가</h4>
+             <div class="grid grid-cols-4 gap-2 mb-4">
+                <select id="template-exercise-select" class="col-span-4 p-2 border rounded"></select>
+                <input type="number" id="template-weight-input" placeholder="무게(kg)" class="p-2 border rounded">
+                <input type="number" id="template-reps-input" placeholder="횟수" class="p-2 border rounded">
+                <input type="number" id="template-sets-input" placeholder="세트" class="p-2 border rounded">
+             </div>
+             <button id="add-template-exercise-btn" class="w-full bg-gray-500 text-white p-2 rounded mb-4">운동 추가</button>
+             <div class="flex space-x-2">
+                <button id="save-template-btn" class="w-1/2 bg-blue-600 text-white p-2 rounded">템플릿 저장</button>
+                <button id="cancel-template-btn" class="w-1/2 bg-gray-300 p-2 rounded">취소</button>
+             </div>
+        </div>
+    </div>
+    
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM 요소 ---
+    const elements = {
+        backBtn: document.getElementById('back-to-main-btn'),
+        calendarTitle: document.getElementById('calendar-title'),
+        calendarBody: document.getElementById('calendar'),
+        prevMonthBtn: document.getElementById('prev-month-btn'),
+        nextMonthBtn: document.getElementById('next-month-btn'),
+        dailyLogTitle: document.getElementById('daily-log-title'),
+        dailyLogList: document.getElementById('daily-log-list'),
+        routineTemplateList: document.getElementById('routine-template-list'),
+        statsBodyPartSelect: document.getElementById('stats-body-part-select'),
+        volumeChartCanvas: document.getElementById('volume-chart'),
+        workoutModal: document.getElementById('workout-modal'),
+        workoutModalTitle: document.getElementById('workout-modal-title'),
+        closeWorkoutModalBtn: document.getElementById('close-workout-modal-btn'),
+        workoutModalList: document.getElementById('workout-modal-list'),
+        timerDisplay: document.getElementById('timer-display'),
+        timerStartBtn: document.getElementById('timer-start-btn'),
+        finishWorkoutBtn: document.getElementById('finish-workout-btn'),
+        templateModal: document.getElementById('template-modal'),
+        templateModalTitle: document.getElementById('template-modal-title'),
+        templateTitleInput: document.getElementById('template-title-input'),
+        templateExerciseList: document.getElementById('template-exercise-list'),
+        templateExerciseSelect: document.getElementById('template-exercise-select'),
+        templateWeightInput: document.getElementById('template-weight-input'),
+        templateRepsInput: document.getElementById('template-reps-input'),
+        templateSetsInput: document.getElementById('template-sets-input'),
+        addTemplateExerciseBtn: document.getElementById('add-template-exercise-btn'),
+        saveTemplateBtn: document.getElementById('save-template-btn'),
+        cancelTemplateBtn: document.getElementById('cancel-template-btn'),
+    };
+
+    // --- 상태 변수 ---
+    const ROUTINE_TEMPLATE_KEY = 'my_fitness_templates_v2';
+    const LOG_KEY = 'my_fitness_logs_v5';
+    const exercisesData = { "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스"], "등": ["데드리프트", "풀업", "바벨 로우"], "어깨": ["오버헤드 프레스", "사이드 레터럴 레이즈"], "하체": ["스쿼트", "런지", "레그 프레스"], "팔": ["바벨 컬", "덤벨 컬"] };
+    let routineTemplates = [];
+    let workoutLogs = {};
+    let calendarDate = new Date();
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let timerInterval = null;
+    let timerSeconds = 60;
+    let volumeChart = null;
+    let currentEditingTemplate = { index: null, exercises: [] };
+
+    // --- 데이터 처리 함수 ---
+    const saveTemplates = () => localStorage.setItem(ROUTINE_TEMPLATE_KEY, JSON.stringify(routineTemplates));
+    const loadTemplates = () => routineTemplates = JSON.parse(localStorage.getItem(ROUTINE_TEMPLATE_KEY) || '[]');
+    const saveLogs = () => localStorage.setItem(LOG_KEY, JSON.stringify(workoutLogs));
+    const loadLogs = () => workoutLogs = JSON.parse(localStorage.getItem(LOG_KEY) || '{}');
+
+    // --- 렌더링 함수 (화면 그리는 역할) ---
+    const renderCalendar = () => {
+        const year = calendarDate.getFullYear();
+        const month = calendarDate.getMonth();
+        elements.calendarTitle.textContent = `${year}년 ${month + 1}월`;
+        elements.calendarBody.innerHTML = '';
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i++) elements.calendarBody.innerHTML += `<div class="calendar-day"></div>`;
+        for (let date = 1; date <= lastDate; date++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+            const today = new Date();
+            const isToday = year === today.getFullYear() && month === today.getMonth() && date === today.getDate();
+            let dayClass = 'calendar-day';
+            if (workoutLogs[dateStr] && workoutLogs[dateStr].length > 0) dayClass += ' has-log';
+            if (isToday) dayClass += ' today';
+            if (dateStr === selectedDate) dayClass += ' selected';
+            elements.calendarBody.innerHTML += `<div class="${dayClass}" data-date="${dateStr}">${date}</div>`;
+        }
+    };
+
+    const renderRoutineTemplates = () => {
+        elements.routineTemplateList.innerHTML = '';
+        const header = document.createElement('div');
+        header.innerHTML = '<p class="text-gray-500 mb-2">템플릿을 클릭해 날짜에 추가하거나 수정하세요.</p>';
+        elements.routineTemplateList.appendChild(header);
+        if (routineTemplates.length > 0) {
+            routineTemplates.forEach((template, index) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 border rounded mb-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center';
+                item.innerHTML = `<span>${template.title}</span><button class="edit-template-btn text-blue-500 text-sm font-bold" data-index="${index}">수정</button>`;
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-template-btn')) openTemplateModal(index);
+                    else addLogFromTemplate(index);
+                });
+                elements.routineTemplateList.appendChild(item);
+            });
+        }
+        const newBtn = document.createElement('button');
+        newBtn.className = 'w-full bg-gray-200 p-2 rounded mt-2 hover:bg-gray-300';
+        newBtn.textContent = '+ 새 템플릿 만들기';
+        newBtn.onclick = () => openTemplateModal(null);
+        elements.routineTemplateList.appendChild(newBtn);
+    };
+
+    const renderDailyLogs = () => {
+        elements.dailyLogTitle.textContent = `${selectedDate} 운동 기록`;
+        elements.dailyLogList.innerHTML = '';
+        const logs = workoutLogs[selectedDate] || [];
+        if (logs.length === 0) {
+            elements.dailyLogList.innerHTML = '<p class="text-gray-500">운동 기록이 없습니다. 템플릿을 추가해 시작하세요.</p>';
+        } else {
+            logs.forEach((log, index) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 border rounded mb-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center';
+                item.innerHTML = `<span>${log.title}</span><button class="delete-log-btn text-red-500 text-xs font-bold" data-index="${index}">삭제</button>`;
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('delete-log-btn')) {
+                        e.stopPropagation();
+                        if (confirm('이 기록을 삭제하시겠습니까?')) {
+                            workoutLogs[selectedDate].splice(index, 1);
+                            saveLogs();
+                            renderDailyLogs();
+                            renderCalendar();
+                            renderStatsGraph();
+                        }
+                    } else {
+                        openWorkoutModal(index);
+                    }
+                });
+                elements.dailyLogList.appendChild(item);
+            });
+        }
+    };
+
+    // --- 로직 함수 (실제 동작) ---
+    const addLogFromTemplate = (templateIndex) => {
+        if (!selectedDate) { alert('날짜를 먼저 선택해주세요.'); return; }
+        const template = routineTemplates[templateIndex];
+        const newLog = JSON.parse(JSON.stringify(template));
+        newLog.exercises.forEach(ex => ex.completedSets = 0);
+        if (!workoutLogs[selectedDate]) workoutLogs[selectedDate] = [];
+        workoutLogs[selectedDate].push(newLog);
+        saveLogs();
+        renderDailyLogs();
+        renderCalendar();
+    };
+
+    const openTemplateModal = (index) => {
+        currentEditingTemplate.index = index;
+        if (index !== null) {
+            const template = routineTemplates[index];
+            elements.templateModalTitle.textContent = "루틴 템플릿 수정";
+            elements.templateTitleInput.value = template.title;
+            currentEditingTemplate.exercises = JSON.parse(JSON.stringify(template.exercises));
+        } else {
+            elements.templateModalTitle.textContent = "새 루틴 템플릿 만들기";
+            elements.templateTitleInput.value = "";
+            currentEditingTemplate.exercises = [];
+        }
+        renderTemplateExerciseList();
+        elements.templateModal.classList.remove('hidden');
+    };
+
+    const renderTemplateExerciseList = () => {
+        elements.templateExerciseList.innerHTML = '';
+        if (currentEditingTemplate.exercises.length === 0) {
+            elements.templateExerciseList.innerHTML = '<p class="text-gray-500">운동을 추가해주세요.</p>';
+        } else {
+            currentEditingTemplate.exercises.forEach((ex, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 border-b';
+                item.innerHTML = `<span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span><button class="delete-template-ex-btn text-red-500 font-bold" data-index="${index}">&times;</button>`;
+                elements.templateExerciseList.appendChild(item);
+            });
+        }
+    };
+    
+    const openWorkoutModal = (logIndex) => {
+        const log = workoutLogs[selectedDate][logIndex];
+        elements.workoutModalTitle.textContent = log.title;
+        
+        const renderModalContent = () => {
+            elements.workoutModalList.innerHTML = '';
+            const currentLog = workoutLogs[selectedDate][logIndex];
+            currentLog.exercises.forEach((ex, exIndex) => {
+                let setsHtml = '';
+                for (let i = 1; i <= ex.sets; i++) {
+                    const isCompleted = i <= ex.completedSets;
+                    setsHtml += `
+                        <div class="set-item">
+                            <span>${i}세트: ${ex.weight}kg x ${ex.reps}회</span>
+                            <button class="set-complete-btn ${isCompleted ? 'completed' : ''}" data-log-index="${logIndex}" data-ex-index="${exIndex}" data-set-index="${i}">
+                                ${isCompleted ? '✓' : ''}
+                            </button>
+                        </div>
+                    `;
+                }
+                elements.workoutModalList.innerHTML += `<div class="mb-4"><h4 class="font-bold text-lg">${ex.name}</h4><div>${setsHtml}</div></div>`;
+            });
+        };
+        renderModalContent();
+        elements.workoutModalList.dataset.logIndex = logIndex;
+        elements.workoutModal.classList.remove('hidden');
+    };
+    
+    const handleTimerStart = () => {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            elements.timerStartBtn.textContent = '재개';
+            elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
+            return;
+        }
+        elements.timerStartBtn.textContent = '정지';
+        elements.timerStartBtn.classList.replace('bg-green-500', 'bg-yellow-500');
+        timerInterval = setInterval(() => {
+            timerSeconds--;
+            const minutes = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+            const seconds = String(timerSeconds % 60).padStart(2, '0');
+            elements.timerDisplay.textContent = `${minutes}:${seconds}`;
+            if (timerSeconds <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                alert('휴식 시간이 종료되었습니다!');
+                elements.timerStartBtn.textContent = '시작';
+                elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
+            }
+        }, 1000);
+    };
+
+    const handleFinishWorkout = () => {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerSeconds = 60;
+        elements.timerDisplay.textContent = '01:00';
+        elements.timerStartBtn.textContent = '시작';
+        elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
+        elements.workoutModal.classList.add('hidden');
+        renderStatsGraph();
+        renderCalendar();
+    };
+
+    const renderStatsGraph = () => {
+        const selectedBodyPart = elements.statsBodyPartSelect.value;
+        if (volumeChart) volumeChart.destroy();
+        if (!selectedBodyPart) return;
+        const labels = [];
+        const data = [];
+        Object.keys(workoutLogs).sort().forEach(date => {
+            let dailyVolume = 0;
+            if (workoutLogs[date]) {
+                workoutLogs[date].forEach(routine => {
+                    routine.exercises.forEach(ex => {
+                        const exerciseBodyPart = Object.keys(exercisesData).find(part => exercisesData[part].includes(ex.name));
+                        if (exerciseBodyPart === selectedBodyPart) {
+                            dailyVolume += ex.weight * ex.reps * ex.completedSets;
+                        }
+                    });
+                });
+            }
+            if (dailyVolume > 0) {
+                labels.push(date.substring(5));
+                data.push(dailyVolume);
+            }
+        });
+
+        volumeChart = new Chart(elements.volumeChartCanvas, {
+            type: 'line', 
+            data: { labels, datasets: [{ label: `${selectedBodyPart} 볼륨`, data, borderColor: 'rgb(59, 130, 246)', tension: 0.1 }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    };
+    
+    // --- 이벤트 리스너 설정 ---
+    const bindEventListeners = () => {
+        elements.backBtn.addEventListener('click', () => window.location.href = 'health.html');
+        elements.prevMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); renderDailyLogs(); });
+        elements.nextMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); renderDailyLogs(); });
+        elements.calendarBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('calendar-day') && e.target.dataset.date) {
+                selectedDate = e.target.dataset.date;
+                renderDailyLogs();
+                renderCalendar();
+            }
+        });
+        elements.closeWorkoutModalBtn.addEventListener('click', () => elements.workoutModal.classList.add('hidden'));
+        elements.statsBodyPartSelect.addEventListener('change', renderStatsGraph);
+        elements.timerStartBtn.addEventListener('click', handleTimerStart);
+        elements.finishWorkoutBtn.addEventListener('click', handleFinishWorkout);
+
+        elements.workoutModalList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('set-complete-btn')) {
+                const { logIndex, exIndex, setIndex } = e.target.dataset;
+                const exercise = workoutLogs[selectedDate][logIndex].exercises[exIndex];
+                exercise.completedSets = parseInt(setIndex);
+                saveLogs();
+                openWorkoutModal(parseInt(logIndex)); // Re-render the modal
+                handleTimerStart();
+            }
+        });
+
+        elements.cancelTemplateBtn.addEventListener('click', () => elements.templateModal.classList.add('hidden'));
+        elements.addTemplateExerciseBtn.addEventListener('click', () => {
+            const name = elements.templateExerciseSelect.value;
+            const weight = parseFloat(elements.templateWeightInput.value) || 0;
+            const reps = parseInt(elements.templateRepsInput.value) || 0;
+            const sets = parseInt(elements.templateSetsInput.value) || 0;
+            if (!name || reps <= 0 || sets <= 0) { alert('운동, 횟수(>0), 세트를 모두 올바르게 입력해주세요.'); return; }
+            currentEditingTemplate.exercises.push({ name, weight, reps, sets });
+            renderTemplateExerciseList();
+        });
+        elements.templateExerciseList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-template-ex-btn')) {
+                currentEditingTemplate.exercises.splice(e.target.dataset.index, 1);
+                renderTemplateExerciseList();
+            }
+        });
+        elements.saveTemplateBtn.addEventListener('click', () => {
+            const title = elements.templateTitleInput.value.trim();
+            if (!title) { alert('루틴 템플릿 이름을 입력해주세요.'); return; }
+            const newTemplate = { title, exercises: currentEditingTemplate.exercises };
+            if (currentEditingTemplate.index !== null) {
+                routineTemplates[currentEditingTemplate.index] = newTemplate;
+            } else {
+                routineTemplates.push(newTemplate);
+            }
+            saveTemplates();
+            renderRoutineTemplates();
+            elements.templateModal.classList.add('hidden');
+        });
+    };
+    
+    // --- 앱 초기화 ---
+    const init = () => {
+        loadTemplates();
+        loadLogs();
+        const populateSelects = () => {
+            const allSelects = [elements.templateExerciseSelect];
+            allSelects.forEach(select => {
+                select.innerHTML = '';
+                Object.keys(exercisesData).forEach(category => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = category;
+                    exercisesData[category].forEach(exercise => {
+                        const option = document.createElement('option');
+                        option.value = exercise;
+                        option.textContent = exercise;
+                        optgroup.appendChild(option);
+                    });
+                    select.appendChild(optgroup);
+                });
+            });
+        };
+        populateSelects();
+        renderCalendar();
+        renderRoutineTemplates();
+        renderDailyLogs();
+        bindEventListeners();
+        elements.statsBodyPartSelect.innerHTML = '<option value="">-- 부위 선택 --</option>' + Object.keys(exercisesData).map(p => `<option value="${p}">${p}</option>`).join('');
+    };
+
+    init();
+});
+</script>
+
+</body>
+</html>
