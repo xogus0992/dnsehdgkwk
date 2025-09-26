@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v5 (지능형 코스 생성)</title>
+    <title>다이어트 워킹 내비게이션 v5.1 (안정화 버전)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -16,8 +16,8 @@
             overflow-y: auto; max-height: 45%;
         }
         h2 { margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .input-wrapper { flex-grow: 1; position: relative; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-wrapper { flex-grow: 1; position: relative; min-width: 200px; }
         .input-wrapper::before {
             position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
             font-weight: bold; color: #4CAF50;
@@ -34,7 +34,7 @@
         #searchBtn {
             padding: 12px 25px; background-color: #4CAF50; color: white; border: none;
             border-radius: 5px; font-size: 1em; font-weight: bold; cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s; flex-shrink: 0;
         }
         #searchBtn:hover { background-color: #45a049; }
 
@@ -109,17 +109,29 @@
         });
     });
 
-    const getRoute = waypoints => new Promise(async (resolve, reject) => {
+    const getRoute = waypoints => new Promise(async (resolve) => {
         const origin = `${waypoints[0].x},${waypoints[0].y}`;
         const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
         const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
         const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND`;
         try {
             const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
-            if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
+            if (!response.ok) {
+                console.warn(`HTTP 에러: ${response.status}`);
+                resolve(null); // API 에러 시 null 반환
+                return;
+            }
             const data = await response.json();
-            resolve(data.routes && data.routes.length > 0 ? data.routes[0] : null);
-        } catch (error) { reject(error); }
+            // **오류 수정**: route와 summary가 모두 유효할 때만 경로 반환
+            if (data.routes && data.routes.length > 0 && data.routes[0].summary) {
+                resolve(data.routes[0]);
+            } else {
+                resolve(null);
+            }
+        } catch (error) { 
+            console.error("경로 요청 실패:", error);
+            resolve(null); 
+        }
     });
 
     const searchNearby = (coords, keyword, radius = 1500) => new Promise((resolve) => {
@@ -177,7 +189,7 @@
             const [startPoint, endPoint] = await Promise.all([searchPlace(startInput.value), searchPlace(endInput.value)]);
             
             const onewayRoute = await getRoute([startPoint, endPoint]);
-            if (!onewayRoute) throw new Error("기본 경로를 찾을 수 없습니다.");
+            if (!onewayRoute) throw new Error("기본 경로를 찾을 수 없습니다. 출발지/도착지를 확인해주세요.");
             
             const onewayCalories = Math.round((onewayRoute.summary.distance / 1000) * KCAL_PER_KM);
 
@@ -193,7 +205,7 @@
             const targetDist = (targetCalories / KCAL_PER_KM) * 1000;
             const vectorX = endPoint.x - startPoint.x;
             const vectorY = endPoint.y - startPoint.y;
-            const distRatio = Math.sqrt(targetDist / onewayRoute.summary.distance) / 2;
+            const distRatio = Math.sqrt(Math.max(0, targetDist / (onewayRoute.summary.distance + 1))) / 2;
 
             // B & C 코스: 목표 칼로리 기반 사각형/원형 코스
             const [midPark, midSubway] = await Promise.all([
@@ -229,19 +241,21 @@
             
             const courseData = [];
             routes.forEach((route, i) => {
-                if (!route) return;
-                const calories = Math.round((route.summary.distance / 1000) * KCAL_PER_KM);
-                courseData.push({
-                    name: courseCandidates[i].name,
-                    route: route,
-                    fitness: Math.abs(calories - targetCalories),
-                    color: COURSE_COLORS[i % COURSE_COLORS.length]
-                });
+                // **오류 수정**: route와 summary가 유효한지 다시 한번 확인
+                if (route && route.summary) {
+                    const calories = Math.round((route.summary.distance / 1000) * KCAL_PER_KM);
+                    courseData.push({
+                        name: courseCandidates[i].name,
+                        route: route,
+                        fitness: Math.abs(calories - targetCalories),
+                        color: COURSE_COLORS[i % COURSE_COLORS.length]
+                    });
+                }
             });
 
+            if (courseData.length === 0) throw new Error("추천할 코스를 찾지 못했습니다. 다른 장소를 시도해보세요.");
+            
             courseData.sort((a, b) => a.fitness - b.fitness);
-
-            if (courseData.length === 0) throw new Error("추천할 코스를 찾지 못했습니다.");
             
             drawRoutesAndFindIntersections(courseData);
             
@@ -271,7 +285,7 @@
             
         } catch (error) {
             alert(error.message);
-            resultArea.innerHTML = '<p>오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>';
+            resultArea.innerHTML = `<p>${error.message}</p>`;
         }
     }
 
