@@ -2,114 +2,49 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션</title>
+    <title>다이어트 워킹 내비게이션 v2</title>
     <style>
-        /* 기본 스타일 */
         html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: 'Malgun Gothic', dotum, '돋움', sans-serif;
-            background-color: #f0f0f0;
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
         }
-
-        /* 전체 레이아웃 */
-        .container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 지도 영역 */
-        #map {
-            width: 100%;
-            flex-grow: 1; /* 남은 공간을 모두 차지 */
-            min-height: 400px;
-        }
-
-        /* 정보 및 컨트롤 패널 */
+        .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+        #map { width: 100%; flex-grow: 1; min-height: 400px; }
         .info-panel {
-            width: 100%;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-            z-index: 10;
+            width: 100%; padding: 20px; background-color: white;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 10;
         }
-
-        h2 {
-            margin: 0 0 15px 0;
-            font-size: 1.5em;
-            color: #333;
-            text-align: center;
-        }
-
-        /* 입력 폼 스타일 (네이버 지도처럼) */
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .input-wrapper {
-            flex-grow: 1;
-            position: relative;
-        }
+        h2 { margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center; }
+        .input-group, .target-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-wrapper { flex-grow: 1; position: relative; }
         .input-wrapper::before {
-            position: absolute;
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
-            font-weight: bold;
-            color: #4CAF50;
+            position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
+            font-weight: bold; color: #4CAF50;
         }
         .input-wrapper.start::before { content: '출발'; }
         .input-wrapper.end::before { content: '도착'; }
         
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 12px 12px 55px; /* 아이콘 공간 확보 */
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1em;
-            box-sizing: border-box;
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 12px; border: 1px solid #ccc;
+            border-radius: 5px; font-size: 1em; box-sizing: border-box;
         }
+        .input-wrapper input { padding-left: 55px; }
+        .target-group label { font-weight: bold; color: #E61A5F; display:flex; align-items:center; }
         
         #searchBtn {
-            padding: 12px 25px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: bold;
-            cursor: pointer;
+            padding: 12px 25px; background-color: #4CAF50; color: white; border: none;
+            border-radius: 5px; font-size: 1em; font-weight: bold; cursor: pointer;
             transition: background-color 0.2s;
         }
-        #searchBtn:hover {
-            background-color: #45a049;
-        }
+        #searchBtn:hover { background-color: #45a049; }
 
-        /* 결과 표시 영역 */
         #result {
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            text-align: center;
-            font-size: 1.1em;
-            color: #555;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 15px; background-color: #f9f9f9; border-radius: 5px; text-align: center;
+            font-size: 1.1em; color: #555; line-height: 1.6;
         }
-        #result b {
-            color: #E61A5F;
-            font-size: 1.2em;
-            margin: 0 5px;
-        }
-
+        #result b { color: #E61A5F; font-size: 1.2em; margin: 0 3px; }
+        #result .oneway { color: #008000; } /* 초록색 */
+        #result .roundtrip { color: #DAA520; } /* 노란색 계열 */
     </style>
 </head>
 <body>
@@ -118,6 +53,10 @@
     <div id="map"></div>
     <div class="info-panel">
         <h2>🚶 나의 건강한 걷기</h2>
+        <div class="target-group">
+            <label for="targetCalories">🔥 목표 소모 칼로리(kcal)</label>
+            <input type="number" id="targetCalories" placeholder="예: 300" style="flex-grow: 1;">
+        </div>
         <div class="input-group">
             <div class="input-wrapper start">
                 <input type="text" id="start" placeholder="예: 부천시청">
@@ -128,45 +67,36 @@
             <button id="searchBtn">경로 검색</button>
         </div>
         <div id="result">
-            <p>출발지와 도착지를 입력하고 경로를 검색하세요.</p>
+            <p>목표 칼로리와 장소를 입력하고 경로를 검색하세요.</p>
         </div>
     </div>
 </div>
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 <script>
-    // ===================================================================
-    // 제공해주신 REST API 키를 적용했습니다.
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
-    // ===================================================================
-    
-    // 1km 걸을 때 소모되는 평균 칼로리 (성인 기준 약 60kcal)
-    const KCAL_PER_KM = 60;
+    const KCAL_PER_KM = 60; // 1km당 소모 칼로리
 
     const mapContainer = document.getElementById('map');
     const startInput = document.getElementById('start');
     const endInput = document.getElementById('end');
+    const targetCaloriesInput = document.getElementById('targetCalories');
     const searchBtn = document.getElementById('searchBtn');
     const resultDiv = document.getElementById('result');
 
-    // 지도 초기화 (부천시 중심)
-    const mapOption = { 
-        center: new kakao.maps.LatLng(37.5034, 126.7661), 
-        level: 5 
-    };
-    const map = new kakao.maps.Map(mapContainer, mapOption);
+    const map = new kakao.maps.Map(mapContainer, {
+        center: new kakao.maps.LatLng(37.5034, 126.7661),
+        level: 5
+    });
 
-    let startMarker = null;
-    let endMarker = null;
-    let currentPolyline = null;
+    let startCoords, endCoords;
+    let polylines = []; // 지도에 그려진 폴리라인들을 관리할 배열
+    let markers = []; // 마커들을 관리할 배열
 
-    // 장소 검색을 Promise로 처리하는 헬퍼 함수
+    // 장소 검색 Promise
     function searchPlace(query) {
         return new Promise((resolve, reject) => {
-            if (!query.trim()) {
-                reject(new Error("검색어가 비어있습니다."));
-                return;
-            }
+            if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
             const ps = new kakao.maps.services.Places();
             ps.keywordSearch(query, (data, status) => {
                 if (status === kakao.maps.services.Status.OK) {
@@ -178,38 +108,35 @@
         });
     }
 
-    // 도보 길찾기 API 호출 (async/await 사용)
-    async function getWalkingRoute(start, end) {
-        const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${start.getLng()},${start.getLat()}&destination=${end.getLng()},${end.getLat()}&priority=RECOMMEND`;
-
+    // 길찾기 API 호출
+    async function getRouteAPI(origin, destination) {
+        const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin.getLng()},${origin.getLat()}&destination=${destination.getLng()},${destination.getLat()}&priority=RECOMMEND`;
         try {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` }
             });
-
             if (!response.ok) throw new Error(`HTTP 에러! Status: ${response.status}`);
-            
             const data = await response.json();
-
-            if (data.routes && data.routes.length > 0) {
-                displayRoute(data.routes[0]);
-            } else {
-                alert('해당 구간의 도보 경로를 찾을 수 없습니다.');
-            }
+            if (data.routes && data.routes.length > 0) return data.routes[0];
+            return null;
         } catch (error) {
             console.error("길찾기 API 요청 실패:", error);
-            alert("길찾기 서비스에 오류가 발생했습니다. 키를 다시 확인해주세요.");
+            alert("길찾기 서비스에 오류가 발생했습니다.");
+            return null;
         }
     }
     
-    // 경로 정보 표시 및 지도에 그리기
-    function displayRoute(route) {
-        // 기존 마커와 폴리라인 제거
-        if (startMarker) startMarker.setMap(null);
-        if (endMarker) endMarker.setMap(null);
-        if (currentPolyline) currentPolyline.setMap(null);
+    // 지도 위 모든 그래픽 요소 초기화
+    function clearMap() {
+        polylines.forEach(p => p.setMap(null));
+        polylines = [];
+        markers.forEach(m => m.setMap(null));
+        markers = [];
+    }
 
+    // 경로 그리기 및 정보 표시
+    function drawRoute(route, color) {
         const linePath = [];
         route.sections.forEach(section => {
             section.roads.forEach(road => {
@@ -219,57 +146,80 @@
             });
         });
 
-        // 초록색 폴리라인 생성
-        currentPolyline = new kakao.maps.Polyline({
-            path: linePath,
-            strokeWeight: 6,
-            strokeColor: '#00FF00', // 초록색
-            strokeOpacity: 0.8,
-            strokeStyle: 'solid'
+        const polyline = new kakao.maps.Polyline({
+            path: linePath, strokeWeight: 8, strokeColor: color,
+            strokeOpacity: 0.8, strokeStyle: 'solid'
         });
-        currentPolyline.setMap(map);
-
-        // 출발/도착 마커 생성
-        startMarker = new kakao.maps.Marker({ position: linePath[0], title: '출발지' });
-        endMarker = new kakao.maps.Marker({ position: linePath[linePath.length - 1], title: '도착지' });
-        startMarker.setMap(map);
-        endMarker.setMap(map);
+        polyline.setMap(map);
+        polylines.push(polyline);
         
-        // 결과 계산 및 표시
-        const distanceKm = (route.summary.distance / 1000).toFixed(2);
-        const calories = Math.round(distanceKm * KCAL_PER_KM);
-        const durationMin = Math.round(route.summary.duration / 60);
-
-        resultDiv.innerHTML = `
-            총 거리 <b>${distanceKm} km</b> | 예상 시간 <b>${durationMin} 분</b> | 소모 칼로리 <b>${calories} kcal</b>
-        `;
-        
-        // 지도를 경로에 맞게 재조정
-        const bounds = new kakao.maps.LatLngBounds();
-        linePath.forEach(point => bounds.extend(point));
-        map.setBounds(bounds);
+        return linePath;
     }
 
     // 메인 실행 함수
     async function searchAndNavigate() {
-        const startQuery = startInput.value;
-        const endQuery = endInput.value;
-
-        if (!startQuery || !endQuery) {
+        if (!startInput.value || !endInput.value) {
             alert('출발지와 도착지를 모두 입력해주세요!');
             return;
         }
         
+        clearMap();
         resultDiv.innerHTML = '<p>경로를 검색 중입니다...</p>';
 
         try {
-            // Promise.all로 출발지와 도착지 좌표를 동시에 검색
-            const [startCoords, endCoords] = await Promise.all([
-                searchPlace(startQuery),
-                searchPlace(endQuery)
+            [startCoords, endCoords] = await Promise.all([
+                searchPlace(startInput.value), searchPlace(endInput.value)
             ]);
             
-            getWalkingRoute(startCoords, endCoords);
+            const onewayRoute = await getRouteAPI(startCoords, endCoords);
+            if (!onewayRoute) {
+                resultDiv.innerHTML = '<p>경로를 찾을 수 없습니다.</p>';
+                return;
+            };
+
+            // [가는 길] 초록색으로 그리기
+            const onewayPath = drawRoute(onewayRoute, '#00FF00');
+
+            const onewayDistance = (onewayRoute.summary.distance / 1000);
+            const onewayCalories = Math.round(onewayDistance * KCAL_PER_KM);
+            const onewayDuration = Math.round(onewayRoute.summary.duration / 60);
+
+            let resultHTML = `<span class="oneway">[편도] 거리 <b>${onewayDistance.toFixed(2)}km</b> | 시간 <b>${onewayDuration}분</b> | 소모 <b>${onewayCalories}kcal</b></span>`;
+
+            const targetCalories = parseInt(targetCaloriesInput.value, 10);
+
+            // 목표 칼로리가 있고, 편도 소모량보다 클 경우 왕복 경로 탐색
+            if (targetCalories && targetCalories > onewayCalories) {
+                const returnRoute = await getRouteAPI(endCoords, startCoords);
+                if (returnRoute) {
+                    // [오는 길] 노란색으로 그리기
+                    drawRoute(returnRoute, '#FFFF00');
+
+                    const roundtripDistance = onewayDistance + (returnRoute.summary.distance / 1000);
+                    const roundtripCalories = onewayCalories + Math.round((returnRoute.summary.distance / 1000) * KCAL_PER_KM);
+                    const roundtripDuration = onewayDuration + Math.round(returnRoute.summary.duration / 60);
+
+                    resultHTML += `<br><span class="roundtrip">[왕복] 거리 <b>${roundtripDistance.toFixed(2)}km</b> | 시간 <b>${roundtripDuration}분</b> | 소모 <b>${roundtripCalories}kcal</b></span>`;
+
+                    if(roundtripCalories < targetCalories) {
+                        resultHTML += `<br>목표까지 <b>${targetCalories - roundtripCalories} kcal</b> 더 필요합니다!`;
+                    } else {
+                        resultHTML += `<br><b>축하합니다!</b> 왕복 시 목표 칼로리를 달성할 수 있어요!`;
+                    }
+                }
+            }
+            resultDiv.innerHTML = resultHTML;
+
+            // 마커 표시 및 지도 범위 재설정
+            const startMarker = new kakao.maps.Marker({ position: startCoords, title: '출발지' });
+            const endMarker = new kakao.maps.Marker({ position: endCoords, title: '도착지' });
+            startMarker.setMap(map);
+            endMarker.setMap(map);
+            markers.push(startMarker, endMarker);
+            
+            const bounds = new kakao.maps.LatLngBounds();
+            onewayPath.forEach(p => bounds.extend(p));
+            map.setBounds(bounds);
 
         } catch (error) {
             alert(error.message);
@@ -277,12 +227,11 @@
         }
     }
 
-    // '경로 검색' 버튼 클릭 이벤트
+    // 이벤트 리스너
     searchBtn.addEventListener('click', searchAndNavigate);
-    
-    // 엔터 키로 검색 실행
-    startInput.addEventListener('keydown', (e) => e.key === 'Enter' && searchAndNavigate());
-    endInput.addEventListener('keydown', (e) => e.key === 'Enter' && searchAndNavigate());
+    [startInput, endInput, targetCaloriesInput].forEach(input => {
+        input.addEventListener('keydown', (e) => e.key === 'Enter' && searchBtn.click());
+    });
 
 </script>
 
