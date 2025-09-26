@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v4</title>
+    <title>다이어트 워킹 내비게이션 v5 (지능형 코스 생성)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -57,7 +57,7 @@
 <div class="container">
     <div id="map"></div>
     <div class="info-panel">
-        <h2>🎯 목표 기반 코스 추천</h2>
+        <h2>💡 지능형 운동 코스 추천</h2>
         <div class="input-group">
             <div class="input-wrapper start">
                 <input type="text" id="start" placeholder="출발지 (예: 부천역)">
@@ -94,7 +94,7 @@
     });
     
     const ps = new kakao.maps.services.Places();
-    const COURSE_COLORS = ["#FFA500", "#0000FF", "#008000"]; // 주황, 파랑, 초록
+    const COURSE_COLORS = ["#008000", "#FFA500", "#0000FF", "#FF1493"]; // 초록, 주황, 파랑, 핑크
     const INTERSECTION_COLOR = "#8A2BE2"; // 보라색
 
     let polylines = [];
@@ -113,64 +113,52 @@
         const origin = `${waypoints[0].x},${waypoints[0].y}`;
         const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
         const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
-        
         const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND`;
-        
         try {
             const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
             if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
             const data = await response.json();
-            if (data.routes && data.routes.length > 0) resolve(data.routes[0]);
-            else resolve(null);
+            resolve(data.routes && data.routes.length > 0 ? data.routes[0] : null);
         } catch (error) { reject(error); }
     });
 
-    const searchNearby = (coords, keyword) => new Promise((resolve) => {
+    const searchNearby = (coords, keyword, radius = 1500) => new Promise((resolve) => {
         ps.keywordSearch(keyword, (data, status) => {
-            if (status === kakao.maps.services.Status.OK) resolve(data[0]);
-            else resolve(null);
-        }, { location: new kakao.maps.LatLng(coords.y, coords.x), radius: 2000 });
+            resolve(status === kakao.maps.services.Status.OK ? data[0] : null);
+        }, { location: new kakao.maps.LatLng(coords.y, coords.x), radius });
     });
 
     const clearMap = () => {
-        polylines.forEach(p => p.setMap(null));
-        polylines = [];
-        markers.forEach(m => m.setMap(null));
-        markers = [];
+        polylines.forEach(p => p.setMap(null)); polylines = [];
+        markers.forEach(m => m.setMap(null)); markers = [];
     };
 
-    // --- 경로 분석 및 시각화 함수 ---
+    // --- 경로 분석 및 시각화 ---
     const drawRoutesAndFindIntersections = (courseData) => {
         const segmentMap = new Map();
-
-        // 1. 모든 경로의 선분(segment)을 분석
         courseData.forEach((course, courseIndex) => {
             if (!course.route) return;
             course.route.sections.forEach(s => s.roads.forEach(r => {
                 for (let i = 0; i < r.vertexes.length - 2; i += 2) {
                     const p1 = { lat: r.vertexes[i + 1], lng: r.vertexes[i] };
                     const p2 = { lat: r.vertexes[i + 3], lng: r.vertexes[i + 2] };
-                    
-                    // 정규화된 선분 키 생성 (시작점-끝점 순서 무관)
                     const key = [p1, p2].map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).sort().join(':');
-                    
                     if (!segmentMap.has(key)) segmentMap.set(key, { points: [p1, p2], courses: new Set() });
                     segmentMap.get(key).courses.add(courseIndex);
                 }
             }));
         });
 
-        // 2. 고유 경로와 겹치는 경로를 분리하여 그림
         segmentMap.forEach(data => {
             const path = [new kakao.maps.LatLng(data.points[0].lat, data.points[0].lng), new kakao.maps.LatLng(data.points[1].lat, data.points[1].lng)];
-            if (data.courses.size > 1) {
-                // 겹치는 구간 (보라색)
-                polylines.push(new kakao.maps.Polyline({ map, path, strokeWeight: 8, strokeColor: INTERSECTION_COLOR, strokeOpacity: 0.9, zIndex: 1 }));
-            } else {
-                // 고유 구간 (각 코스 색상)
-                const courseIndex = [...data.courses][0];
-                polylines.push(new kakao.maps.Polyline({ map, path, strokeWeight: 6, strokeColor: COURSE_COLORS[courseIndex], strokeOpacity: 0.8 }));
-            }
+            const isIntersection = data.courses.size > 1;
+            polylines.push(new kakao.maps.Polyline({
+                map, path,
+                strokeWeight: isIntersection ? 8 : 6,
+                strokeColor: isIntersection ? INTERSECTION_COLOR : COURSE_COLORS[[...data.courses][0]],
+                strokeOpacity: 0.9,
+                zIndex: isIntersection ? 1 : 0
+            }));
         });
     };
     
@@ -188,63 +176,91 @@
         try {
             const [startPoint, endPoint] = await Promise.all([searchPlace(startInput.value), searchPlace(endInput.value)]);
             
-            // 다양한 경유지 후보 탐색
-            const [park, subway] = await Promise.all([
-                searchNearby(startPoint, "공원"),
-                searchNearby(startPoint, "지하철역")
-            ]);
-
-            const waypointsCandidates = [
-                [startPoint, endPoint, startPoint], // 기본 원형
-                park ? [startPoint, park, endPoint, startPoint] : null, // 공원 경유
-                subway && subway.id !== startPoint.id ? [startPoint, subway, endPoint, startPoint] : null // 다른 역 경유
-            ].filter(Boolean);
-
-            const courses = await Promise.all(waypointsCandidates.map(getRoute));
+            const onewayRoute = await getRoute([startPoint, endPoint]);
+            if (!onewayRoute) throw new Error("기본 경로를 찾을 수 없습니다.");
             
-            // 결과 분석 및 카드 생성
-            let resultHTML = "";
-            const courseData = [];
-            
-            courses.forEach((route, i) => {
-                if (!route) return;
-                
-                const distance = route.summary.distance;
-                const calories = Math.round((distance / 1000) * KCAL_PER_KM);
-                // 목표 칼로리와의 차이를 기준으로 코스의 "적합도" 점수 계산
-                const fitness = Math.abs(calories - targetCalories);
-                
-                courseData.push({ route, fitness, color: COURSE_COLORS[i] });
-            });
-            
-            // 적합도(목표 칼로리와의 근접성)가 높은 순으로 정렬
-            courseData.sort((a, b) => a.fitness - b.fitness);
+            const onewayCalories = Math.round((onewayRoute.summary.distance / 1000) * KCAL_PER_KM);
 
-            if (courseData.length === 0) {
-                 resultArea.innerHTML = '<p>추천할 코스를 찾지 못했습니다. 장소를 변경하여 시도해보세요.</p>';
-                 return;
+            let courseCandidates = [];
+
+            // A 코스: 기본 최단 경로 (왕복)
+            const basicReturnRoute = await getRoute([endPoint, startPoint]);
+            if (basicReturnRoute) {
+                const combinedRouteA = { summary: { distance: onewayRoute.summary.distance + basicReturnRoute.summary.distance, duration: onewayRoute.summary.duration + basicReturnRoute.summary.duration }, sections: [...onewayRoute.sections, ...basicReturnRoute.sections] };
+                courseCandidates.push({ name: "[기본] 최단거리 코스", route: combinedRouteA });
             }
 
-            drawRoutesAndFindIntersections(courseData);
+            const targetDist = (targetCalories / KCAL_PER_KM) * 1000;
+            const vectorX = endPoint.x - startPoint.x;
+            const vectorY = endPoint.y - startPoint.y;
+            const distRatio = Math.sqrt(targetDist / onewayRoute.summary.distance) / 2;
 
-            courseData.forEach((course, i) => {
-                const { route, color } = course;
+            // B & C 코스: 목표 칼로리 기반 사각형/원형 코스
+            const [midPark, midSubway] = await Promise.all([
+                searchNearby({ y: startPoint.y + vectorY * 0.5, x: startPoint.x + vectorX * 0.5 }, "공원"),
+                searchNearby({ y: startPoint.y + vectorY * 0.5 - vectorX * distRatio, x: startPoint.x + vectorX * 0.5 + vectorY * distRatio }, "지하철역")
+            ]);
+
+            if (midPark) courseCandidates.push({ name: "[목표] 원형 코스", waypoints: [startPoint, midPark, endPoint, startPoint] });
+            if (midSubway) courseCandidates.push({ name: "[목표] 사각 코스", waypoints: [startPoint, midSubway, endPoint, startPoint] });
+
+            // D 코스: 단거리 목표 코스
+            if (targetCalories < onewayCalories) {
+                let accumulatedDist = 0;
+                let turnPoint = null;
+                for (const section of onewayRoute.sections) {
+                    for (const road of section.roads) {
+                        if (accumulatedDist + road.distance > targetDist / 2) {
+                            turnPoint = { x: road.vertexes[road.vertexes.length - 2], y: road.vertexes[road.vertexes.length - 1] };
+                            break;
+                        }
+                        accumulatedDist += road.distance;
+                    }
+                    if (turnPoint) break;
+                }
+                if (turnPoint) {
+                    const nearbyPoint = await searchNearby(turnPoint, "사거리", 500);
+                    if (nearbyPoint) courseCandidates.push({ name: `[${targetCalories}kcal] 단거리 코스`, waypoints: [startPoint, nearbyPoint, startPoint] });
+                }
+            }
+
+            const coursePromises = courseCandidates.map(c => c.waypoints ? getRoute(c.waypoints) : Promise.resolve(c.route));
+            const routes = await Promise.all(coursePromises);
+            
+            const courseData = [];
+            routes.forEach((route, i) => {
+                if (!route) return;
+                const calories = Math.round((route.summary.distance / 1000) * KCAL_PER_KM);
+                courseData.push({
+                    name: courseCandidates[i].name,
+                    route: route,
+                    fitness: Math.abs(calories - targetCalories),
+                    color: COURSE_COLORS[i % COURSE_COLORS.length]
+                });
+            });
+
+            courseData.sort((a, b) => a.fitness - b.fitness);
+
+            if (courseData.length === 0) throw new Error("추천할 코스를 찾지 못했습니다.");
+            
+            drawRoutesAndFindIntersections(courseData);
+            
+            let resultHTML = "";
+            courseData.slice(0, 4).forEach((course, i) => {
+                const { route, color, name } = course;
                 const distanceKm = (route.summary.distance / 1000).toFixed(2);
                 const durationMin = Math.round(route.summary.duration / 60);
                 const calories = Math.round(parseFloat(distanceKm) * KCAL_PER_KM);
-
                 resultHTML += `
                     <div class="route-card" style="border-color: ${color};">
-                        <h3><span class="color-box" style="background-color:${color}"></span>추천 코스 ${i + 1}</h3>
+                        <h3><span class="color-box" style="background-color:${color}"></span>${name}</h3>
                         <p>총 거리: <b>${distanceKm} km</b></p>
                         <p>예상 시간: <b>${durationMin} 분</b></p>
                         <p>소모 칼로리: <b>${calories} kcal</b></p>
                     </div>`;
             });
-
             resultArea.innerHTML = resultHTML;
-            
-            // 마커 및 지도 범위 설정
+
             const bounds = new kakao.maps.LatLngBounds();
             courseData.forEach(c => c.route.sections.forEach(s => s.roads.forEach(r => {
                 for (let i = 0; i < r.vertexes.length; i += 2) {
@@ -253,9 +269,6 @@
             })));
             map.setBounds(bounds);
             
-            markers.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
-            markers.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
-
         } catch (error) {
             alert(error.message);
             resultArea.innerHTML = '<p>오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>';
