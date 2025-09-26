@@ -2,235 +2,287 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>카카오 도보 길찾기</title>
+    <title>다이어트 워킹 내비게이션</title>
     <style>
+        /* 기본 스타일 */
         html, body {
             width: 100%;
             height: 100%;
             margin: 0;
             padding: 0;
             font-family: 'Malgun Gothic', dotum, '돋움', sans-serif;
+            background-color: #f0f0f0;
         }
+
+        /* 전체 레이아웃 */
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 지도 영역 */
         #map {
             width: 100%;
-            height: 70%;
+            flex-grow: 1; /* 남은 공간을 모두 차지 */
+            min-height: 400px;
         }
+
+        /* 정보 및 컨트롤 패널 */
         .info-panel {
-            padding: 15px;
-            box-sizing: border-box;
-            height: 30%;
             width: 100%;
-            background-color: #f9f9f9;
-            border-top: 1px solid #ccc;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            z-index: 10;
         }
-        .search-box {
+
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.5em;
+            color: #333;
+            text-align: center;
+        }
+
+        /* 입력 폼 스타일 (네이버 지도처럼) */
+        .input-group {
+            display: flex;
+            gap: 10px;
             margin-bottom: 15px;
         }
-        #destination {
-            width: 250px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        .input-wrapper {
+            flex-grow: 1;
+            position: relative;
         }
+        .input-wrapper::before {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .input-wrapper.start::before { content: '출발'; }
+        .input-wrapper.end::before { content: '도착'; }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 12px 12px 55px; /* 아이콘 공간 확보 */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        
         #searchBtn {
-            padding: 8px 12px;
+            padding: 12px 25px;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: bold;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         #searchBtn:hover {
             background-color: #45a049;
         }
+
+        /* 결과 표시 영역 */
         #result {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            text-align: center;
             font-size: 1.1em;
-            color: #333;
+            color: #555;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #result p {
-            margin: 8px 0;
-        }
-        b {
+        #result b {
             color: #E61A5F;
+            font-size: 1.2em;
+            margin: 0 5px;
         }
+
     </style>
 </head>
 <body>
 
-<div class="info-panel">
-    <h2>🚶 도보 길찾기</h2>
-    <div class="search-box">
-        <input type="text" id="destination" placeholder="목적지 입력 (예: 부천역, 시흥대로96길 15)">
-        <button id="searchBtn">길찾기</button>
-    </div>
-    <div id="result">
-        <p>목적지를 검색하시면 예상 거리와 소모 칼로리를 알려드립니다.</p>
+<div class="container">
+    <div id="map"></div>
+    <div class="info-panel">
+        <h2>🚶 나의 건강한 걷기</h2>
+        <div class="input-group">
+            <div class="input-wrapper start">
+                <input type="text" id="start" placeholder="예: 부천시청">
+            </div>
+            <div class="input-wrapper end">
+                <input type="text" id="end" placeholder="예: 부천역">
+            </div>
+            <button id="searchBtn">경로 검색</button>
+        </div>
+        <div id="result">
+            <p>출발지와 도착지를 입력하고 경로를 검색하세요.</p>
+        </div>
     </div>
 </div>
-<div id="map"></div>
 
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=71b46fcb7202af130ab7c6c18bf5163a&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 <script>
     // ===================================================================
-    // ⚠️ 경고: 아래 키는 JavaScript 키입니다. 길찾기 기능은 이 키로 작동하지 않습니다.
-    // 길찾기를 위해서는 [카카오 개발자] 사이트에서 확인한 진짜 'REST API 키'로 반드시 교체해야 합니다!
-    const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a'; 
+    // 제공해주신 REST API 키를 적용했습니다.
+    const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
     // ===================================================================
     
-    // 칼로리 계산 상수 (성인 평균, 1km당 약 50kcal 소모 기준)
-    const KCAL_PER_KM = 50;
+    // 1km 걸을 때 소모되는 평균 칼로리 (성인 기준 약 60kcal)
+    const KCAL_PER_KM = 60;
 
     const mapContainer = document.getElementById('map');
+    const startInput = document.getElementById('start');
+    const endInput = document.getElementById('end');
     const searchBtn = document.getElementById('searchBtn');
-    const destinationInput = document.getElementById('destination');
     const resultDiv = document.getElementById('result');
 
-    let map;
-    let currentPolyline = null;
+    // 지도 초기화 (부천시 중심)
+    const mapOption = { 
+        center: new kakao.maps.LatLng(37.5034, 126.7661), 
+        level: 5 
+    };
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+
     let startMarker = null;
     let endMarker = null;
-    let myPosition;
+    let currentPolyline = null;
 
-    // 1. 지도 초기화 및 현재 위치 가져오기
-    function initMap() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                myPosition = new kakao.maps.LatLng(lat, lon);
-                
-                const mapOption = { 
-                    center: myPosition, 
-                    level: 4 
-                };
-                map = new kakao.maps.Map(mapContainer, mapOption);
-                startMarker = new kakao.maps.Marker({ position: myPosition, title: '현재 위치' });
-                startMarker.setMap(map);
-
-            }, function() {
-                alert('위치 정보를 가져올 수 없습니다. 기본 위치에서 시작합니다.');
-                setDefaultMap();
-            });
-        } else {
-            alert('이 브라우저는 Geolocation을 지원하지 않습니다. 기본 위치에서 시작합니다.');
-            setDefaultMap();
-        }
-    }
-    
-    // 위치 정보 사용 불가 시 기본 지도 설정
-    function setDefaultMap() {
-        myPosition = new kakao.maps.LatLng(37.5035, 126.766); // 부천시청
-        const mapOption = { center: myPosition, level: 4 };
-        map = new kakao.maps.Map(mapContainer, mapOption);
-    }
-
-    // 2. 장소 검색 및 길찾기 실행 함수
-    function searchAndNavigate() {
-        const destination = destinationInput.value;
-        if (!destination.trim()) {
-            alert('목적지를 입력해주세요!');
-            return;
-        }
-        
-        const ps = new kakao.maps.services.Places();
-        ps.keywordSearch(destination, function(data, status) {
-            if (status === kakao.maps.services.Status.OK) {
-                const destCoords = new kakao.maps.LatLng(data[0].y, data[0].x);
-                getWalkingRoute(myPosition, destCoords);
-            } else {
-                alert('장소 검색에 실패했습니다: ' + status);
+    // 장소 검색을 Promise로 처리하는 헬퍼 함수
+    function searchPlace(query) {
+        return new Promise((resolve, reject) => {
+            if (!query.trim()) {
+                reject(new Error("검색어가 비어있습니다."));
+                return;
             }
+            const ps = new kakao.maps.services.Places();
+            ps.keywordSearch(query, (data, status) => {
+                if (status === kakao.maps.services.Status.OK) {
+                    resolve(new kakao.maps.LatLng(data[0].y, data[0].x));
+                } else {
+                    reject(new Error(`'${query}' 검색 실패`));
+                }
+            });
         });
     }
-    
-    // 3. REST API를 이용해 도보 길찾기 데이터 요청
+
+    // 도보 길찾기 API 호출 (async/await 사용)
     async function getWalkingRoute(start, end) {
-        const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${start.getLng()},${start.getLat()}&destination=${end.getLng()},${end.getLat()}&waypoints=&priority=RECOMMEND&car_type=1&car_fuel=GASOLINE&alternatives=false&road_details=false`;
+        const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${start.getLng()},${start.getLat()}&destination=${end.getLng()},${end.getLat()}&priority=RECOMMEND`;
 
         try {
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `KakaoAK ${REST_API_KEY}`
-                }
+                headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` }
             });
 
-            if (!response.ok) {
-                // 인증 실패(401) 시 더 구체적인 안내 제공
-                if (response.status === 401) {
-                    throw new Error('인증 실패(401): REST API 키가 올바르지 않습니다. 코드를 확인해주세요.');
-                }
-                throw new Error(`HTTP 에러! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            if (!response.ok) throw new Error(`HTTP 에러! Status: ${response.status}`);
             
+            const data = await response.json();
+
             if (data.routes && data.routes.length > 0) {
-                const route = data.routes[0];
-                const linePath = [];
-                
-                route.sections.forEach(section => {
-                    section.roads.forEach(road => {
-                        for (let i = 0; i < road.vertexes.length; i += 2) {
-                            linePath.push(new kakao.maps.LatLng(road.vertexes[i+1], road.vertexes[i]));
-                        }
-                    });
-                });
-
-                drawPolyline(linePath);
-                
-                const distanceKm = (route.summary.distance / 1000).toFixed(2);
-                const calories = Math.round(distanceKm * KCAL_PER_KM);
-                
-                resultDiv.innerHTML = `
-                    <p>📍 총 거리: <b>${distanceKm} km</b></p>
-                    <p>🔥 예상 소모 칼로리: <b>${calories} kcal</b></p>
-                    <p>⏳ 예상 소요 시간: <b>${Math.round(route.summary.duration / 60)} 분</b></p>
-                `;
-                
-                if (endMarker) endMarker.setMap(null);
-                endMarker = new kakao.maps.Marker({ position: end, title: '도착지' });
-                endMarker.setMap(map);
-
-                const bounds = new kakao.maps.LatLngBounds();
-                linePath.forEach(point => bounds.extend(point));
-                map.setBounds(bounds);
-                
+                displayRoute(data.routes[0]);
             } else {
-                 alert('도보 경로를 찾을 수 없습니다.');
+                alert('해당 구간의 도보 경로를 찾을 수 없습니다.');
             }
-
         } catch (error) {
             console.error("길찾기 API 요청 실패:", error);
-            alert("길찾기 서비스에 오류가 발생했습니다. " + error.message);
+            alert("길찾기 서비스에 오류가 발생했습니다. 키를 다시 확인해주세요.");
         }
     }
     
-    // 4. 지도에 경로(Polyline)를 그리는 함수
-    function drawPolyline(linePath) {
-        if (currentPolyline) {
-            currentPolyline.setMap(null);
-        }
+    // 경로 정보 표시 및 지도에 그리기
+    function displayRoute(route) {
+        // 기존 마커와 폴리라인 제거
+        if (startMarker) startMarker.setMap(null);
+        if (endMarker) endMarker.setMap(null);
+        if (currentPolyline) currentPolyline.setMap(null);
+
+        const linePath = [];
+        route.sections.forEach(section => {
+            section.roads.forEach(road => {
+                for (let i = 0; i < road.vertexes.length; i += 2) {
+                    linePath.push(new kakao.maps.LatLng(road.vertexes[i+1], road.vertexes[i]));
+                }
+            });
+        });
+
+        // 초록색 폴리라인 생성
         currentPolyline = new kakao.maps.Polyline({
             path: linePath,
-            strokeWeight: 5,
-            strokeColor: '#00FF00',
+            strokeWeight: 6,
+            strokeColor: '#00FF00', // 초록색
             strokeOpacity: 0.8,
             strokeStyle: 'solid'
         });
         currentPolyline.setMap(map);
-    }
-    
-    // 이벤트 리스너 등록
-    searchBtn.addEventListener('click', searchAndNavigate);
-    destinationInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            searchAndNavigate();
-        }
-    });
 
-    // 페이지 로드 시 지도 초기화
-    initMap();
+        // 출발/도착 마커 생성
+        startMarker = new kakao.maps.Marker({ position: linePath[0], title: '출발지' });
+        endMarker = new kakao.maps.Marker({ position: linePath[linePath.length - 1], title: '도착지' });
+        startMarker.setMap(map);
+        endMarker.setMap(map);
+        
+        // 결과 계산 및 표시
+        const distanceKm = (route.summary.distance / 1000).toFixed(2);
+        const calories = Math.round(distanceKm * KCAL_PER_KM);
+        const durationMin = Math.round(route.summary.duration / 60);
+
+        resultDiv.innerHTML = `
+            총 거리 <b>${distanceKm} km</b> | 예상 시간 <b>${durationMin} 분</b> | 소모 칼로리 <b>${calories} kcal</b>
+        `;
+        
+        // 지도를 경로에 맞게 재조정
+        const bounds = new kakao.maps.LatLngBounds();
+        linePath.forEach(point => bounds.extend(point));
+        map.setBounds(bounds);
+    }
+
+    // 메인 실행 함수
+    async function searchAndNavigate() {
+        const startQuery = startInput.value;
+        const endQuery = endInput.value;
+
+        if (!startQuery || !endQuery) {
+            alert('출발지와 도착지를 모두 입력해주세요!');
+            return;
+        }
+        
+        resultDiv.innerHTML = '<p>경로를 검색 중입니다...</p>';
+
+        try {
+            // Promise.all로 출발지와 도착지 좌표를 동시에 검색
+            const [startCoords, endCoords] = await Promise.all([
+                searchPlace(startQuery),
+                searchPlace(endQuery)
+            ]);
+            
+            getWalkingRoute(startCoords, endCoords);
+
+        } catch (error) {
+            alert(error.message);
+            resultDiv.innerHTML = '<p>오류가 발생했습니다. 장소 이름을 다시 확인해주세요.</p>';
+        }
+    }
+
+    // '경로 검색' 버튼 클릭 이벤트
+    searchBtn.addEventListener('click', searchAndNavigate);
+    
+    // 엔터 키로 검색 실행
+    startInput.addEventListener('keydown', (e) => e.key === 'Enter' && searchAndNavigate());
+    endInput.addEventListener('keydown', (e) => e.key === 'Enter' && searchAndNavigate());
 
 </script>
 
