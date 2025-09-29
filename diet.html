@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v18 (AI 순환 코스)</title>
+    <title>다이어트 워킹 내비게이션 v19 (단일 순환 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -20,7 +20,7 @@
             display: flex; align-items: center; justify-content: center;
         }
         .version-tag {
-            font-size: 0.5em; font-weight: bold; color: white; background-color: #007bff;
+            font-size: 0.5em; font-weight: bold; color: white; background-color: #E61A5F;
             padding: 3px 6px; border-radius: 8px; margin-left: 10px;
         }
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
@@ -75,7 +75,7 @@
 <div class="container">
     <div id="map"></div>
     <div class="info-panel">
-        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v18</span></h2>
+        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v19</span></h2>
         <div class="input-group">
             <div class="input-wrapper start">
                 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -206,33 +206,41 @@
         return card;
     }
     
-    // --- ✨ [핵심 개선] 목표 거리 추적 순환 코스 생성 함수 (v18) ---
-    async function generateDistanceTrackingLoopCourse(startPoint, targetDistance) {
+    // --- ✨ [핵심 개선] 겹침 없는 단일 순환 코스 생성 함수 (v19) ---
+    async function generateSimpleLoopCourse(startPoint, targetDistance) {
         const R = 6371e3; // 지구 반경
-        const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
-        const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
         
         let bestRoute = null;
         let bestDistanceDiff = Infinity;
-        // 실제 도로가 직선보다 평균 1.6배 길다고 가정하여 초기 반경 계산
-        let radius = (targetDistance / (2 * Math.PI)) * (1 / 1.6); 
+        let correctionFactor = 1.6; // 초기 보정값
 
-        // 최대 4번 반복하여 최적의 경로 탐색
-        for (let i = 0; i < 4; i++) {
-            const randomStartAngle = Math.random() * 360; 
-            const waypointsCount = 5; // 5개의 경유지로 6각형 모양 생성 -> 골목길 탐색 확률 증가
-            const virtualWaypoints = [];
+        // 최대 3번 반복하여 거리 오차 보정
+        for (let i = 0; i < 3; i++) {
+            const waypointsCount = 4; // 4개의 경유지로 사각형 모양 생성
+            const sideLength = (targetDistance / waypointsCount) / correctionFactor;
+            const randomStartAngle = Math.random() * 360;
+            
+            const waypoints = [];
+            let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
+            let lastAngle = randomStartAngle;
 
-            for (let j = 0; j < waypointsCount; j++) {
-                const bearing = randomStartAngle + (360 / waypointsCount) * j;
-                const brngRad = bearing * Math.PI / 180;
-                // 각 경유지를 출발점 기준으로 생성하여 
-                const latRad = Math.asin(Math.sin(startLatRad) * Math.cos(radius / R) + Math.cos(startLatRad) * Math.sin(radius / R) * Math.cos(brngRad));
-                const lonRad = startLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(radius / R) * Math.cos(startLatRad), Math.cos(radius / R) - Math.sin(startLatRad) * Math.sin(latRad));
-                virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
+            // ✨ '한붓그리기' 방식으로 경유지 순차 생성
+            for (let j = 0; j < waypointsCount - 1; j++) {
+                const lastLatRad = lastPoint.y * Math.PI / 180;
+                const lastLonRad = lastPoint.x * Math.PI / 180;
+                const brngRad = lastAngle * Math.PI / 180;
+
+                const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
+                const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+                
+                const newPoint = { y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI };
+                waypoints.push(newPoint);
+                
+                lastPoint = newPoint;
+                lastAngle += 90; // 사각형이므로 90도씩 회전
             }
 
-            const currentRoute = await getRoute([startPoint, ...virtualWaypoints, startPoint]);
+            const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]);
             
             if (currentRoute) {
                 const actualDistance = currentRoute.summary.distance;
@@ -243,14 +251,10 @@
                     bestRoute = currentRoute;
                 }
 
-                if (bestDistanceDiff < targetDistance * 0.1) { // 오차가 10% 이내이면 만족
-                    return bestRoute;
-                }
+                if (bestDistanceDiff < targetDistance * 0.1) return bestRoute; // 오차 10% 이내면 종료
                 
                 const errorRatio = actualDistance / targetDistance;
-                if (errorRatio > 0 && Math.abs(errorRatio -1) > 0.01) { 
-                    radius /= errorRatio; // 반경을 오차율만큼 나누어 크기 조절
-                }
+                if (errorRatio > 0) correctionFactor *= errorRatio;
             }
         }
         return bestRoute; 
@@ -269,18 +273,24 @@
             const startPoint = await searchPlace(elements.startInput.value);
             const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
             
-            const promises = [generateDistanceTrackingLoopCourse(startPoint, targetDistanceMeters)];
+            // 출발지 기준으로만 순환 코스 생성
+            const loopPromise = generateSimpleLoopCourse(startPoint, targetDistanceMeters);
+            
+            let optimalPromise = Promise.resolve(null);
+            let scenicPromise = Promise.resolve(null);
+
             if (endPoint) {
-                promises.push(getRoute([startPoint, endPoint]));
-                promises.push(new Promise(resolve => {
+                optimalPromise = getRoute([startPoint, endPoint]);
+                scenicPromise = new Promise(resolve => {
                     ps.keywordSearch("공원 산책로 하천", (data, status) => {
                         if (status === kakao.maps.services.Status.OK && data.length > 0) {
                             resolve(getRoute([startPoint, data[0], endPoint]));
                         } else resolve(null);
                     }, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 3000, sort: kakao.maps.services.SortBy.DISTANCE });
-                }));
+                });
             }
-            const [loopRoute, optimalRoute, scenicRoute] = await Promise.all(promises);
+
+            const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalPromise, scenicPromise]);
 
             elements.resultArea.innerHTML = ''; 
             let routeCount = 0;
