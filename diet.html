@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v6 (사각 코스)</title>
+    <title>다이어트 워킹 내비게이션 v6 (사각 코스 + 자동완성)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -50,6 +50,35 @@
         .route-card p { margin: 5px 0; font-size: 1em; }
         .route-card b { font-size: 1.1em; color: #E61A5F; }
         .color-box { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border-radius: 3px; vertical-align: middle; background-color: #FFA500;}
+
+        /* --- 자동완성 목록 스타일 --- */
+        .suggestions-list {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            z-index: 1000;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+        .suggestion-item:hover {
+            background-color: #f5f5f5;
+        }
+        .suggestion-item small {
+            display: block;
+            color: #888;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -60,10 +89,12 @@
         <h2>🎯 목표 칼로리 사각 코스</h2>
         <div class="input-group">
             <div class="input-wrapper start">
-                <input type="text" id="start" placeholder="출발지 (예: 부천역)">
+                <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
+                <div id="start-suggestions" class="suggestions-list"></div>
             </div>
             <div class="input-wrapper end">
-                <input type="text" id="end" placeholder="도착지 (예: 부천시청)">
+                <input type="text" id="end" placeholder="도착지 (예: 부천시청)" autocomplete="off">
+                <div id="end-suggestions" class="suggestions-list"></div>
             </div>
             <div class="input-wrapper target">
                  <input type="number" id="targetCalories" placeholder="목표 칼로리">
@@ -87,6 +118,8 @@
     const targetCaloriesInput = document.getElementById('targetCalories');
     const searchBtn = document.getElementById('searchBtn');
     const resultArea = document.getElementById('result-area');
+    const startSuggestions = document.getElementById('start-suggestions');
+    const endSuggestions = document.getElementById('end-suggestions');
 
     const map = new kakao.maps.Map(mapContainer, {
         center: new kakao.maps.LatLng(37.5034, 126.7661),
@@ -119,10 +152,9 @@
         } catch (error) { resolve(null); }
     });
     
-    // 특정 좌표 주변의 가장 가까운 장소(교차로 등)를 찾는 함수
     const findRealPointNearby = (point) => new Promise((resolve) => {
         ps.keywordSearch("교차로", (data, status) => {
-            resolve(status === kakao.maps.services.Status.OK ? data[0] : point); // 찾지 못하면 원래 좌표 사용
+            resolve(status === kakao.maps.services.Status.OK ? data[0] : point);
         }, { location: new kakao.maps.LatLng(point.y, point.x), radius: 500, sort: kakao.maps.services.SortBy.DISTANCE });
     });
 
@@ -131,6 +163,58 @@
         markers.forEach(m => m.setMap(null));
         markers = [];
     };
+
+    // --- ✨ 자동완성 기능 추가 ✨ ---
+    const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(null, args), delay);
+        };
+    };
+
+    const setupAutocomplete = (inputEl, listEl) => {
+        const showSuggestions = debounce((query) => {
+            if (!query.trim()) {
+                listEl.innerHTML = '';
+                listEl.style.display = 'none';
+                return;
+            }
+
+            ps.keywordSearch(query, (data, status) => {
+                listEl.innerHTML = '';
+                if (status === kakao.maps.services.Status.OK) {
+                    const fragment = document.createDocumentFragment();
+                    data.forEach(place => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.innerHTML = `
+                            ${place.place_name}
+                            <small>${place.road_address_name || place.address_name}</small>
+                        `;
+                        item.addEventListener('click', () => {
+                            inputEl.value = place.place_name;
+                            listEl.style.display = 'none';
+                        });
+                        fragment.appendChild(item);
+                    });
+                    listEl.appendChild(fragment);
+                    listEl.style.display = 'block';
+                } else {
+                    listEl.style.display = 'none';
+                }
+            });
+        }, 250);
+
+        inputEl.addEventListener('input', () => showSuggestions(inputEl.value));
+        document.addEventListener('click', (e) => {
+            if (!inputEl.contains(e.target)) listEl.style.display = 'none';
+        });
+    };
+    
+    setupAutocomplete(startInput, startSuggestions);
+    setupAutocomplete(endInput, endSuggestions);
+
 
     // --- 메인 실행 함수 ---
     async function generateSquareCourse() {
@@ -146,44 +230,35 @@
         try {
             const [startPoint, endPoint] = await Promise.all([searchPlace(startInput.value), searchPlace(endInput.value)]);
             
-            // 1. 목표 칼로리를 목표 거리로 변환
             const targetDistance = (targetCalories / KCAL_PER_KM) * 1000;
-
-            // 2. 출발-도착 직선거리 계산 (피타고라스 정리 근사치)
             const dx = endPoint.x - startPoint.x;
             const dy = endPoint.y - startPoint.y;
             const directDist = Math.sqrt(dx*dx + dy*dy);
             
-            // 3. 사각형의 나머지 두 변의 길이 계산
             const sideLength = (targetDistance / 2) - directDist;
             if (sideLength <= 0) {
                 throw new Error("목표 칼로리가 너무 작아 사각형 코스를 만들 수 없습니다. 더 큰 값을 입력해주세요.");
             }
 
-            // 4. 벡터를 이용해 가상의 경유지 2곳의 좌표 계산
             const vectorLength = Math.sqrt(dx*dx + dy*dy);
             const normDx = dx / vectorLength;
             const normDy = dy / vectorLength;
             
-            // 가상 경유지 1 (시계 방향)
             const waypoint1_virtual = {
-                x: parseFloat(endPoint.x) + normDy * sideLength * 0.000011, // 위도 1도 ≈ 111km
-                y: parseFloat(endPoint.y) - normDx * sideLength * 0.000009  // 경도 1도 ≈ 90km
+                x: parseFloat(endPoint.x) + normDy * sideLength * 0.000011,
+                y: parseFloat(endPoint.y) - normDx * sideLength * 0.000009 
             };
             
-            // 가상 경유지 2 (시계 방향)
             const waypoint2_virtual = {
                 x: parseFloat(startPoint.x) + normDy * sideLength * 0.000011,
                 y: parseFloat(startPoint.y) - normDx * sideLength * 0.000009
             };
             
-            // 5. 가상 경유지 근처의 실제 지점 탐색
             const [waypoint1_real, waypoint2_real] = await Promise.all([
                 findRealPointNearby(waypoint1_virtual),
                 findRealPointNearby(waypoint2_virtual)
             ]);
 
-            // 6. 최종 사각형 경로 탐색
             const finalWaypoints = [startPoint, waypoint2_real, endPoint, waypoint1_real, startPoint];
             const route = await getRoute(finalWaypoints);
 
@@ -191,7 +266,6 @@
                 throw new Error("사각 코스 생성에 실패했습니다. 장소나 목표 칼로리를 변경하여 다시 시도해주세요.");
             }
 
-            // 7. 결과 표시 및 지도에 그리기
             clearMap();
             const linePath = [];
             route.sections.forEach(s => s.roads.forEach(r => {
@@ -204,7 +278,7 @@
                 map: map,
                 path: linePath,
                 strokeWeight: 8,
-                strokeColor: '#FFA500', // 주황색
+                strokeColor: '#FFA500',
                 strokeOpacity: 0.8
             });
             
@@ -224,7 +298,6 @@
             linePath.forEach(p => bounds.extend(p));
             map.setBounds(bounds);
             
-            // 마커 표시
             markers.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
             markers.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
 
@@ -236,7 +309,13 @@
 
     searchBtn.addEventListener('click', generateSquareCourse);
     [startInput, endInput, targetCaloriesInput].forEach(input => {
-        input.addEventListener('keydown', (e) => e.key === 'Enter' && searchBtn.click());
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                // 자동완성 목록이 보이는 경우 Enter는 코스 생성이 아닌 목록 선택에 사용될 수 있으므로
+                // searchBtn을 직접 클릭하는 로직으로 통일합니다.
+                searchBtn.click();
+            }
+        });
     });
 
 </script>
