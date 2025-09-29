@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v13 (최종 순환 코스)</title>
+    <title>다이어트 워킹 내비게이션 v14 (AI 보정 순환 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -199,33 +199,47 @@
         return card;
     }
     
-    // --- ✨ [핵심 개선] 기하학적 순환 코스 생성 (가상 지점 직접 사용) ---
+    // --- ✨ [핵심 개선] AI 학습 방식의 순환 코스 생성 함수 ---
     async function generateGeometricLoopCourse(startPoint, targetDistance) {
-        // 목표 거리에 따라 보정 계수를 적용하여 실제 도로와의 오차를 줄임
-        const correctionFactor = 1.4; // 직선 거리 대비 실제 도로가 더 긴 것을 감안한 보정값
-        const sideLength = (targetDistance / 4) / correctionFactor; 
-        const R = 6371e3; // 지구 반경(미터)
+        const R = 6371e3; // 지구 반경
         const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
         const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
-
-        const bearings = [45, 135, 225]; // 북동, 남동, 남서 방향
-        let lastLatRad = startLatRad;
-        let lastLonRad = startLonRad;
-        const virtualWaypoints = [];
-
-        for (const bearing of bearings) {
-            const brngRad = bearing * Math.PI / 180;
-            const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
-            const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
-            virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
-            lastLatRad = latRad;
-            lastLonRad = lonRad;
-        }
         
-        // ✨ 실제 장소에 맞추지 않고, 계산된 가상 지점을 직접 경유지로 사용!
-        try {
-            return await getRoute([startPoint, ...virtualWaypoints, startPoint]);
-        } catch { return null; }
+        let bestRoute = null;
+        let currentCorrection = 1.6; // 보정값 초기값 (실제 도로는 직선보다 길기 때문)
+
+        // ✨ AI처럼 2번 학습하여 최적의 경로를 찾음
+        for (let i = 0; i < 2; i++) {
+            const sideLength = (targetDistance / 4) / currentCorrection;
+            const randomStartAngle = Math.random() * 360; // 매번 다른 모양을 위해 시작 각도 무작위 설정
+            const bearings = [randomStartAngle, randomStartAngle + 90, randomStartAngle + 180];
+            
+            let lastLatRad = startLatRad;
+            let lastLonRad = startLonRad;
+            const virtualWaypoints = [];
+
+            for (const bearing of bearings) {
+                const brngRad = bearing * Math.PI / 180;
+                const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
+                const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+                virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
+                lastLatRad = latRad;
+                lastLonRad = lonRad;
+            }
+
+            const currentRoute = await getRoute([startPoint, ...virtualWaypoints, startPoint]);
+            
+            if (currentRoute) {
+                bestRoute = currentRoute; // 일단 현재 경로를 최선으로 저장
+                const actualDistance = currentRoute.summary.distance;
+                // ✨ 목표와 결과의 오차를 계산하고 다음 계산에 반영 (학습)
+                const errorRatio = actualDistance / targetDistance;
+                if (errorRatio > 0) { // 0으로 나누는 것 방지
+                    currentCorrection *= errorRatio;
+                }
+            }
+        }
+        return bestRoute; // 2번의 학습 후 가장 최적화된 경로 반환
     }
 
     async function generateCourses() {
