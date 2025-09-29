@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v10 (km 입력 및 3종 코스)</title>
+    <title>다이어트 워킹 내비게이션 v11 (정교한 순환 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -24,7 +24,7 @@
         }
         .input-wrapper.start::before { content: '출발'; }
         .input-wrapper.end::before { content: '도착'; }
-        .input-wrapper.target::before { content: '👟 km';} /* 아이콘 변경 */
+        .input-wrapper.target::before { content: '👟 km';}
         #calculated-calories { font-size: 0.9em; color: #555; font-weight: bold; flex-shrink: 0; min-width: 90px; }
 
         input[type="text"], input[type="number"] {
@@ -99,8 +99,8 @@
         mapContainer: document.getElementById('map'),
         startInput: document.getElementById('start'),
         endInput: document.getElementById('end'),
-        targetDistanceInput: document.getElementById('targetDistance'), // ID 변경
-        calculatedCalories: document.getElementById('calculated-calories'), // 칼로리 표시 span
+        targetDistanceInput: document.getElementById('targetDistance'),
+        calculatedCalories: document.getElementById('calculated-calories'),
         searchBtn: document.getElementById('searchBtn'),
         resultArea: document.getElementById('result-area'),
         startSuggestions: document.getElementById('start-suggestions'),
@@ -111,11 +111,9 @@
     const ps = new kakao.maps.services.Places();
     let mapObjects = [];
 
-    // --- ✨ [핵심 변경] km 입력 시 칼로리 자동 계산 UI ---
     elements.targetDistanceInput.addEventListener('input', () => {
         const distance = parseFloat(elements.targetDistanceInput.value) || 0;
-        const calories = Math.round(distance * KCAL_PER_KM);
-        elements.calculatedCalories.textContent = `약 ${calories} kcal`;
+        elements.calculatedCalories.textContent = `약 ${Math.round(distance * KCAL_PER_KM)} kcal`;
     });
 
     const searchPlace = query => new Promise((resolve, reject) => {
@@ -167,14 +165,14 @@
     setupAutocomplete(elements.endInput, elements.endSuggestions);
     document.addEventListener('click', e => { if (!e.target.closest('.input-wrapper')) { elements.startSuggestions.style.display = 'none'; elements.endSuggestions.style.display = 'none'; }});
 
-    function drawRouteWithColorSegments(route, targetDistance, colors) {
+    function drawRouteWithColorSegments(route, targetDistanceMeters, colors) {
         if (!route) return;
         let accumulatedDistance = 0;
         const pathInTarget = [], pathOverTarget = [];
         route.sections.forEach(sec => sec.roads.forEach(road => {
             const roadPath = [];
             for (let i = 0; i < road.vertexes.length; i += 2) roadPath.push(new kakao.maps.LatLng(road.vertexes[i + 1], road.vertexes[i]));
-            if (accumulatedDistance < targetDistance) pathInTarget.push(...roadPath);
+            if (accumulatedDistance < targetDistanceMeters) pathInTarget.push(...roadPath);
             else pathOverTarget.push(...roadPath);
             accumulatedDistance += road.distance;
         }));
@@ -191,7 +189,7 @@
         const distanceKm = (route.summary.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.summary.duration / 60);
         const calories = Math.round(parseFloat(distanceKm) * KCAL_PER_KM);
-        const titles = { optimal: '최적 추천 경로', scenic: '산책로 경유 경로', loop: '주변 산책로 순환 코스' };
+        const titles = { optimal: '최적 추천 경로', scenic: '산책로 경유 경로', loop: '목표 거리 순환 코스' };
         card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
                           <p>총 거리: <b>${distanceKm} km</b></p>
                           <p>예상 시간: <b>${durationMin} 분</b></p>
@@ -199,35 +197,41 @@
         return card;
     }
     
-    // --- ✨ [개선] 순환 코스 생성 로직 강화 (Fallback 기능 추가) ---
-    async function generateScenicLoopCourse(startPoint, targetDistance) {
-        const radius = targetDistance / 4;
-        const latPerMeter = 1 / 111000, lngPerMeter = 1 / 88000;
-        const virtual_waypoints = [
-            { x: startPoint.x + radius * lngPerMeter, y: startPoint.y + radius * latPerMeter },
-            { x: startPoint.x - radius * lngPerMeter, y: startPoint.y - radius * latPerMeter }
-        ];
-        const findScenicPoint = (point) => new Promise(resolve => {
-            ps.keywordSearch("공원 호수 산책로 둘레길", (data, status) => {
-                resolve(status === kakao.maps.services.Status.OK ? data : null);
-            }, { location: new kakao.maps.LatLng(point.y, point.x), radius: 2500, sort: kakao.maps.services.SortBy.DISTANCE });
-        });
-        try {
-            const [results1, results2] = await Promise.all(virtual_waypoints.map(findScenicPoint));
-            const scenicWp1 = results1?.[0];
-            let scenicWp2 = results2?.find(p => p.id !== scenicWp1?.id); // 첫번째 경유지와 다른 장소 찾기
-            if (!scenicWp2) scenicWp2 = results1?.find(p => p.id !== scenicWp1?.id); // 그래도 없으면 첫번째 검색결과에서 다른 장소 찾기
+    // --- ✨ [핵심 개선] 기하학적 순환 코스 생성 함수 ---
+    async function generateGeometricLoopCourse(startPoint, targetDistance) {
+        const sideLength = targetDistance / 4; // 4개의 변을 가지는 사각형 기준
+        const R = 6371e3; // 지구 반경(미터)
+        const startLat = parseFloat(startPoint.y) * Math.PI / 180;
+        const startLon = parseFloat(startPoint.x) * Math.PI / 180;
 
-            if (scenicWp1 && scenicWp2) return await getRoute([startPoint, scenicWp1, scenicWp2, startPoint]);
-            if (scenicWp1) return await getRoute([startPoint, scenicWp1, startPoint]); // 하나만 찾아도 왕복 코스 제공
-            return null;
+        const bearings = [45, 135, 225]; // 북동, 남동, 남서 방향 (각도)
+        let lastLat = startLat;
+        let lastLon = startLon;
+
+        const waypoints = [startPoint];
+
+        for (const bearing of bearings) {
+            const brng = bearing * Math.PI / 180;
+            const lat2 = Math.asin(Math.sin(lastLat) * Math.cos(sideLength / R) + Math.cos(lastLat) * Math.sin(sideLength / R) * Math.cos(brng));
+            const lon2 = lastLon + Math.atan2(Math.sin(brng) * Math.sin(sideLength / R) * Math.cos(lastLat), Math.cos(sideLength / R) - Math.sin(lastLat) * Math.sin(lat2));
+            
+            waypoints.push({
+                y: lat2 * 180 / Math.PI,
+                x: lon2 * 180 / Math.PI
+            });
+            lastLat = lat2;
+            lastLon = lon2;
+        }
+        waypoints.push(startPoint); // 출발지로 복귀
+        
+        try {
+            return await getRoute(waypoints);
         } catch { return null; }
     }
 
     async function generateCourses() {
         if (!elements.startInput.value || !elements.targetDistanceInput.value) {
-            alert('출발지와 목표 거리를 모두 입력해주세요!');
-            return;
+            alert('출발지와 목표 거리를 모두 입력해주세요!'); return;
         }
         clearMap();
         elements.resultArea.innerHTML = '<p>최적의 코스를 생성 중입니다...</p>';
@@ -238,11 +242,11 @@
             const startPoint = await searchPlace(elements.startInput.value);
             const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
             
-            const promises = [generateScenicLoopCourse(startPoint, targetDistanceMeters)];
+            const promises = [generateGeometricLoopCourse(startPoint, targetDistanceMeters)];
             if (endPoint) {
                 promises.push(getRoute([startPoint, endPoint]));
                 promises.push(new Promise(resolve => {
-                    ps.keywordSearch("공원 산책로 하천 둘레길 호수공원", (data, status) => {
+                    ps.keywordSearch("공원 산책로 하천 둘레길", (data, status) => {
                         if (status === kakao.maps.services.Status.OK && data.length > 0) {
                             resolve(getRoute([startPoint, data[0], endPoint]));
                         } else resolve(null);
@@ -255,7 +259,7 @@
             let routeCount = 0;
 
             if (loopRoute) {
-                drawRouteWithColorSegments(loopRoute, 999999, { in: '#ffc107', over: '#ffc107' });
+                drawRouteWithColorSegments(loopRoute, 9999999, { in: '#ffc107', over: '#ffc107' });
                 elements.resultArea.appendChild(displayRouteInfo(loopRoute, 'loop', targetDistanceKm));
                 routeCount++;
             }
@@ -264,7 +268,7 @@
                 elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal', targetDistanceKm));
                 routeCount++;
             }
-            if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > optimalRoute.summary.distance * 1.05)) { 
+            if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > optimalRoute.summary.distance * 1.1)) { 
                 drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
                 elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
                 routeCount++;
@@ -276,8 +280,13 @@
             
             const bounds = new kakao.maps.LatLngBounds();
             [loopRoute, optimalRoute, scenicRoute].forEach(r => { if (r) r.sections.forEach(s => s.roads.forEach(rd => { for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i])); })); });
-            if (!bounds.isEmpty()) map.setBounds(bounds);
-            else map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+            
+            if (!bounds.isEmpty()) {
+                 map.setBounds(bounds);
+            } else {
+                map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+                map.setLevel(5);
+            }
             
             mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
             if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
