@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v16 (목표 거리 추적 코스)</title>
+    <title>다이어트 워킹 내비게이션 v18 (AI 순환 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -15,7 +15,14 @@
             box-shadow: 0 -2px 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 10;
             overflow-y: auto; max-height: 45%;
         }
-        h2 { margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center; }
+        h2 { 
+            margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .version-tag {
+            font-size: 0.5em; font-weight: bold; color: white; background-color: #007bff;
+            padding: 3px 6px; border-radius: 8px; margin-left: 10px;
+        }
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         .input-wrapper { flex-grow: 1; position: relative; min-width: 180px; }
         .input-wrapper::before {
@@ -68,7 +75,7 @@
 <div class="container">
     <div id="map"></div>
     <div class="info-panel">
-        <h2>👟 맞춤형 걷기 코스 추천</h2>
+        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v18</span></h2>
         <div class="input-group">
             <div class="input-wrapper start">
                 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -199,25 +206,27 @@
         return card;
     }
     
-    // --- ✨ [핵심 개선] 목표 거리 추적 순환 코스 생성 함수 (v16) ---
+    // --- ✨ [핵심 개선] 목표 거리 추적 순환 코스 생성 함수 (v18) ---
     async function generateDistanceTrackingLoopCourse(startPoint, targetDistance) {
-        const R = 6371e3;
+        const R = 6371e3; // 지구 반경
         const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
         const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
         
         let bestRoute = null;
         let bestDistanceDiff = Infinity;
-        let radius = (targetDistance / (2 * Math.PI)) * 0.8; // 원주 공식을 이용한 초기 반경 계산 (보정값 적용)
+        // 실제 도로가 직선보다 평균 1.6배 길다고 가정하여 초기 반경 계산
+        let radius = (targetDistance / (2 * Math.PI)) * (1 / 1.6); 
 
         // 최대 4번 반복하여 최적의 경로 탐색
         for (let i = 0; i < 4; i++) {
             const randomStartAngle = Math.random() * 360; 
-            const waypointsCount = 4; // 4개의 경유지로 5각형 모양 생성
+            const waypointsCount = 5; // 5개의 경유지로 6각형 모양 생성 -> 골목길 탐색 확률 증가
             const virtualWaypoints = [];
 
             for (let j = 0; j < waypointsCount; j++) {
                 const bearing = randomStartAngle + (360 / waypointsCount) * j;
                 const brngRad = bearing * Math.PI / 180;
+                // 각 경유지를 출발점 기준으로 생성하여 
                 const latRad = Math.asin(Math.sin(startLatRad) * Math.cos(radius / R) + Math.cos(startLatRad) * Math.sin(radius / R) * Math.cos(brngRad));
                 const lonRad = startLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(radius / R) * Math.cos(startLatRad), Math.cos(radius / R) - Math.sin(startLatRad) * Math.sin(latRad));
                 virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
@@ -229,20 +238,17 @@
                 const actualDistance = currentRoute.summary.distance;
                 const distanceDiff = Math.abs(actualDistance - targetDistance);
 
-                // 현재까지 찾은 경로 중 목표 거리에 가장 가까운 경로를 저장
                 if (distanceDiff < bestDistanceDiff) {
                     bestDistanceDiff = distanceDiff;
                     bestRoute = currentRoute;
                 }
 
-                // 오차가 8% 이내이면 만족하고 즉시 종료
-                if (bestDistanceDiff < targetDistance * 0.08) {
+                if (bestDistanceDiff < targetDistance * 0.1) { // 오차가 10% 이내이면 만족
                     return bestRoute;
                 }
                 
-                // 다음 계산을 위해 반경(radius) 수정
                 const errorRatio = actualDistance / targetDistance;
-                if (errorRatio > 0) { 
+                if (errorRatio > 0 && Math.abs(errorRatio -1) > 0.01) { 
                     radius /= errorRatio; // 반경을 오차율만큼 나누어 크기 조절
                 }
             }
