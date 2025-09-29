@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v15 (정확한 순환 코스)</title>
+    <title>다이어트 워킹 내비게이션 v16 (목표 거리 추적 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -125,7 +125,7 @@
     });
 
     const getRoute = waypoints => new Promise(async (resolve) => {
-        if (!waypoints || waypoints.some(p => !p || !p.x || !p.y)) return resolve(null);
+        if (!waypoints || waypoints.length < 2 || waypoints.some(p => !p || !p.x || !p.y)) return resolve(null);
         const origin = `${waypoints[0].x},${waypoints[0].y}`;
         const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
         const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
@@ -199,53 +199,55 @@
         return card;
     }
     
-    // --- ✨ [핵심 개선] 자기 보정 순환 코스 생성 함수 ---
-    async function generateSelfCorrectingLoopCourse(startPoint, targetDistance) {
+    // --- ✨ [핵심 개선] 목표 거리 추적 순환 코스 생성 함수 (v16) ---
+    async function generateDistanceTrackingLoopCourse(startPoint, targetDistance) {
         const R = 6371e3;
         const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
         const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
         
         let bestRoute = null;
-        let currentCorrection = 1.6; // 보정값 초기값 (실제 도로는 직선보다 평균 1.6배 길다고 가정)
+        let bestDistanceDiff = Infinity;
+        let radius = (targetDistance / (2 * Math.PI)) * 0.8; // 원주 공식을 이용한 초기 반경 계산 (보정값 적용)
 
-        for (let i = 0; i < 3; i++) { // 최대 3번 반복하여 오차 수정
-            const sideLength = (targetDistance / 4) / currentCorrection;
-            
-            // 매번 다른 모양을 위해 시작 각도 무작위 설정
-            const randomStartAngle = Math.random() * 90; 
-            const bearings = [randomStartAngle, randomStartAngle + 90, randomStartAngle + 180, randomStartAngle + 270];
-            
-            let lastLatRad = startLatRad;
-            let lastLonRad = startLonRad;
+        // 최대 4번 반복하여 최적의 경로 탐색
+        for (let i = 0; i < 4; i++) {
+            const randomStartAngle = Math.random() * 360; 
+            const waypointsCount = 4; // 4개의 경유지로 5각형 모양 생성
             const virtualWaypoints = [];
 
-            for (const bearing of bearings) {
+            for (let j = 0; j < waypointsCount; j++) {
+                const bearing = randomStartAngle + (360 / waypointsCount) * j;
                 const brngRad = bearing * Math.PI / 180;
-                const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
-                const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+                const latRad = Math.asin(Math.sin(startLatRad) * Math.cos(radius / R) + Math.cos(startLatRad) * Math.sin(radius / R) * Math.cos(brngRad));
+                const lonRad = startLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(radius / R) * Math.cos(startLatRad), Math.cos(radius / R) - Math.sin(startLatRad) * Math.sin(latRad));
                 virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
-                // 다음 경유지 계산을 위해 마지막 지점을 현재 지점으로 업데이트하지 않음 (별 모양 방지)
             }
 
             const currentRoute = await getRoute([startPoint, ...virtualWaypoints, startPoint]);
             
             if (currentRoute) {
-                bestRoute = currentRoute;
                 const actualDistance = currentRoute.summary.distance;
-                const errorRatio = actualDistance / targetDistance;
+                const distanceDiff = Math.abs(actualDistance - targetDistance);
 
-                // 오차가 10% 이내이면 만족하고 종료
-                if (Math.abs(errorRatio - 1) < 0.1) {
+                // 현재까지 찾은 경로 중 목표 거리에 가장 가까운 경로를 저장
+                if (distanceDiff < bestDistanceDiff) {
+                    bestDistanceDiff = distanceDiff;
+                    bestRoute = currentRoute;
+                }
+
+                // 오차가 8% 이내이면 만족하고 즉시 종료
+                if (bestDistanceDiff < targetDistance * 0.08) {
                     return bestRoute;
                 }
                 
-                // 다음 계산을 위해 보정값 수정
+                // 다음 계산을 위해 반경(radius) 수정
+                const errorRatio = actualDistance / targetDistance;
                 if (errorRatio > 0) { 
-                    currentCorrection *= errorRatio;
+                    radius /= errorRatio; // 반경을 오차율만큼 나누어 크기 조절
                 }
             }
         }
-        return bestRoute; // 3번 시도 후 가장 마지막에 생성된 경로 반환
+        return bestRoute; 
     }
 
     async function generateCourses() {
@@ -261,7 +263,7 @@
             const startPoint = await searchPlace(elements.startInput.value);
             const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
             
-            const promises = [generateSelfCorrectingLoopCourse(startPoint, targetDistanceMeters)];
+            const promises = [generateDistanceTrackingLoopCourse(startPoint, targetDistanceMeters)];
             if (endPoint) {
                 promises.push(getRoute([startPoint, endPoint]));
                 promises.push(new Promise(resolve => {
