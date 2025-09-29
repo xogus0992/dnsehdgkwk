@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 v11 (정교한 순환 코스)</title>
+    <title>다이어트 워킹 내비게이션 v13 (최종 순환 코스)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -125,7 +125,7 @@
     });
 
     const getRoute = waypoints => new Promise(async (resolve) => {
-        if (waypoints.some(p => !p || !p.x || !p.y)) return resolve(null);
+        if (!waypoints || waypoints.some(p => !p || !p.x || !p.y)) return resolve(null);
         const origin = `${waypoints[0].x},${waypoints[0].y}`;
         const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
         const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
@@ -134,7 +134,9 @@
             const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
             if (!response.ok) return resolve(null);
             const data = await response.json();
-            resolve(data.routes && data.routes.length > 0 ? data.routes[0] : null);
+            if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) {
+                resolve(data.routes[0]);
+            } else { resolve(null); }
         } catch { resolve(null); }
     });
 
@@ -156,7 +158,7 @@
                         f.appendChild(i);
                     });
                     listEl.appendChild(f); listEl.style.display = 'block';
-                } else { listEl.style.display = 'none'; }
+                }
             });
         }, 250);
         inputEl.addEventListener('input', () => showSuggestions(inputEl.value));
@@ -166,7 +168,7 @@
     document.addEventListener('click', e => { if (!e.target.closest('.input-wrapper')) { elements.startSuggestions.style.display = 'none'; elements.endSuggestions.style.display = 'none'; }});
 
     function drawRouteWithColorSegments(route, targetDistanceMeters, colors) {
-        if (!route) return;
+        if (!route || !route.sections) return;
         let accumulatedDistance = 0;
         const pathInTarget = [], pathOverTarget = [];
         route.sections.forEach(sec => sec.roads.forEach(road => {
@@ -197,35 +199,32 @@
         return card;
     }
     
-    // --- ✨ [핵심 개선] 기하학적 순환 코스 생성 함수 ---
+    // --- ✨ [핵심 개선] 기하학적 순환 코스 생성 (가상 지점 직접 사용) ---
     async function generateGeometricLoopCourse(startPoint, targetDistance) {
-        const sideLength = targetDistance / 4; // 4개의 변을 가지는 사각형 기준
+        // 목표 거리에 따라 보정 계수를 적용하여 실제 도로와의 오차를 줄임
+        const correctionFactor = 1.4; // 직선 거리 대비 실제 도로가 더 긴 것을 감안한 보정값
+        const sideLength = (targetDistance / 4) / correctionFactor; 
         const R = 6371e3; // 지구 반경(미터)
-        const startLat = parseFloat(startPoint.y) * Math.PI / 180;
-        const startLon = parseFloat(startPoint.x) * Math.PI / 180;
+        const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
+        const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
 
-        const bearings = [45, 135, 225]; // 북동, 남동, 남서 방향 (각도)
-        let lastLat = startLat;
-        let lastLon = startLon;
-
-        const waypoints = [startPoint];
+        const bearings = [45, 135, 225]; // 북동, 남동, 남서 방향
+        let lastLatRad = startLatRad;
+        let lastLonRad = startLonRad;
+        const virtualWaypoints = [];
 
         for (const bearing of bearings) {
-            const brng = bearing * Math.PI / 180;
-            const lat2 = Math.asin(Math.sin(lastLat) * Math.cos(sideLength / R) + Math.cos(lastLat) * Math.sin(sideLength / R) * Math.cos(brng));
-            const lon2 = lastLon + Math.atan2(Math.sin(brng) * Math.sin(sideLength / R) * Math.cos(lastLat), Math.cos(sideLength / R) - Math.sin(lastLat) * Math.sin(lat2));
-            
-            waypoints.push({
-                y: lat2 * 180 / Math.PI,
-                x: lon2 * 180 / Math.PI
-            });
-            lastLat = lat2;
-            lastLon = lon2;
+            const brngRad = bearing * Math.PI / 180;
+            const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
+            const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+            virtualWaypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
+            lastLatRad = latRad;
+            lastLonRad = lonRad;
         }
-        waypoints.push(startPoint); // 출발지로 복귀
         
+        // ✨ 실제 장소에 맞추지 않고, 계산된 가상 지점을 직접 경유지로 사용!
         try {
-            return await getRoute(waypoints);
+            return await getRoute([startPoint, ...virtualWaypoints, startPoint]);
         } catch { return null; }
     }
 
@@ -246,7 +245,7 @@
             if (endPoint) {
                 promises.push(getRoute([startPoint, endPoint]));
                 promises.push(new Promise(resolve => {
-                    ps.keywordSearch("공원 산책로 하천 둘레길", (data, status) => {
+                    ps.keywordSearch("공원 산책로 하천", (data, status) => {
                         if (status === kakao.maps.services.Status.OK && data.length > 0) {
                             resolve(getRoute([startPoint, data[0], endPoint]));
                         } else resolve(null);
@@ -272,21 +271,21 @@
                 drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
                 elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
                 routeCount++;
-            } else if (endPoint && optimalRoute) {
+            } else if (endPoint && optimalRoute && scenicRoute) {
                 elements.resultArea.innerHTML += '<p class="info-message">ℹ️ 산책로 경유 코스가 최적 경로와 유사하여 생략되었습니다.</p>';
             }
 
             if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 추천할 코스를 찾지 못했습니다. 장소나 거리를 변경하여 다시 시도해보세요.</p>';
             
             const bounds = new kakao.maps.LatLngBounds();
-            [loopRoute, optimalRoute, scenicRoute].forEach(r => { if (r) r.sections.forEach(s => s.roads.forEach(rd => { for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i])); })); });
+            [loopRoute, optimalRoute, scenicRoute].forEach(r => { 
+                if (r && r.sections) r.sections.forEach(s => s.roads.forEach(rd => { 
+                    for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i])); 
+                })); 
+            });
             
-            if (!bounds.isEmpty()) {
-                 map.setBounds(bounds);
-            } else {
-                map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
-                map.setLevel(5);
-            }
+            if (!bounds.isEmpty()) map.setBounds(bounds);
+            else map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
             
             mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
             if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
