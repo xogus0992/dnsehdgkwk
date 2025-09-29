@@ -9,16 +9,38 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; }
         body { overflow-y: auto; scroll-behavior: smooth; }
-        .card { margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white; }
-        #calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-        .calendar-day { text-align: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
-        .calendar-day:hover { background-color: #f0f9ff; }
+        .card { padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background-color: white; }
+        
+        #calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .calendar-day { 
+            text-align: center; padding: 12px 5px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; 
+            transition: all 0.2s; min-height: 90px; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .calendar-day:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
         .calendar-day.selected { background-color: #3b82f6; color: white; font-weight: bold; }
-        .calendar-day.has-log { border-bottom: 3px solid #63b3ed; }
-        .calendar-day.today { box-shadow: 0 0 0 2px #3b82f6 inset; }
-        .set-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; }
-        .set-complete-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d1d5db; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
-        .set-complete-btn.completed { background-color: #48bb78; border-color: #48bb78; color: white; }
+        .calendar-day.has-log { border-bottom: 4px solid #63b3ed; }
+        .calendar-day.today { box-shadow: 0 0 0 3px #3b82f6 inset; }
+        .day-number { font-size: 1.1rem; font-weight: bold; }
+        .day-volume { font-size: 0.8rem; color: #4a5568; font-weight: 600; }
+        .calendar-day.selected .day-volume { color: white; }
+
+        /* --- Layered modal styles --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.7);
+            display: none; /* 기본 숨김 */
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; } /* 열릴 때만 flex로 보이게 */
+        .modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; }
+
+        /* 작은 터치포인트 보정 */
+        .close-modal-btn { cursor: pointer; }
+
     </style>
 </head>
 <body class="bg-gray-100 pb-20">
@@ -28,11 +50,17 @@
         <h1 class="text-3xl font-semibold">나의 운동 기록</h1>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4">
+    <main class="max-w-4xl mx-auto px-4 mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <button id="open-routine-modal-btn" class="w-full bg-white p-4 rounded-lg shadow hover:bg-gray-50 text-lg font-bold">🗒️ 루틴 관리</button>
+            <button id="open-stats-modal-btn" class="w-full bg-white p-4 rounded-lg shadow hover:bg-gray-50 text-lg font-bold">📊 볼륨 통계</button>
+            <button id="open-search-modal-btn" class="w-full bg-white p-4 rounded-lg shadow hover:bg-gray-50 text-lg font-bold">🔍 날짜 검색</button>
+        </div>
+
         <section id="calendar-section" class="card">
             <div class="flex justify-between items-center mb-4">
                 <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded">&lt;</button>
-                <h3 id="calendar-title" class="text-xl font-bold"></h3>
+                <h3 id="calendar-title" class="text-2xl font-bold"></h3>
                 <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded">&gt;</button>
             </div>
             <div class="grid grid-cols-7 text-center font-bold mb-2 text-sm text-gray-500">
@@ -40,45 +68,33 @@
             </div>
             <div id="calendar"></div>
         </section>
-
-        <div class="grid md:grid-cols-2 gap-6 mt-8">
-            <section>
-                <h2 id="daily-log-title" class="text-2xl font-bold"></h2>
-                <div id="daily-log-list" class="card min-h-[200px]"></div>
-            </section>
-            <section>
-                <h2 class="text-2xl font-bold">나의 루틴 템플릿</h2>
-                <div id="routine-template-list" class="card min-h-[200px]"></div>
-            </section>
-        </div>
-        
-        <section class="card mt-8">
-            <h2 class="text-2xl font-bold mb-4">부위별 볼륨 통계</h2>
-            <select id="stats-body-part-select" class="w-full p-2 border rounded mb-4"></select>
-            <div class="h-64"><canvas id="volume-chart"></canvas></div>
-        </section>
     </main>
-
-    <div id="workout-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
-             <div class="flex justify-between items-center mb-4">
-                <h3 id="workout-modal-title" class="text-2xl font-bold"></h3>
-                <button id="close-workout-modal-btn" class="text-2xl font-bold">&times;</button>
-             </div>
-             <div id="workout-modal-list"></div>
-             <div class="mt-6 border-t pt-4 flex items-center justify-between">
-                <span id="timer-display" class="text-4xl font-mono">01:00</span>
-                <div class="flex space-x-2">
-                    <button id="timer-start-btn" class="px-4 py-2 bg-green-500 text-white rounded w-24">시작</button>
-                    <button id="finish-workout-btn" class="px-4 py-2 bg-blue-600 text-white rounded">운동 완료</button>
-                </div>
+    
+    <!-- 레이어 팝업들: 기본적으로 보이지 않음(스타일에서 처리) -->
+    <div id="daily-log-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="daily-log-modal-title" class="text-2xl font-bold"></h3>
+                <button class="close-modal-btn text-2xl font-bold" aria-label="닫기">&times;</button>
             </div>
+            <div id="daily-log-modal-list" class="flex-grow overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <div id="routine-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">나의 루틴 템플릿</h3>
+                <button class="close-modal-btn text-2xl font-bold" aria-label="닫기">&times;</button>
+            </div>
+            <div id="routine-template-list" class="flex-grow overflow-y-auto"></div>
+            <button id="create-new-template-btn" class="w-full bg-gray-200 p-2 rounded mt-4 hover:bg-gray-300 font-bold">+ 새 템플릿 만들기</button>
         </div>
     </div>
     
-    <div id="template-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-             <h3 id="template-modal-title" class="text-2xl font-bold mb-4">새 루틴 템플릿 만들기</h3>
+    <div id="template-editor-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true">
+             <h3 id="template-modal-title" class="text-2xl font-bold mb-4"></h3>
              <input type="text" id="template-title-input" placeholder="루틴 이름 (예: 가슴 불태우기)" class="w-full p-2 border rounded mb-4">
              <h4 class="font-bold mb-2">운동 목록</h4>
              <div id="template-exercise-list" class="flex-grow overflow-y-auto mb-4 border-t border-b py-2"></div>
@@ -96,7 +112,30 @@
              </div>
         </div>
     </div>
+
+    <div id="stats-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">부위별 볼륨 통계</h3>
+                <button class="close-modal-btn text-2xl font-bold" aria-label="닫기">&times;</button>
+            </div>
+            <select id="stats-body-part-select" class="w-full p-2 border rounded mb-4"></select>
+            <div class="h-64"><canvas id="volume-chart"></canvas></div>
+        </div>
+    </div>
     
+    <div id="search-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true">
+             <h3 class="text-2xl font-bold mb-4">날짜 검색</h3>
+             <p class="text-gray-600 mb-2">이동하고 싶은 날짜를 선택하세요.</p>
+             <input type="date" id="date-search-input" class="w-full p-2 border rounded">
+             <div class="flex justify-end space-x-2 mt-4">
+                <button class="close-modal-btn px-4 py-2 bg-gray-300 rounded">취소</button>
+                <button id="date-search-go" class="px-4 py-2 bg-blue-600 text-white rounded">이동</button>
+             </div>
+        </div>
+    </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM 요소 ---
@@ -106,19 +145,22 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarBody: document.getElementById('calendar'),
         prevMonthBtn: document.getElementById('prev-month-btn'),
         nextMonthBtn: document.getElementById('next-month-btn'),
-        dailyLogTitle: document.getElementById('daily-log-title'),
-        dailyLogList: document.getElementById('daily-log-list'),
+        openRoutineModalBtn: document.getElementById('open-routine-modal-btn'),
+        openStatsModalBtn: document.getElementById('open-stats-modal-btn'),
+        openSearchModalBtn: document.getElementById('open-search-modal-btn'),
+        dailyLogModal: document.getElementById('daily-log-modal'),
+        routineModal: document.getElementById('routine-modal'),
+        statsModal: document.getElementById('stats-modal'),
+        searchModal: document.getElementById('search-modal'),
+        templateEditorModal: document.getElementById('template-editor-modal'),
+        dailyLogModalTitle: document.getElementById('daily-log-modal-title'),
+        dailyLogModalList: document.getElementById('daily-log-modal-list'),
         routineTemplateList: document.getElementById('routine-template-list'),
+        createNewTemplateBtn: document.getElementById('create-new-template-btn'),
         statsBodyPartSelect: document.getElementById('stats-body-part-select'),
         volumeChartCanvas: document.getElementById('volume-chart'),
-        workoutModal: document.getElementById('workout-modal'),
-        workoutModalTitle: document.getElementById('workout-modal-title'),
-        closeWorkoutModalBtn: document.getElementById('close-workout-modal-btn'),
-        workoutModalList: document.getElementById('workout-modal-list'),
-        timerDisplay: document.getElementById('timer-display'),
-        timerStartBtn: document.getElementById('timer-start-btn'),
-        finishWorkoutBtn: document.getElementById('finish-workout-btn'),
-        templateModal: document.getElementById('template-modal'),
+        dateSearchInput: document.getElementById('date-search-input'),
+        dateSearchGo: document.getElementById('date-search-go'),
         templateModalTitle: document.getElementById('template-modal-title'),
         templateTitleInput: document.getElementById('template-title-input'),
         templateExerciseList: document.getElementById('template-exercise-list'),
@@ -132,15 +174,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 상태 변수 ---
-    const ROUTINE_TEMPLATE_KEY = 'my_fitness_templates_v2';
-    const LOG_KEY = 'my_fitness_logs_v5';
+    const ROUTINE_TEMPLATE_KEY = 'my_fitness_templates_v3';
+    const LOG_KEY = 'my_fitness_logs_v6';
     const exercisesData = { "가슴": ["벤치프레스", "인클라인 벤치프레스", "딥스"], "등": ["데드리프트", "풀업", "바벨 로우"], "어깨": ["오버헤드 프레스", "사이드 레터럴 레이즈"], "하체": ["스쿼트", "런지", "레그 프레스"], "팔": ["바벨 컬", "덤벨 컬"] };
     let routineTemplates = [];
     let workoutLogs = {};
     let calendarDate = new Date();
     let selectedDate = new Date().toISOString().split('T')[0];
-    let timerInterval = null;
-    let timerSeconds = 60;
     let volumeChart = null;
     let currentEditingTemplate = { index: null, exercises: [] };
 
@@ -150,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveLogs = () => localStorage.setItem(LOG_KEY, JSON.stringify(workoutLogs));
     const loadLogs = () => workoutLogs = JSON.parse(localStorage.getItem(LOG_KEY) || '{}');
 
-    // --- 렌더링 함수 (화면 그리는 역할) ---
+    // --- 렌더링 함수 ---
     const renderCalendar = () => {
         const year = calendarDate.getFullYear();
         const month = calendarDate.getMonth();
@@ -158,87 +198,86 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.calendarBody.innerHTML = '';
         const firstDay = new Date(year, month, 1).getDay();
         const lastDate = new Date(year, month + 1, 0).getDate();
-        for (let i = 0; i < firstDay; i++) elements.calendarBody.innerHTML += `<div class="calendar-day"></div>`;
+        for (let i = 0; i < firstDay; i++) elements.calendarBody.innerHTML += `<div class="calendar-day opacity-25"></div>`;
         for (let date = 1; date <= lastDate; date++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
             const today = new Date();
             const isToday = year === today.getFullYear() && month === today.getMonth() && date === today.getDate();
             let dayClass = 'calendar-day';
-            if (workoutLogs[dateStr] && workoutLogs[dateStr].length > 0) dayClass += ' has-log';
+            let totalVolume = 0;
+            if (workoutLogs[dateStr] && workoutLogs[dateStr].length > 0) {
+                dayClass += ' has-log';
+                workoutLogs[dateStr].forEach(log => {
+                    log.exercises.forEach(ex => totalVolume += (ex.weight || 0) * (ex.reps || 0) * (ex.completedSets || 0));
+                });
+            }
             if (isToday) dayClass += ' today';
             if (dateStr === selectedDate) dayClass += ' selected';
-            elements.calendarBody.innerHTML += `<div class="${dayClass}" data-date="${dateStr}">${date}</div>`;
+            elements.calendarBody.innerHTML += `
+                <div class="${dayClass}" data-date="${dateStr}">
+                    <div class="day-number">${date}</div>
+                    ${totalVolume > 0 ? `<div class="day-volume">${totalVolume}kg</div>` : ''}
+                </div>`;
         }
     };
+    
+    // --- 모달(레이어) 열기/닫기 함수 ---
+    const openModal = (modalElement) => {
+        if (!modalElement) return;
+        modalElement.classList.add('open');
+        modalElement.setAttribute('aria-hidden', 'false');
+    };
+    const closeModal = (modalElement) => {
+        if (!modalElement) return;
+        modalElement.classList.remove('open');
+        modalElement.setAttribute('aria-hidden', 'true');
+    };
 
-    const renderRoutineTemplates = () => {
+    const openDailyLogModal = (date) => {
+        elements.dailyLogModalTitle.textContent = `${date} 운동 기록`;
+        const logs = workoutLogs[date] || [];
+        elements.dailyLogModalList.innerHTML = '';
+        if (logs.length === 0) {
+            elements.dailyLogModalList.innerHTML = '<p class="text-gray-500">기록된 운동이 없습니다. 루틴 관리 팝업에서 템플릿을 추가해주세요.</p>';
+        } else {
+            logs.forEach(log => {
+                let exercisesHtml = '';
+                log.exercises.forEach(ex => {
+                    exercisesHtml += `<li class="text-sm">${ex.name}: ${ex.weight}kg x ${ex.reps}회 (${ex.completedSets || 0}/${ex.sets}세트 완료)</li>`;
+                });
+                elements.dailyLogModalList.innerHTML += `
+                    <div class="mb-4 pb-2 border-b">
+                        <h4 class="font-bold">${log.title}</h4>
+                        <ul class="list-disc list-inside text-gray-700">${exercisesHtml}</ul>
+                    </div>
+                `;
+            });
+        }
+        openModal(elements.dailyLogModal);
+    };
+    
+    const openRoutineModal = () => {
         elements.routineTemplateList.innerHTML = '';
         const header = document.createElement('div');
-        header.innerHTML = '<p class="text-gray-500 mb-2">템플릿을 클릭해 날짜에 추가하거나 수정하세요.</p>';
+        header.innerHTML = '<p class="text-gray-500 mb-2">템플릿을 수정하거나, 날짜에 추가할 수 있습니다.</p>';
         elements.routineTemplateList.appendChild(header);
         if (routineTemplates.length > 0) {
             routineTemplates.forEach((template, index) => {
                 const item = document.createElement('div');
-                item.className = 'p-3 border rounded mb-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center';
-                item.innerHTML = `<span>${template.title}</span><button class="edit-template-btn text-blue-500 text-sm font-bold" data-index="${index}">수정</button>`;
-                item.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('edit-template-btn')) openTemplateModal(index);
-                    else addLogFromTemplate(index);
-                });
+                item.className = 'p-3 border rounded mb-2 flex justify-between items-center';
+                item.innerHTML = `
+                    <span>${template.title}</span>
+                    <div>
+                        <button class="add-log-btn text-green-500 text-sm font-bold mr-2" data-index="${index}">+ 날짜에 추가</button>
+                        <button class="edit-template-btn text-blue-500 text-sm font-bold" data-index="${index}">수정</button>
+                    </div>`;
                 elements.routineTemplateList.appendChild(item);
             });
         }
-        const newBtn = document.createElement('button');
-        newBtn.className = 'w-full bg-gray-200 p-2 rounded mt-2 hover:bg-gray-300';
-        newBtn.textContent = '+ 새 템플릿 만들기';
-        newBtn.onclick = () => openTemplateModal(null);
-        elements.routineTemplateList.appendChild(newBtn);
+        openModal(elements.routineModal);
     };
 
-    const renderDailyLogs = () => {
-        elements.dailyLogTitle.textContent = `${selectedDate} 운동 기록`;
-        elements.dailyLogList.innerHTML = '';
-        const logs = workoutLogs[selectedDate] || [];
-        if (logs.length === 0) {
-            elements.dailyLogList.innerHTML = '<p class="text-gray-500">운동 기록이 없습니다. 템플릿을 추가해 시작하세요.</p>';
-        } else {
-            logs.forEach((log, index) => {
-                const item = document.createElement('div');
-                item.className = 'p-3 border rounded mb-2 cursor-pointer hover:bg-gray-100 flex justify-between items-center';
-                item.innerHTML = `<span>${log.title}</span><button class="delete-log-btn text-red-500 text-xs font-bold" data-index="${index}">삭제</button>`;
-                item.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('delete-log-btn')) {
-                        e.stopPropagation();
-                        if (confirm('이 기록을 삭제하시겠습니까?')) {
-                            workoutLogs[selectedDate].splice(index, 1);
-                            saveLogs();
-                            renderDailyLogs();
-                            renderCalendar();
-                            renderStatsGraph();
-                        }
-                    } else {
-                        openWorkoutModal(index);
-                    }
-                });
-                elements.dailyLogList.appendChild(item);
-            });
-        }
-    };
-
-    // --- 로직 함수 (실제 동작) ---
-    const addLogFromTemplate = (templateIndex) => {
-        if (!selectedDate) { alert('날짜를 먼저 선택해주세요.'); return; }
-        const template = routineTemplates[templateIndex];
-        const newLog = JSON.parse(JSON.stringify(template));
-        newLog.exercises.forEach(ex => ex.completedSets = 0);
-        if (!workoutLogs[selectedDate]) workoutLogs[selectedDate] = [];
-        workoutLogs[selectedDate].push(newLog);
-        saveLogs();
-        renderDailyLogs();
-        renderCalendar();
-    };
-
-    const openTemplateModal = (index) => {
+    const openTemplateEditorModal = (index) => {
         currentEditingTemplate.index = index;
         if (index !== null) {
             const template = routineTemplates[index];
@@ -251,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingTemplate.exercises = [];
         }
         renderTemplateExerciseList();
-        elements.templateModal.classList.remove('hidden');
+        openModal(elements.templateEditorModal);
     };
 
     const renderTemplateExerciseList = () => {
@@ -268,75 +307,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const openWorkoutModal = (logIndex) => {
-        const log = workoutLogs[selectedDate][logIndex];
-        elements.workoutModalTitle.textContent = log.title;
-        
-        const renderModalContent = () => {
-            elements.workoutModalList.innerHTML = '';
-            const currentLog = workoutLogs[selectedDate][logIndex];
-            currentLog.exercises.forEach((ex, exIndex) => {
-                let setsHtml = '';
-                for (let i = 1; i <= ex.sets; i++) {
-                    const isCompleted = i <= ex.completedSets;
-                    setsHtml += `
-                        <div class="set-item">
-                            <span>${i}세트: ${ex.weight}kg x ${ex.reps}회</span>
-                            <button class="set-complete-btn ${isCompleted ? 'completed' : ''}" data-log-index="${logIndex}" data-ex-index="${exIndex}" data-set-index="${i}">
-                                ${isCompleted ? '✓' : ''}
-                            </button>
-                        </div>
-                    `;
-                }
-                elements.workoutModalList.innerHTML += `<div class="mb-4"><h4 class="font-bold text-lg">${ex.name}</h4><div>${setsHtml}</div></div>`;
-            });
-        };
-        renderModalContent();
-        elements.workoutModalList.dataset.logIndex = logIndex;
-        elements.workoutModal.classList.remove('hidden');
-    };
-    
-    const handleTimerStart = () => {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            elements.timerStartBtn.textContent = '재개';
-            elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
-            return;
-        }
-        elements.timerStartBtn.textContent = '정지';
-        elements.timerStartBtn.classList.replace('bg-green-500', 'bg-yellow-500');
-        timerInterval = setInterval(() => {
-            timerSeconds--;
-            const minutes = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
-            const seconds = String(timerSeconds % 60).padStart(2, '0');
-            elements.timerDisplay.textContent = `${minutes}:${seconds}`;
-            if (timerSeconds <= 0) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                alert('휴식 시간이 종료되었습니다!');
-                elements.timerStartBtn.textContent = '시작';
-                elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
-            }
-        }, 1000);
-    };
-
-    const handleFinishWorkout = () => {
-        clearInterval(timerInterval);
-        timerInterval = null;
-        timerSeconds = 60;
-        elements.timerDisplay.textContent = '01:00';
-        elements.timerStartBtn.textContent = '시작';
-        elements.timerStartBtn.classList.replace('bg-yellow-500', 'bg-green-500');
-        elements.workoutModal.classList.add('hidden');
-        renderStatsGraph();
-        renderCalendar();
-    };
-
     const renderStatsGraph = () => {
         const selectedBodyPart = elements.statsBodyPartSelect.value;
         if (volumeChart) volumeChart.destroy();
-        if (!selectedBodyPart) return;
+        if (!selectedBodyPart) { return; }
         const labels = [];
         const data = [];
         Object.keys(workoutLogs).sort().forEach(date => {
@@ -346,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     routine.exercises.forEach(ex => {
                         const exerciseBodyPart = Object.keys(exercisesData).find(part => exercisesData[part].includes(ex.name));
                         if (exerciseBodyPart === selectedBodyPart) {
-                            dailyVolume += ex.weight * ex.reps * ex.completedSets;
+                            dailyVolume += ex.weight * ex.reps * (ex.completedSets || 0);
                         }
                     });
                 });
@@ -356,43 +330,82 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.push(dailyVolume);
             }
         });
-
         volumeChart = new Chart(elements.volumeChartCanvas, {
             type: 'line', 
             data: { labels, datasets: [{ label: `${selectedBodyPart} 볼륨`, data, borderColor: 'rgb(59, 130, 246)', tension: 0.1 }] },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: true }
         });
     };
-    
-    // --- 이벤트 리스너 설정 ---
+
+    // --- 이벤트 리스너 바인딩 ---
     const bindEventListeners = () => {
-        elements.backBtn.addEventListener('click', () => window.location.href = 'health.html');
-        elements.prevMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); renderDailyLogs(); });
-        elements.nextMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); renderDailyLogs(); });
+        elements.backBtn.addEventListener('click', () => window.location.href = 'index.html');
+        elements.prevMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); });
+        elements.nextMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); });
+        
         elements.calendarBody.addEventListener('click', (e) => {
-            if (e.target.classList.contains('calendar-day') && e.target.dataset.date) {
-                selectedDate = e.target.dataset.date;
-                renderDailyLogs();
+            const dayElement = e.target.closest('.calendar-day');
+            if (dayElement && dayElement.dataset.date) {
+                selectedDate = dayElement.dataset.date;
                 renderCalendar();
+                openDailyLogModal(selectedDate);
             }
         });
-        elements.closeWorkoutModalBtn.addEventListener('click', () => elements.workoutModal.classList.add('hidden'));
-        elements.statsBodyPartSelect.addEventListener('change', renderStatsGraph);
-        elements.timerStartBtn.addEventListener('click', handleTimerStart);
-        elements.finishWorkoutBtn.addEventListener('click', handleFinishWorkout);
+        
+        elements.openRoutineModalBtn.addEventListener('click', openRoutineModal);
+        elements.openStatsModalBtn.addEventListener('click', () => { renderStatsGraph(); openModal(elements.statsModal); });
+        elements.openSearchModalBtn.addEventListener('click', () => { elements.dateSearchInput.value = selectedDate; openModal(elements.searchModal); });
+        
+        // 닫기 버튼: 모달 오버레이를 찾아서 closeModal 호출
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const overlay = e.target.closest('.modal-overlay');
+                if (overlay) closeModal(overlay);
+            });
+        });
 
-        elements.workoutModalList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('set-complete-btn')) {
-                const { logIndex, exIndex, setIndex } = e.target.dataset;
-                const exercise = workoutLogs[selectedDate][logIndex].exercises[exIndex];
-                exercise.completedSets = parseInt(setIndex);
+        // 오버레이 바깥(배경) 클릭 시 닫기 (단, 모달 콘텐츠 클릭은 닫지 않음)
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) closeModal(overlay);
+            });
+        });
+
+        // Esc 키로 열려있는 모든 모달 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.open').forEach(mod => closeModal(mod));
+            }
+        });
+        
+        elements.dateSearchGo.addEventListener('click', () => {
+            const date = new Date(elements.dateSearchInput.value);
+            if (!isNaN(date)) {
+                calendarDate = date;
+                selectedDate = elements.dateSearchInput.value;
+                renderCalendar();
+                closeModal(elements.searchModal);
+            } else { alert('유효한 날짜를 선택해주세요.'); }
+        });
+
+        elements.routineTemplateList.addEventListener('click', e => {
+            if (e.target.classList.contains('edit-template-btn')) {
+                openTemplateEditorModal(parseInt(e.target.dataset.index));
+            } else if (e.target.classList.contains('add-log-btn')) {
+                const template = routineTemplates[parseInt(e.target.dataset.index)];
+                const newLog = JSON.parse(JSON.stringify(template));
+                newLog.exercises.forEach(ex => ex.completedSets = 0);
+                if (!workoutLogs[selectedDate]) workoutLogs[selectedDate] = [];
+                workoutLogs[selectedDate].push(newLog);
                 saveLogs();
-                openWorkoutModal(parseInt(logIndex)); // Re-render the modal
-                handleTimerStart();
+                renderCalendar();
+                alert(`'${selectedDate}'에 '${template.title}' 루틴이 추가되었습니다.`);
             }
         });
 
-        elements.cancelTemplateBtn.addEventListener('click', () => elements.templateModal.classList.add('hidden'));
+        elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditorModal(null));
+        elements.cancelTemplateBtn.addEventListener('click', () => closeModal(elements.templateEditorModal));
+        
         elements.addTemplateExerciseBtn.addEventListener('click', () => {
             const name = elements.templateExerciseSelect.value;
             const weight = parseFloat(elements.templateWeightInput.value) || 0;
@@ -402,12 +415,14 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingTemplate.exercises.push({ name, weight, reps, sets });
             renderTemplateExerciseList();
         });
+
         elements.templateExerciseList.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-template-ex-btn')) {
                 currentEditingTemplate.exercises.splice(e.target.dataset.index, 1);
                 renderTemplateExerciseList();
             }
         });
+
         elements.saveTemplateBtn.addEventListener('click', () => {
             const title = elements.templateTitleInput.value.trim();
             if (!title) { alert('루틴 템플릿 이름을 입력해주세요.'); return; }
@@ -418,8 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 routineTemplates.push(newTemplate);
             }
             saveTemplates();
-            renderRoutineTemplates();
-            elements.templateModal.classList.add('hidden');
+            closeModal(elements.templateEditorModal);
         });
     };
     
@@ -446,10 +460,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         populateSelects();
         renderCalendar();
-        renderRoutineTemplates();
-        renderDailyLogs();
         bindEventListeners();
         elements.statsBodyPartSelect.innerHTML = '<option value="">-- 부위 선택 --</option>' + Object.keys(exercisesData).map(p => `<option value="${p}">${p}</option>`).join('');
+        // 모든 모달이 기본적으로 보이지 않도록 aria-hidden을 true로 설정해둠
+        document.querySelectorAll('.modal-overlay').forEach(mod => mod.setAttribute('aria-hidden', 'true'));
     };
 
     init();
