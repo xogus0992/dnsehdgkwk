@@ -2,9 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>다이어트 워킹 내비게이션 v25 (Promise 에러 수정)</title>
+<title>다이어트 워킹 내비게이션 v26 (전체 코스 표시 개선)</title>
 <style>
-/* 기존 v20의 CSS 디자인을 그대로 유지 */
+/* 디자인 CSS는 v20을 유지합니다. */
 html, body {
 width: 100%; height: 100%; margin: 0; padding: 0;
 font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
@@ -76,7 +76,7 @@ flex-basis: 320px; background-color: #f9f9f9; flex-grow: 1;
 <div class="container">
 <div id="map"></div>
 <div class="info-panel">
-<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v25</span></h2>
+<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v26</span></h2>
 <div class="input-group">
 <div class="input-wrapper start">
 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -213,7 +213,7 @@ card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
 return card;
 }
 
-// --- [v24] 깔끔한 순환 코스 생성 함수 (경유지 수 7개, 보정값 1.8) ---
+// --- [v24] 깔끔한 순환 코스 생성 함수 유지 (겹침 최소화 로직) ---
 async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
 const R = 6371e3; // 지구 반경
 
@@ -296,13 +296,14 @@ optimalPromise = getRoute([startPoint, endPoint]);
 scenicPromise = new Promise(resolve => {
 ps.keywordSearch("공원 산책로 하천", (data, status) => {
 if (status === kakao.maps.services.Status.OK && data.length > 0) {
+// 산책로를 경유지로 추가하여 경로 요청
 resolve(getRoute([startPoint, data[0], endPoint]));
 } else resolve(null);
-}, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 3000, sort: kakao.maps.services.SortBy.DISTANCE });
+}, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 5000, sort: kakao.maps.services.SortBy.DISTANCE }); // 검색 반경을 5km로 확대
 });
 }
 
-// ⚠️ 핵심 수정: Promise.all 배열 내에서 변수명 오류 수정
+// Promise.all을 통해 모든 경로 결과를 비동기로 기다립니다.
 const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalPromise, scenicPromise]);
 
 elements.resultArea.innerHTML = '';
@@ -320,14 +321,20 @@ elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal', target
 routeCount++;
 }
 
-// ⚠️ 오류 방지 수정: optimalRoute가 null인지 확인하는 조건 추가
-if (scenicRoute && (!optimalRoute || (optimalRoute && scenicRoute.summary.distance > optimalRoute.summary.distance * 1.1))) {
-drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
-elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
-routeCount++;
-} else if (endPoint && optimalRoute && scenicRoute) {
-elements.resultArea.innerHTML += '<p class="info-message">ℹ️ 산책로 경유 코스가 최적 경로와 유사하여 생략되었습니다.</p>';
+// ⚠️ 산책로 경유 경로 표시 조건 완화
+if (scenicRoute) {
+    // 최적 경로와 거리 차이가 너무 심하게 나는 경우만 제외하고 표시 (50% 이상 차이나면 제외)
+    const isTooLong = optimalRoute && (scenicRoute.summary.distance > optimalRoute.summary.distance * 1.5);
+    
+    if (!isTooLong) {
+        drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
+        elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
+        routeCount++;
+    } else {
+         elements.resultArea.innerHTML += '<p class="info-message">ℹ️ 산책로 경유 코스의 거리가 최적 경로보다 지나치게 길어 생략되었습니다.</p>';
+    }
 }
+
 
 if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 추천할 코스를 찾지 못했습니다. 장소나 거리를 변경하여 다시 시도해보세요.</p>';
 
