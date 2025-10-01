@@ -52,7 +52,9 @@
         #result-area { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; text-align: left; }
         .route-card, .info-message {
             border: 2px solid #ccc; border-radius: 8px; padding: 15px;
-            flex-basis: 48%; background-color: #f9f9f9; cursor: pointer; transition: all 0.2s;
+            flex-basis: 48%; /* 양옆으로 배치하기 위해 너비 조정 */
+            box-sizing: border-box;
+            background-color: #f9f9f9; cursor: pointer; transition: all 0.2s;
         }
         .route-card:hover { border-color: #333; transform: translateY(-2px); }
         .info-message { border-style: dashed; color: #666; font-size: 0.95em; text-align: center; cursor: default; }
@@ -97,8 +99,7 @@
             <button id="searchBtn">코스 생성</button>
         </div>
         <div id="result-area">
-            <p class="info-message">장소와 목표 거리를 입력하고 맞춤형 코스를 추천받으세요.</p>
-        </div>
+            </div>
     </div>
 </div>
 
@@ -120,7 +121,7 @@
     const map = new kakao.maps.Map(elements.mapContainer, { center: new kakao.maps.LatLng(37.5034, 126.7661), level: 5 });
     const ps = new kakao.maps.services.Places();
     let mapObjects = [];
-    let polylines = {}; // { loop: {faint, highlight}, roundTrip: {faint, highlight} }
+    let polylines = {}; // { loop: Polyline, round-trip: Polyline }
 
     const searchPlace = query => new Promise((resolve, reject) => {
         if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
@@ -185,9 +186,8 @@
     };
     setupAutocomplete(elements.startInput, elements.startSuggestions);
     setupAutocomplete(elements.endInput, elements.endSuggestions);
-    document.addEventListener('click', e => { if (!e.target.closest('.input-wrapper')) { elements.startSuggestions.style.display = 'none'; elements.endSuggestions.style.display = 'none'; }});
 
-    function drawPolylines(route, type, color) {
+    function drawPolyline(route, type, color) {
         if (!route || !route.sections) return;
         const path = [];
         route.sections.forEach(sec => sec.roads.forEach(road => {
@@ -195,23 +195,31 @@
                 path.push(new kakao.maps.LatLng(road.vertexes[i + 1], road.vertexes[i]));
             }
         }));
-
-        const faintLine = new kakao.maps.Polyline({ map, path, strokeWeight: 6, strokeColor: color, strokeOpacity: 0.3 });
-        const highlightLine = new kakao.maps.Polyline({ path, strokeWeight: 10, strokeColor: color, strokeOpacity: 1.0 });
-
-        polylines[type] = { faint: faintLine, highlight: highlightLine };
-        mapObjects.push(faintLine, highlightLine);
+        
+        const polyline = new kakao.maps.Polyline({ map, path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.4 });
+        polylines[type] = polyline;
+        mapObjects.push(polyline);
     }
 
     function highlightRoute(type) {
-        Object.values(polylines).forEach(p => p.highlight.setMap(null));
-        if (polylines[type]) {
-            polylines[type].highlight.setMap(map);
-        }
+        Object.keys(polylines).forEach(key => {
+            const line = polylines[key];
+            if (key === type) {
+                // On/Off 토글
+                const currentOpacity = line.getOptions().strokeOpacity;
+                line.setOptions({ strokeOpacity: currentOpacity > 0.5 ? 0.4 : 1.0, strokeWeight: currentOpacity > 0.5 ? 8 : 10 });
+            } else {
+                // 다른 경로는 흐리게
+                line.setOptions({ strokeOpacity: 0.4, strokeWeight: 8 });
+            }
+        });
     }
 
     function displayRouteInfo(summary, type) {
-        if (!summary) return createPlaceholderCard('경로 없음');
+        if (!summary) {
+             const title = type === 'loop' ? '순환 코스' : '왕복 코스';
+             return createPlaceholderCard(`적절한 ${title}를 찾지 못했습니다.`);
+        }
 
         const card = document.createElement('div');
         card.className = `route-card ${type}`;
@@ -259,29 +267,29 @@
     async function generateLoopCourse(startPoint, targetDistance) {
         let bestRoute = null;
         let bestDiff = Infinity;
-        
-        for (const waypointsCount of [4, 5, 6]) {
-            for (const radiusMultiplier of [0.5, 0.65, 0.8]) { // 반지름을 더 크게 조정
-                const radius = (targetDistance / (waypointsCount + 1)) * radiusMultiplier;
-                const waypoints = [];
-                for (let i = 0; i < waypointsCount; i++) {
-                    const angle = (360 / waypointsCount) * i;
-                    waypoints.push(getPointOnCircle(startPoint, radius, angle));
-                }
+        const waypointsCount = 3; // 경유지 3개로 고정
 
-                const routes = await getRouteAPI({ 
-                    origin: `${startPoint.x},${startPoint.y}`, 
-                    destination: `${startPoint.x},${startPoint.y}`,
-                    waypoints: waypoints.map(p => `${p.x},${p.y}`).join('|')
-                });
+        // 반지름을 점차 늘려가며 최적의 경로 탐색
+        for (const radiusMultiplier of [0.4, 0.6, 0.8, 1.0, 1.2]) {
+            const radius = (targetDistance / (waypointsCount + 1)) * radiusMultiplier;
+            const waypoints = [];
+            for (let i = 0; i < waypointsCount; i++) {
+                const angle = (360 / waypointsCount) * i;
+                waypoints.push(getPointOnCircle(startPoint, radius, angle));
+            }
 
-                const candidateRoute = await findBestRoute(routes, targetDistance);
-                if (candidateRoute) {
-                    const diff = Math.abs(candidateRoute.summary.distance - targetDistance);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestRoute = candidateRoute;
-                    }
+            const routes = await getRouteAPI({ 
+                origin: `${startPoint.x},${startPoint.y}`, 
+                destination: `${startPoint.x},${startPoint.y}`,
+                waypoints: waypoints.map(p => `${p.x},${p.y}`).join('|')
+            });
+
+            const candidateRoute = await findBestRoute(routes, targetDistance);
+            if (candidateRoute) {
+                const diff = Math.abs(candidateRoute.summary.distance - targetDistance);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestRoute = candidateRoute;
                 }
             }
         }
@@ -343,37 +351,36 @@
             elements.resultArea.innerHTML = '';
             const bounds = new kakao.maps.LatLngBounds();
 
-            // 순환 코스 표시
+            // 순환 코스 카드
             if (loopRoute && Math.abs(loopRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
-                drawPolylines(loopRoute, 'loop', '#ffc107');
+                drawPolyline(loopRoute, 'loop', '#ffc107');
                 elements.resultArea.appendChild(displayRouteInfo(loopRoute.summary, 'loop'));
                 loopRoute.sections.forEach(s => s.roads.forEach(rd => {
                     for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
                 }));
             } else {
-                elements.resultArea.appendChild(createPlaceholderCard('순환 코스 없음'));
+                elements.resultArea.appendChild(displayRouteInfo(null, 'loop'));
             }
             
-            // 왕복 코스 표시
+            // 왕복 코스 카드
             if (endPoint) {
                 if (roundTripRoute) {
                     const isShortestCase = targetDistanceMeters < roundTripRoute.summary.distance;
                     if (isShortestCase || Math.abs(roundTripRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
-                        drawPolylines(roundTripRoute, 'round-trip', '#007bff');
+                        drawPolyline(roundTripRoute, 'round-trip', '#007bff');
                         elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
                         roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
                             for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
                         }));
                     } else {
-                         elements.resultArea.appendChild(createPlaceholderCard('왕복 코스 없음'));
+                         elements.resultArea.appendChild(displayRouteInfo(null, 'round-trip'));
                     }
                 } else {
-                    elements.resultArea.appendChild(createPlaceholderCard('왕복 코스 없음'));
+                    elements.resultArea.appendChild(displayRouteInfo(null, 'round-trip'));
                 }
             } else {
-                 elements.resultArea.appendChild(createPlaceholderCard('도착지 미설정'));
+                 elements.resultArea.appendChild(createPlaceholderCard('왕복 코스는 도착지 설정 시 제공됩니다.'));
             }
-
 
             if (!bounds.isEmpty()) {
                 map.setBounds(bounds);
