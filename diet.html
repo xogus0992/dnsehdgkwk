@@ -2,8 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>다이어트 워킹 내비게이션 v20 (안정적인 순환 코스)</title>
+<title>다이어트 워킹 내비게이션 v24 (깔끔한 순환 코스)</title>
 <style>
+/* 기존 v20의 CSS 디자인을 그대로 유지 */
 html, body {
 width: 100%; height: 100%; margin: 0; padding: 0;
 font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
@@ -75,7 +76,7 @@ flex-basis: 320px; background-color: #f9f9f9; flex-grow: 1;
 <div class="container">
 <div id="map"></div>
 <div class="info-panel">
-<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v20</span></h2>
+<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v24</span></h2>
 <div class="input-group">
 <div class="input-wrapper start">
 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -136,7 +137,8 @@ if (!waypoints || waypoints.length < 2 || waypoints.some(p => !p || !p.x || !p.y
 const origin = `${waypoints[0].x},${waypoints[0].y}`;
 const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
 const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
-const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND`;
+// walking_mode=WALK 옵션 추가로 걷기 최적화 유도 (v24)
+const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND&car_avoid=1&walking_mode=WALK`; 
 try {
 const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
 if (!response.ok) return resolve(null);
@@ -181,8 +183,13 @@ const pathInTarget = [], pathOverTarget = [];
 route.sections.forEach(sec => sec.roads.forEach(road => {
 const roadPath = [];
 for (let i = 0; i < road.vertexes.length; i += 2) roadPath.push(new kakao.maps.LatLng(road.vertexes[i + 1], road.vertexes[i]));
-if (accumulatedDistance < targetDistanceMeters) pathInTarget.push(...roadPath);
-else pathOverTarget.push(...roadPath);
+// 순환 코스는 색 분할 미사용 (colors.in === colors.over)
+if (colors.in === colors.over) { 
+    pathInTarget.push(...roadPath);
+} else { 
+    if (accumulatedDistance < targetDistanceMeters) pathInTarget.push(...roadPath);
+    else pathOverTarget.push(...roadPath);
+}
 accumulatedDistance += road.distance;
 }));
 if (pathInTarget.length > 0) mapObjects.push(new kakao.maps.Polyline({ map, path: pathInTarget, strokeWeight: 8, strokeColor: colors.in, strokeOpacity: 0.8 }));
@@ -206,55 +213,61 @@ card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
 return card;
 }
 
-// --- ✨ [핵심 개선] 겹침 없는 단일 순환 코스 생성 함수 (v20) ---
+// --- ✨ [v24] 깔끔한 순환 코스 생성 함수로 변경 (경유지 수 7개, 보정값 1.8) ---
 async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
 const R = 6371e3; // 지구 반경
 
 let bestRoute = null;
 let bestDistanceDiff = Infinity;
-let correctionFactor = 1.6; // 초기 보정값
+let correctionFactor = 1.8; // 보정값 조정 (1.6 -> 1.8)
 
 // 최대 3번 반복하여 거리 오차 보정
 for (let i = 0; i < 3; i++) {
-const waypointsCount = 5; // 5개의 경유지로 6각형 모양 생성 (골목길 탐색 확률 증가)
-const sideLength = (targetDistance / waypointsCount) / correctionFactor;
-const startAngle = 30; // 일관성을 위해 랜덤 요소 제거, 고정 각도 사용
+const waypointsCount = 7; // 경유지 수 증가 (5 -> 7)
+// 순환이므로, 직선 거리는 목표 거리 / (경유지 수 * 보정값)
+const sideLength = (targetDistance / waypointsCount) / correctionFactor; 
+const startAngle = Math.random() * 360; // 시작 각도 랜덤으로 설정하여 다양한 형태 유도
 
 const waypoints = [];
 let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
 let lastAngle = startAngle;
 
-// ✨ '한붓그리기' 방식으로 경유지 순차 생성 (겹침 방지)
+// '한붓그리기' 방식으로 경유지 순차 생성
 for (let j = 0; j < waypointsCount - 1; j++) {
-const lastLatRad = lastPoint.y * Math.PI / 180;
-const lastLonRad = lastPoint.x * Math.PI / 180;
-const brngRad = lastAngle * Math.PI / 180;
+    const lastLatRad = lastPoint.y * Math.PI / 180;
+    const lastLonRad = lastPoint.x * Math.PI / 180;
+    const brngRad = lastAngle * Math.PI / 180;
 
-const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
-const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+    // Vincenty formula를 이용한 새로운 좌표 계산
+    const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
+    const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
 
-const newPoint = { y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI };
-waypoints.push(newPoint);
+    const newPoint = { y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI };
+    waypoints.push(newPoint);
 
-lastPoint = newPoint;
-lastAngle += 360 / waypointsCount; // 다각형의 외각만큼 회전
+    lastPoint = newPoint;
+    lastAngle += 360 / waypointsCount; // 다각형의 외각만큼 회전 (360/7)
 }
 
 const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]);
 
 if (currentRoute) {
-const actualDistance = currentRoute.summary.distance;
-const distanceDiff = Math.abs(actualDistance - targetDistance);
+    const actualDistance = currentRoute.summary.distance;
+    // 비정상적으로 긴 경로는 무시 (목표 거리의 2배 초과 시)
+    if (actualDistance > targetDistance * 2.0) continue; 
+    
+    const distanceDiff = Math.abs(actualDistance - targetDistance);
 
-if (distanceDiff < bestDistanceDiff) {
-bestDistanceDiff = distanceDiff;
-bestRoute = currentRoute;
-}
+    if (distanceDiff < bestDistanceDiff) {
+        bestDistanceDiff = distanceDiff;
+        bestRoute = currentRoute;
+    }
 
-if (bestDistanceDiff < targetDistance * 0.1) return bestRoute; // 오차 10% 이내면 종료
+    if (bestDistanceDiff < targetDistance * 0.1) return bestRoute; // 오차 10% 이내면 종료
 
-const errorRatio = actualDistance / targetDistance;
-if (errorRatio > 0.1) correctionFactor *= errorRatio; // 오차가 너무 작으면 보정값 유지
+    const errorRatio = actualDistance / targetDistance;
+    // 보정 로직 개선: 오차가 클수록 보정값을 더 크게 반영
+    if (errorRatio > 0.1) correctionFactor *= errorRatio * 0.8 + 0.2; 
 }
 }
 return bestRoute;
@@ -273,7 +286,7 @@ try {
 const startPoint = await searchPlace(elements.startInput.value);
 const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
 
-// 출발지 기준으로만 순환 코스 생성
+// 깔끔한 순환 코스 생성 함수 사용 (v24 개선)
 const loopPromise = generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters);
 
 let optimalPromise = Promise.resolve(null);
@@ -290,12 +303,13 @@ resolve(getRoute([startPoint, data[0], endPoint]));
 });
 }
 
-const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalPromise, scenicPromise]);
+const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalRoute, scenicPromise]);
 
 elements.resultArea.innerHTML = '';
 let routeCount = 0;
 
 if (loopRoute) {
+// 순환 코스는 색 분할 없이 전체를 주황색으로 표시
 drawRouteWithColorSegments(loopRoute, 9999999, { in: '#ffc107', over: '#ffc107' });
 elements.resultArea.appendChild(displayRouteInfo(loopRoute, 'loop', targetDistanceKm));
 routeCount++;
@@ -305,7 +319,7 @@ drawRouteWithColorSegments(optimalRoute, targetDistanceMeters, { in: '#007bff', 
 elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal', targetDistanceKm));
 routeCount++;
 }
-if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > scenicRoute.summary.distance * 1.1)) {
+if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > optimalRoute.summary.distance * 1.1)) {
 drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
 elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
 routeCount++;
@@ -323,7 +337,7 @@ for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.
 });
 
 if (!bounds.isEmpty()) map.setBounds(bounds);
-else map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+else if (startPoint) map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
 
 mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
 if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
