@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 (v21 - 최종 로직)</title>
+    <title>다이어트 워킹 내비게이션 (v22 - 지능형 경로)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -26,18 +26,20 @@
         }
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         .input-wrapper { flex-grow: 1; position: relative; min-width: 180px; }
-        .input-wrapper::before {
-            position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
-            font-weight: bold; color: #4CAF50;
-        }
-        .input-wrapper.start::before { content: '출발'; }
-        .input-wrapper.end::before { content: '도착'; }
-        .input-wrapper.target::before { content: '👟 km';}
-
-        input[type="text"], input[type="number"] {
-            width: 100%; padding: 12px 12px 12px 60px; border: 1px solid #ccc;
+        .input-wrapper.target { display: flex; align-items: center; border: 1px solid #ccc; border-radius: 5px; }
+        .input-wrapper.target .icon { padding-left: 12px; color: #4CAF50; }
+        .input-wrapper.target .unit { padding-right: 12px; color: #888; font-weight: bold; }
+        
+        input[type="text"] {
+            width: 100%; padding: 12px; border: 1px solid #ccc;
             border-radius: 5px; font-size: 1em; box-sizing: border-box;
         }
+        input[type="number"] {
+            width: 100%; padding: 12px 0; border: none; font-size: 1em; box-sizing: border-box;
+            text-align: center; background: none;
+        }
+        input[type="number"]:focus { outline: none; }
+
 
         #searchBtn {
             padding: 12px 25px; background-color: #4CAF50; color: white; border: none;
@@ -75,16 +77,18 @@
     <div class="info-panel">
         <h2>👟 맞춤형 걷기 코스 추천</h2>
         <div class="input-group">
-            <div class="input-wrapper start">
+            <div class="input-wrapper">
                 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
                 <div id="start-suggestions" class="suggestions-list"></div>
             </div>
-            <div class="input-wrapper end">
+            <div class="input-wrapper">
                 <input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off">
                 <div id="end-suggestions" class="suggestions-list"></div>
             </div>
             <div class="input-wrapper target">
+                <span class="icon">👟</span>
                 <input type="number" id="targetDistance" placeholder="목표 거리">
+                <span class="unit">km</span>
             </div>
             <button id="searchBtn">코스 생성</button>
         </div>
@@ -122,14 +126,16 @@
     });
     
     const getRouteAPI = (params) => new Promise(async (resolve) => {
-        const query = new URLSearchParams(params).toString();
+        // priority=RECOMMEND 대신 short_dist 삭제하고 alternatives 추가하여 골목길 탐색 유도
+        const queryParams = { ...params, priority: "RECOMMEND", alternatives: true };
+        const query = new URLSearchParams(queryParams).toString();
         const url = `https://apis-navi.kakaomobility.com/v1/directions?${query}`;
         try {
             const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
             if (!response.ok) return resolve(null);
             const data = await response.json();
             if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) {
-                resolve(data); // routes 배열 전체를 반환
+                resolve(data);
             } else { resolve(null); }
         } catch { resolve(null); }
     });
@@ -163,8 +169,12 @@
                 const firstSuggestion = listEl.querySelector('.suggestion-item');
                 if (firstSuggestion) {
                     firstSuggestion.click();
+                    // 다음 입력 필드로 포커스 이동
+                    if (inputEl === elements.startInput) elements.endInput.focus();
+                    else if (inputEl === elements.endInput) elements.targetDistanceInput.focus();
+                } else {
+                   elements.searchBtn.focus();
                 }
-                elements.searchBtn.focus(); // 검색 버튼으로 포커스 이동
             }
         });
     };
@@ -195,7 +205,6 @@
         return card;
     }
 
-    // --- 코스 1: 겹침 없는 순환 코스 생성 함수 ---
     async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
         const R = 6371e3;
         let bestRoute = null;
@@ -205,7 +214,7 @@
         for (let i = 0; i < 3; i++) {
             const waypointsCount = 5;
             const sideLength = (targetDistance / waypointsCount) / correctionFactor;
-            const startAngle = 30;
+            const startAngle = 30 + (i * 10);
 
             const waypoints = [];
             let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
@@ -215,14 +224,10 @@
                 const lastLatRad = lastPoint.y * Math.PI / 180;
                 const lastLonRad = lastPoint.x * Math.PI / 180;
                 const brngRad = lastAngle * Math.PI / 180;
-
                 const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
                 const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
-
-                const newPoint = { y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI };
-                waypoints.push(newPoint);
-
-                lastPoint = newPoint;
+                waypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
+                lastPoint = waypoints[waypoints.length -1];
                 lastAngle += 360 / waypointsCount;
             }
 
@@ -232,64 +237,67 @@
                 waypoints: waypoints.map(p => `${p.x},${p.y}`).join('|')
             });
 
-            if (data && data.routes[0]) {
-                const currentRoute = data.routes[0];
-                const actualDistance = currentRoute.summary.distance;
-                const distanceDiff = Math.abs(actualDistance - targetDistance);
-
-                if (distanceDiff < bestDistanceDiff) {
-                    bestDistanceDiff = distanceDiff;
-                    bestRoute = currentRoute;
-                }
-                if (bestDistanceDiff < targetDistance * 0.1) return bestRoute;
-                const errorRatio = actualDistance / targetDistance;
+            if (data && data.routes) {
+                 for (const route of data.routes) {
+                    const actualDistance = route.summary.distance;
+                    const distanceDiff = Math.abs(actualDistance - targetDistance);
+                    if (distanceDiff < bestDistanceDiff) {
+                        bestDistanceDiff = distanceDiff;
+                        bestRoute = route;
+                    }
+                 }
+                const errorRatio = bestRoute.summary.distance / targetDistance;
                 if (errorRatio > 0.1) correctionFactor *= errorRatio;
             }
         }
         return bestRoute;
     }
     
-    // --- 코스 2: 왕복 코스 생성 함수 ---
     async function generateRoundTripCourse(startPoint, endPoint, targetDistance) {
-        const toEndData = await getRouteAPI({ origin: `${startPoint.x},${startPoint.y}`, destination: `${endPoint.x},${endPoint.y}`, alternatives: true });
+        const toEndData = await getRouteAPI({ origin: `${startPoint.x},${startPoint.y}`, destination: `${endPoint.x},${endPoint.y}` });
         if (!toEndData) return null;
 
         const shortestToEndRoute = toEndData.routes[0];
-        const minRoundTripDistance = shortestToEndRoute.summary.distance * 2; // 대략적인 최소 왕복 거리
+        const minRoundTripDistance = shortestToEndRoute.summary.distance * 2;
 
-        if (targetDistance <= minRoundTripDistance * 1.1) { // 목표 거리가 최소 왕복 거리보다 짧거나 비슷할 경우
-            const toStartRoute = await getRouteAPI({ origin: `${endPoint.x},${endPoint.y}`, destination: `${startPoint.x},${startPoint.y}` });
-            if (!toStartRoute) return null;
+        if (targetDistance <= minRoundTripDistance) {
+            const toStartData = await getRouteAPI({ origin: `${endPoint.x},${endPoint.y}`, destination: `${startPoint.x},${startPoint.y}` });
+            if (!toStartData) return null;
+            const shortestToStartRoute = toStartData.routes[0];
 
             const combinedSummary = {
-                distance: shortestToEndRoute.summary.distance + toStartRoute.routes[0].summary.distance,
-                duration: shortestToEndRoute.summary.duration + toStartRoute.routes[0].summary.duration,
+                distance: shortestToEndRoute.summary.distance + shortestToStartRoute.summary.distance,
+                duration: shortestToEndRoute.summary.duration + shortestToStartRoute.summary.duration,
             };
             const combinedRoute = { ...shortestToEndRoute };
             combinedRoute.summary = combinedSummary;
-            combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(toStartRoute.routes[0].sections[0].roads);
+            combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(shortestToStartRoute.sections[0].roads);
             return combinedRoute;
-        } else { // 목표 거리가 더 길 경우, 돌아오는 길을 다양하게 탐색
+        } else {
             const remainingDistance = targetDistance - shortestToEndRoute.summary.distance;
+            const returnLoop = await generateNonOverlappingLoopCourse(endPoint, remainingDistance);
             
-            // 도착지에서 출발지로 돌아오는 경로를 다양한 방법으로 탐색
-            const toStartRouteData = await getRouteAPI({ 
-                origin: `${endPoint.x},${endPoint.y}`, 
-                destination: `${startPoint.x},${startPoint.y}`,
-                alternatives: true,
-                priority: "RECOMMEND"
-            });
-            if (!toStartRouteData) return null;
-
+            if(!returnLoop) return null; // 순환 경로 못찾으면 종료
+            
+            // endPoint -> startPoint 순환경로를 endPoint -> ... -> startPoint 로 변환
             let bestReturnRoute = null;
             let minDiff = Infinity;
-            toStartRouteData.routes.forEach(route => {
-                const diff = Math.abs(route.summary.distance - remainingDistance);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    bestReturnRoute = route;
-                }
+            
+            const toStartAlternatives = await getRouteAPI({
+                origin: `${endPoint.x},${endPoint.y}`,
+                destination: `${startPoint.x},${startPoint.y}`,
+                alternatives: true,
             });
+
+            if(toStartAlternatives) {
+                toStartAlternatives.routes.forEach(route => {
+                    const diff = Math.abs(route.summary.distance - remainingDistance);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestReturnRoute = route;
+                    }
+                });
+            }
 
             if (!bestReturnRoute) return null;
 
@@ -318,12 +326,15 @@
             const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
             
             elements.resultArea.innerHTML = '';
-            let routeCount = 0;
             const bounds = new kakao.maps.LatLngBounds();
 
-            // 1. 순환 코스 (항상 생성)
-            const loopRoute = await generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters);
-            if (loopRoute && Math.abs(loopRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
+            const [loopRoute, roundTripRoute] = await Promise.all([
+                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters),
+                endPoint ? generateRoundTripCourse(startPoint, endPoint, targetDistanceMeters) : Promise.resolve(null)
+            ]);
+
+            let routeCount = 0;
+            if (loopRoute) {
                 drawPolyline(loopRoute, '#ffc107');
                 elements.resultArea.appendChild(displayRouteInfo(loopRoute.summary, 'loop'));
                 routeCount++;
@@ -332,17 +343,13 @@
                 }));
             }
             
-            // 2. 왕복 코스 (도착지가 있을 때만 생성)
-            if (endPoint) {
-                const roundTripRoute = await generateRoundTripCourse(startPoint, endPoint, targetDistanceMeters);
-                if (roundTripRoute && Math.abs(roundTripRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
-                    drawPolyline(roundTripRoute, '#007bff');
-                    elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
-                    routeCount++;
-                     roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
-                        for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
-                    }));
-                }
+            if (roundTripRoute) {
+                drawPolyline(roundTripRoute, '#007bff');
+                elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
+                routeCount++;
+                 roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
+                    for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
+                }));
             }
 
             if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 추천할 코스를 찾지 못했습니다. 장소나 거리를 변경하여 다시 시도해보세요.</p>';
@@ -361,7 +368,8 @@
 
     elements.searchBtn.addEventListener('click', generateCourses);
     [elements.startInput, elements.endInput, elements.targetDistanceInput].forEach(input => {
-        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') elements.searchBtn.click(); });
+        if(input !== elements.targetDistanceInput)
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
     });
 </script>
 
