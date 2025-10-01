@@ -2,9 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>다이어트 워킹 내비게이션 v34 (최종 결함 수정)</title>
+<title>다이어트 워킹 내비게이션 v35 (캐릭터 커스텀 및 목표 관리)</title>
 <style>
-  /* CSS는 v33과 동일 */
+  /* v34 CSS 기반 + 프로그레스 바 스타일 추가 */
   html, body { width: 100%; height: 100%; margin: 0; padding: 0; font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0; }
   .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
   #map { width: 100%; flex-grow: 1; min-height: 400px; }
@@ -42,14 +42,22 @@
   .scenic-loop .color-box { background-color: #28a745; }
   .trail-course .color-box { background-color: #6f42c1; }
 
+  /* 모달 스타일 */
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-  .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 10px; text-align: center; }
+  .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 10px; text-align: center; }
   .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
   .modal-content h3 { margin-top: 0; }
   .modal-input-group { display: flex; gap: 10px; margin-bottom: 15px; }
-  #character-display { font-family: monospace; line-height: 1.2; font-size: 16px; margin: 20px 0; white-space: pre; background-color: #eee; padding: 15px; border-radius: 5px; }
+  #character-display { font-family: monospace; line-height: 1; font-size: 14px; margin: 15px 0; white-space: pre; background-color: #eee; padding: 15px; border-radius: 5px; display: inline-block; }
   #bmi-status { font-weight: bold; font-size: 1.2em; }
-  #calorie-log { margin-top: 10px; color: #e61a5f; font-weight: bold; }
+  #calorie-log { margin-top: 5px; color: #e61a5f; font-weight: bold; }
+
+  /* ✨ 목표 체중 프로그레스 바 스타일 */
+  #goal-progress { margin-top: 15px; }
+  #goal-progress-bar { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 5px; }
+  .progress-block { width: 15px; height: 15px; background-color: #e61a5f; border: 1px solid white; }
+  #goal-status { font-weight: bold; }
+
 
   .suggestions-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white; border: 1px solid #ddd; z-index: 1001; max-height: 220px; overflow-y: auto; }
   .suggestion-item { padding: 12px 15px; cursor: pointer; font-size: 0.95em; }
@@ -62,7 +70,7 @@
   <div id="map"></div>
   <div class="info-panel">
     <div class="panel-header">
-      <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v34</span></h2>
+      <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v35</span></h2>
       <button id="bodyStateBtn">오늘 나의 몸상태</button>
     </div>
     <div class="input-group">
@@ -84,137 +92,160 @@
     <h3>오늘 나의 몸상태</h3>
     <div class="modal-input-group">
       <input type="number" id="userHeight" placeholder="키(cm)">
-      <input type="number" id="userWeight" placeholder="몸무게(kg)">
-      <select id="userGender">
-        <option value="male">남성</option>
-        <option value="female">여성</option>
-      </select>
+      <input type="number" id="userWeight" placeholder="현재 체중(kg)">
+      <input type="number" id="userGoalWeight" placeholder="목표 체중(kg)">
     </div>
     <div id="character-display"></div>
     <div id="bmi-status">정보를 입력해주세요.</div>
     <div id="calorie-log">오늘 소모한 칼로리: 0 kcal</div>
+    <div id="goal-progress">
+      <div id="goal-status">목표를 설정해주세요.</div>
+      <div id="goal-progress-bar"></div>
+    </div>
   </div>
 </div>
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 <script>
-  // 신체 상태 기능 (v33과 동일)
+  // ✨ --- 신체 상태(Body State) 기능 v2 ---
   const bodyState = {
     modal: document.getElementById('bodyStateModal'), btn: document.getElementById('bodyStateBtn'),
     closeBtn: document.querySelector('.modal .close'), heightInput: document.getElementById('userHeight'),
-    weightInput: document.getElementById('userWeight'), genderInput: document.getElementById('userGender'),
+    weightInput: document.getElementById('userWeight'), goalWeightInput: document.getElementById('userGoalWeight'),
     characterDisplay: document.getElementById('character-display'), bmiStatus: document.getElementById('bmi-status'),
-    calorieLog: document.getElementById('calorie-log'),
-    data: { height: '', weight: '', gender: 'male', burntCalories: 0 },
+    calorieLog: document.getElementById('calorie-log'), goalStatus: document.getElementById('goal-status'),
+    progressBar: document.getElementById('goal-progress-bar'),
+
+    data: { height: '', weight: '', goalWeight: '', burntCalories: 0 },
+
+    // ✨ 요청하신 캐릭터 기반으로 새로 제작한 아트
     characters: {
-      obese: `\n     █████\n    ███████\n   █████████\n     █████\n   █████████\n  ████ ████\n`,
-      overweight: `\n      ███\n     █████\n    ███████\n      ███\n     █████\n    ███ ███\n`,
-      normal: `\n      █\n     ███\n    █████\n      █\n     ███\n    █   █\n`,
-      underweight: `\n      .\n     -|- \n    --|--\n      |\n     / \\\n    /   \\\n`,
+      obese: `
+ ██████
+████████
+████████
+ ██████
+ ██████
+███  ███
+`,
+      overweight: `
+  ████
+ ██████
+ ██████
+  ████
+  ████
+ ██  ██
+`,
+      normal: `
+   ██
+  ████
+  ████
+   ██
+   ██
+  █  █
+`,
+      underweight: `
+   █
+  -█-
+  -█-
+   █
+  / \\
+ /   \\
+`,
     },
-    init() { this.loadData(); this.updateUI(); this.btn.onclick = () => this.modal.style.display = 'block'; this.closeBtn.onclick = () => this.modal.style.display = 'none'; window.onclick = (event) => { if (event.target == this.modal) this.modal.style.display = 'none'; }; this.heightInput.oninput = () => this.updateCharacter(); this.weightInput.oninput = () => this.updateCharacter(); },
-    saveData() { localStorage.setItem('userData', JSON.stringify(this.data)); },
-    loadData() { const savedData = JSON.parse(localStorage.getItem('userData')); if (savedData) { this.data = { ...this.data, ...savedData }; } },
-    updateUI() { this.heightInput.value = this.data.height; this.weightInput.value = this.data.weight; this.genderInput.value = this.data.gender; this.calorieLog.textContent = `오늘 소모한 칼로리: ${this.data.burntCalories} kcal`; this.updateCharacter(); },
-    updateCharacter() { const height = parseFloat(this.heightInput.value); const weight = parseFloat(this.weightInput.value); this.data.height = height || ''; this.data.weight = weight || ''; this.saveData(); if (!height || !weight || height <= 0 || weight <= 0) { this.characterDisplay.textContent = '정보를 입력하면\n캐릭터가 나타납니다.'; this.bmiStatus.textContent = '정보를 입력해주세요.'; return; } const bmi = weight / ((height / 100) ** 2); let statusText = ''; let characterArt = ''; if (bmi >= 30) { statusText = '비만'; characterArt = this.characters.obese; } else if (bmi >= 25) { statusText = '과체중'; characterArt = this.characters.overweight; } else if (bmi >= 18.5) { statusText = '정상'; characterArt = this.characters.normal; } else { statusText = '저체중'; characterArt = this.characters.underweight; } this.bmiStatus.textContent = `BMI: ${bmi.toFixed(1)} (${statusText})`; this.characterDisplay.textContent = characterArt; },
+
+    init() {
+      this.loadData();
+      this.updateUI();
+      this.btn.onclick = () => this.modal.style.display = 'block';
+      this.closeBtn.onclick = () => this.modal.style.display = 'none';
+      window.onclick = (event) => { if (event.target == this.modal) this.modal.style.display = 'none'; };
+      
+      this.heightInput.oninput = () => this.updateAll();
+      this.weightInput.oninput = () => this.updateAll();
+      this.goalWeightInput.oninput = () => this.updateAll();
+    },
+
+    saveData() { localStorage.setItem('userDataV2', JSON.stringify(this.data)); },
+    loadData() { const savedData = JSON.parse(localStorage.getItem('userDataV2')); if (savedData) this.data = { ...this.data, ...savedData }; },
+
+    updateAll() {
+        this.updateDataFromInputs();
+        this.updateCharacter();
+        this.updateProgressBar();
+        this.saveData();
+    },
+
+    updateUI() {
+      this.heightInput.value = this.data.height;
+      this.weightInput.value = this.data.weight;
+      this.goalWeightInput.value = this.data.goalWeight;
+      this.calorieLog.textContent = `오늘 소모한 칼로리: ${this.data.burntCalories} kcal`;
+      this.updateAll();
+    },
+    
+    updateDataFromInputs(){
+        this.data.height = parseFloat(this.heightInput.value) || '';
+        this.data.weight = parseFloat(this.weightInput.value) || '';
+        this.data.goalWeight = parseFloat(this.goalWeightInput.value) || '';
+    },
+
+    updateCharacter() {
+      const { height, weight } = this.data;
+      if (!height || !weight) {
+        this.characterDisplay.textContent = '정보를 입력하면\n캐릭터가 나타납니다.';
+        this.bmiStatus.textContent = '키와 현재 체중을 입력해주세요.';
+        return;
+      }
+      const bmi = weight / ((height / 100) ** 2);
+      let statusText = '', characterArt = '';
+      if (bmi >= 30) { statusText = '비만'; characterArt = this.characters.obese; } 
+      else if (bmi >= 25) { statusText = '과체중'; characterArt = this.characters.overweight; } 
+      else if (bmi >= 18.5) { statusText = '정상'; characterArt = this.characters.normal; } 
+      else { statusText = '저체중'; characterArt = this.characters.underweight; }
+      this.bmiStatus.textContent = `BMI: ${bmi.toFixed(1)} (${statusText})`;
+      this.characterDisplay.textContent = characterArt;
+    },
+
+    updateProgressBar() {
+        const { weight, goalWeight } = this.data;
+        this.progressBar.innerHTML = '';
+        if(!weight || !goalWeight || goalWeight >= weight) {
+            this.goalStatus.textContent = weight && goalWeight ? "🎉 목표 체중 달성! 축하합니다!" : "목표 체중을 입력해주세요.";
+            return;
+        }
+        const diff = weight - goalWeight;
+        this.goalStatus.textContent = `목표까지 앞으로 ${diff.toFixed(1)} kg !`;
+        const blocks = Math.ceil(diff);
+        for(let i = 0; i < blocks; i++) {
+            const block = document.createElement('div');
+            block.className = 'progress-block';
+            this.progressBar.appendChild(block);
+        }
+    },
+
     addBurntCalories(calories) { this.data.burntCalories += calories; this.calorieLog.textContent = `오늘 소모한 칼로리: ${Math.round(this.data.burntCalories)} kcal`; this.saveData(); }
   };
   bodyState.init();
 
-  // --- 내비게이션 기능 ---
-  const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
-  const KCAL_PER_KM = 60;
+  // --- 내비게이션 기능 (v34와 동일) ---
+  const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a'; const KCAL_PER_KM = 60;
   const elements = { mapContainer: document.getElementById('map'), startInput: document.getElementById('start'), endInput: document.getElementById('end'), targetDistanceInput: document.getElementById('targetDistance'), calculatedCalories: document.getElementById('calculated-calories'), searchBtn: document.getElementById('searchBtn'), resultArea: document.getElementById('result-area'), startSuggestions: document.getElementById('start-suggestions'), endSuggestions: document.getElementById('end-suggestions'), };
-  const map = new kakao.maps.Map(elements.mapContainer, { center: new kakao.maps.LatLng(37.5034, 126.7661), level: 5 });
-  const ps = new kakao.maps.services.Places();
-  let mapObjects = [];
-
-  // 기본 유틸리티 함수들 (변경 없음)
+  const map = new kakao.maps.Map(elements.mapContainer, { center: new kakao.maps.LatLng(37.5034, 126.7661), level: 5 }); const ps = new kakao.maps.services.Places(); let mapObjects = [];
   elements.targetDistanceInput.addEventListener('input', () => { const distance = parseFloat(elements.targetDistanceInput.value) || 0; elements.calculatedCalories.textContent = `약 ${Math.round(distance * KCAL_PER_KM)} kcal`; });
   const searchPlace = (query) => new Promise((resolve, reject) => { if (!query.trim()) return reject(new Error('검색어가 비어있습니다.')); ps.keywordSearch(query, (data, status) => { if (status === kakao.maps.services.Status.OK && data.length > 0) { resolve(data[0]); } else { reject(new Error(`'${query}' 검색 실패. 정확한 장소명을 입력해주세요.`)); } }); });
   const getRoute = (waypoints) => new Promise(async (resolve) => { if (!waypoints || waypoints.length < 2 || waypoints.some((p) => !p || !p.x || !p.y)) return resolve(null); const origin = `${waypoints[0].x},${waypoints[0].y}`; const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`; const via = waypoints.slice(1, -1).map((p) => `${p.x},${p.y}`).join('|'); const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND&car_avoid=1&walking_mode=WALK`; try { const response = await fetch(url, { headers: { Authorization: `KakaoAK ${REST_API_KEY}` } }); if (!response.ok) return resolve(null); const data = await response.json(); if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) { resolve(data.routes[0]); } else { resolve(null); } } catch { resolve(null); } });
   const clearMap = () => { mapObjects.forEach((obj) => obj.setMap(null)); mapObjects = []; };
   const debounce = (func, delay) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => func.apply(null, a), delay); }; };
   const setupAutocomplete = (inputEl, listEl) => { const showSuggestions = debounce((query) => { if (!query.trim()) { listEl.style.display = 'none'; return; } ps.keywordSearch(query, (data, status) => { listEl.innerHTML = ''; if (status === kakao.maps.services.Status.OK) { const f = document.createDocumentFragment(); data.forEach((p) => { const i = document.createElement('div'); i.className = 'suggestion-item'; i.innerHTML = `${p.place_name}<small>${p.road_address_name || p.address_name}</small>`; i.addEventListener('click', () => { inputEl.value = p.place_name; listEl.style.display = 'none'; }); f.appendChild(i); }); listEl.appendChild(f); listEl.style.display = 'block'; } }); }, 250); inputEl.addEventListener('input', () => showSuggestions(inputEl.value)); };
-  setupAutocomplete(elements.startInput, elements.startSuggestions);
-  setupAutocomplete(elements.endInput, elements.endSuggestions);
+  setupAutocomplete(elements.startInput, elements.startSuggestions); setupAutocomplete(elements.endInput, elements.endSuggestions);
   document.addEventListener('click', (e) => { if (!e.target.closest('.input-wrapper')) { elements.startSuggestions.style.display = 'none'; elements.endSuggestions.style.display = 'none'; } });
-
-  // ✨ [핵심 수정] v34: 실패 원인이었던 '사거리'를 삭제하고 신뢰도 높은 키워드 추가
-  async function generateWaypointLoopCourse(startPoint, targetDistanceKm) {
-    const targetDistMeters = targetDistanceKm * 1000;
-    let bestRoute = null;
-    let bestDiff = Infinity;
-    let searchRadius = targetDistMeters / 4;
-    for (let i = 0; i < 3; i++) {
-      // ✨ 신뢰도 높은 키워드로 변경
-      const keywords = ['지하철역', '은행', '편의점', '카페', '약국', '학교', '버스정류장'];
-      const bearings = [0, 90, 180, 270];
-      const R = 6371e3;
-      const startLatRad = parseFloat(startPoint.y) * Math.PI / 180;
-      const startLonRad = parseFloat(startPoint.x) * Math.PI / 180;
-      const waypointPromises = bearings.map((bearing) => new Promise((resolve) => {
-            const brngRad = bearing * Math.PI / 180;
-            const latRad = Math.asin(Math.sin(startLatRad) * Math.cos(searchRadius / R) + Math.cos(startLatRad) * Math.sin(searchRadius / R) * Math.cos(brngRad));
-            const lonRad = startLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(searchRadius / R) * Math.cos(startLatRad), Math.cos(searchRadius / R) - Math.sin(startLatRad) * Math.sin(latRad));
-            const searchCenter = new kakao.maps.LatLng((latRad * 180) / Math.PI, (lonRad * 180) / Math.PI);
-            ps.keywordSearch(keywords.join(','), (data, status) => {
-                if (status === kakao.maps.services.Status.OK && data.length > 0) {
-                  resolve(data[0]);
-                } else {
-                  resolve(null);
-                }
-              }, { location: searchCenter, radius: 700, sort: kakao.maps.services.SortBy.DISTANCE });
-          })
-      );
-      const waypoints = (await Promise.all(waypointPromises)).filter((p) => p);
-      if (waypoints.length < 3) continue;
-      const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]);
-      if (currentRoute) {
-        const currentDist = currentRoute.summary.distance;
-        const diff = Math.abs(currentDist - targetDistMeters);
-        if (diff < bestDiff) { bestDiff = diff; bestRoute = currentRoute; }
-        if (bestDiff < targetDistMeters * 0.1) return bestRoute;
-        const ratio = targetDistMeters / currentDist;
-        searchRadius *= (ratio * 0.7 + 0.3);
-      }
-    }
-    return bestRoute;
-  }
-
-  // 나머지 코스 생성 함수 및 UI 표시 함수는 v33과 동일
+  async function generateWaypointLoopCourse(startPoint, targetDistanceKm) { const targetDistMeters = targetDistanceKm * 1000; let bestRoute = null; let bestDiff = Infinity; let searchRadius = targetDistMeters / 4; for (let i = 0; i < 3; i++) { const keywords = ['지하철역', '은행', '편의점', '카페', '약국', '학교', '버스정류장']; const bearings = [0, 90, 180, 270]; const R = 6371e3; const startLatRad = parseFloat(startPoint.y) * Math.PI / 180; const startLonRad = parseFloat(startPoint.x) * Math.PI / 180; const waypointPromises = bearings.map((bearing) => new Promise((resolve) => { const brngRad = bearing * Math.PI / 180; const latRad = Math.asin(Math.sin(startLatRad) * Math.cos(searchRadius / R) + Math.cos(startLatRad) * Math.sin(searchRadius / R) * Math.cos(brngRad)); const lonRad = startLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(searchRadius / R) * Math.cos(startLatRad), Math.cos(searchRadius / R) - Math.sin(startLatRad) * Math.sin(latRad)); const searchCenter = new kakao.maps.LatLng((latRad * 180) / Math.PI, (lonRad * 180) / Math.PI); ps.keywordSearch(keywords.join(','), (data, status) => { if (status === kakao.maps.services.Status.OK && data.length > 0) { resolve(data[0]); } else { resolve(null); } }, { location: searchCenter, radius: 700, sort: kakao.maps.services.SortBy.DISTANCE }); })); const waypoints = (await Promise.all(waypointPromises)).filter((p) => p); if (waypoints.length < 3) continue; const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]); if (currentRoute) { const currentDist = currentRoute.summary.distance; const diff = Math.abs(currentDist - targetDistMeters); if (diff < bestDiff) { bestDiff = diff; bestRoute = currentRoute; } if (bestDiff < targetDistMeters * 0.1) return bestRoute; const ratio = targetDistMeters / currentDist; searchRadius *= (ratio * 0.7 + 0.3); } } return bestRoute; }
   async function generateTrailCourse(startPoint, targetDistanceKm) { return new Promise(resolve => { ps.keywordSearch("공원 산 등산로", async (data, status) => { if (status !== kakao.maps.services.Status.OK || data.length === 0) { return resolve(null); } const trailStartPoint = data[0]; const trailRoute = await generateWaypointLoopCourse(trailStartPoint, targetDistanceKm); resolve(trailRoute); }, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 3000, sort: kakao.maps.services.SortBy.DISTANCE }); }); }
   async function generateScenicLoopNearPoint(centerPoint, targetDistanceKm) { return new Promise((resolve) => { ps.keywordSearch('공원 산책로 하천 등산로 강변', async (data, status) => { if (status !== kakao.maps.services.Status.OK || data.length === 0) return resolve(null); const scenicStartPoint = data[0]; const scenicLoopRoute = await generateWaypointLoopCourse(scenicStartPoint, targetDistanceKm); resolve(scenicLoopRoute); }, { location: new kakao.maps.LatLng(centerPoint.y, centerPoint.x), radius: 5000, sort: kakao.maps.services.SortBy.DISTANCE }); }); }
   function drawPolyline(route, color) { if (!route || !route.sections) return; const path = []; route.sections.forEach((sec) => sec.roads.forEach((road) => { for (let i = 0; i < road.vertexes.length; i += 2) { path.push(new kakao.maps.LatLng(road.vertexes[i + 1], road.vertexes[i])); } })); mapObjects.push(new kakao.maps.Polyline({ map: map, path: path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.8 })); }
   function displayRouteInfo(route, type) { const card = document.createElement('div'); card.className = `route-card ${type}`; const distanceKm = (route.summary.distance / 1000).toFixed(2); const durationMin = Math.round(route.summary.duration / 60); const calories = Math.round(parseFloat(distanceKm) * KCAL_PER_KM); bodyState.addBurntCalories(calories); const titles = { loop: '1. 출발지 기준 순환 코스', optimal: '2. 최적 경로 코스', 'scenic-loop': '3. 도착지 주변 산책 코스', 'trail-course': '4. 주변 산책로 코스' }; card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3> <p>총 거리: <b>${distanceKm} km</b></p> <p>예상 시간: <b>${durationMin} 분</b></p> <p>소모 칼로리: <b>약 ${calories} kcal</b></p>`; return card; }
-  
-  async function generateCourses() {
-    if (!elements.startInput.value || !elements.targetDistanceInput.value) { alert('출발지와 목표 거리를 모두 입력해주세요!'); return; }
-    clearMap();
-    elements.resultArea.innerHTML = '<p class="info-message">네 가지 맞춤 코스를 생성 중입니다...</p>';
-    const targetDistanceKm = parseFloat(elements.targetDistanceInput.value);
-    try {
-      const startPoint = await searchPlace(elements.startInput.value);
-      const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
-      const departureLoopPromise = generateWaypointLoopCourse(startPoint, targetDistanceKm);
-      const optimalPromise = endPoint ? getRoute([startPoint, endPoint]) : Promise.resolve(null);
-      const scenicLoopPromise = endPoint ? generateScenicLoopNearPoint(endPoint, targetDistanceKm) : Promise.resolve(null);
-      const trailCoursePromise = generateTrailCourse(startPoint, targetDistanceKm);
-      const [departureLoopRoute, optimalRoute, scenicLoopRoute, trailCourseRoute] = await Promise.all([departureLoopPromise, optimalPromise, scenicLoopPromise, trailCoursePromise]);
-      elements.resultArea.innerHTML = '';
-      bodyState.data.burntCalories = 0; 
-      const bounds = new kakao.maps.LatLngBounds();
-      if (departureLoopRoute) { drawPolyline(departureLoopRoute, '#ffc107'); elements.resultArea.appendChild(displayRouteInfo(departureLoopRoute, 'loop')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 1번 코스를 생성하지 못했습니다.</p>'; }
-      if (endPoint) { if (optimalRoute) { drawPolyline(optimalRoute, '#007bff'); elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 2번 코스를 생성하지 못했습니다.</p>'; } } else { elements.resultArea.innerHTML += '<p class="info-message">💡 도착지를 입력하면 2, 3번 코스를 추천받을 수 있습니다.</p>'; }
-      if (endPoint) { if (scenicLoopRoute) { drawPolyline(scenicLoopRoute, '#28a745'); elements.resultArea.appendChild(displayRouteInfo(scenicLoopRoute, 'scenic-loop')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 3번 코스를 생성하지 못했습니다.</p>'; } }
-      if (trailCourseRoute) { drawPolyline(trailCourseRoute, '#6f42c1'); elements.resultArea.appendChild(displayRouteInfo(trailCourseRoute, 'trail-course')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 4번 코스를 생성하지 못했습니다.</p>'; }
-      [departureLoopRoute, optimalRoute, scenicLoopRoute, trailCourseRoute].forEach((r) => { if (r && r.sections) r.sections.forEach((s) => s.roads.forEach((rd) => { for (let i = 0; i < rd.vertexes.length; i += 2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i + 1], rd.vertexes[i])); })); });
-      if (!bounds.isEmpty()) map.setBounds(bounds); else if (startPoint) map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
-      mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: '출발'}));
-      if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: '도착'}));
-    } catch (error) { alert(error.message); elements.resultArea.innerHTML = `<p class="info-message">${error.message}</p>`; }
-  }
-
+  async function generateCourses() { if (!elements.startInput.value || !elements.targetDistanceInput.value) { alert('출발지와 목표 거리를 모두 입력해주세요!'); return; } clearMap(); elements.resultArea.innerHTML = '<p class="info-message">네 가지 맞춤 코스를 생성 중입니다...</p>'; const targetDistanceKm = parseFloat(elements.targetDistanceInput.value); try { const startPoint = await searchPlace(elements.startInput.value); const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null; const departureLoopPromise = generateWaypointLoopCourse(startPoint, targetDistanceKm); const optimalPromise = endPoint ? getRoute([startPoint, endPoint]) : Promise.resolve(null); const scenicLoopPromise = endPoint ? generateScenicLoopNearPoint(endPoint, targetDistanceKm) : Promise.resolve(null); const trailCoursePromise = generateTrailCourse(startPoint, targetDistanceKm); const [departureLoopRoute, optimalRoute, scenicLoopRoute, trailCourseRoute] = await Promise.all([departureLoopPromise, optimalPromise, scenicLoopPromise, trailCoursePromise]); elements.resultArea.innerHTML = ''; bodyState.data.burntCalories = 0; const bounds = new kakao.maps.LatLngBounds(); if (departureLoopRoute) { drawPolyline(departureLoopRoute, '#ffc107'); elements.resultArea.appendChild(displayRouteInfo(departureLoopRoute, 'loop')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 1번 코스를 생성하지 못했습니다.</p>'; } if (endPoint) { if (optimalRoute) { drawPolyline(optimalRoute, '#007bff'); elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 2번 코스를 생성하지 못했습니다.</p>'; } } else { elements.resultArea.innerHTML += '<p class="info-message">💡 도착지를 입력하면 2, 3번 코스를 추천받을 수 있습니다.</p>'; } if (endPoint) { if (scenicLoopRoute) { drawPolyline(scenicLoopRoute, '#28a745'); elements.resultArea.appendChild(displayRouteInfo(scenicLoopRoute, 'scenic-loop')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 3번 코스를 생성하지 못했습니다.</p>'; } } if (trailCourseRoute) { drawPolyline(trailCourseRoute, '#6f42c1'); elements.resultArea.appendChild(displayRouteInfo(trailCourseRoute, 'trail-course')); } else { elements.resultArea.innerHTML += '<p class="info-message">⚠️ 4번 코스를 생성하지 못했습니다.</p>'; } [departureLoopRoute, optimalRoute, scenicLoopRoute, trailCourseRoute].forEach((r) => { if (r && r.sections) r.sections.forEach((s) => s.roads.forEach((rd) => { for (let i = 0; i < rd.vertexes.length; i += 2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i + 1], rd.vertexes[i])); })); }); if (!bounds.isEmpty()) map.setBounds(bounds); else if (startPoint) map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x)); mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: '출발'})); if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: '도착'})); } catch (error) { alert(error.message); elements.resultArea.innerHTML = `<p class="info-message">${error.message}</p>`; } }
   elements.searchBtn.addEventListener('click', generateCourses);
   [elements.startInput, elements.endInput, elements.targetDistanceInput].forEach((input) => {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') elements.searchBtn.click(); });
