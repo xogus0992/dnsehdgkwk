@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>My 다이어트 정보 (개선판)</title>
+<style>
+    body { font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; }
+    h2 { margin-top: 0; }
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; margin-top: 10px; background: #4caf50; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+    button:hover { background-color: #45a049; }
+    
+    #character-display { margin: 25px auto; width: 120px; height: 180px; display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+    #characterImage { max-width: 100%; max-height: 100%; object-fit: contain; filter: grayscale(1); } /* 회색톤 적용 */
+    
+    #goal-progress { margin-top: 20px; }
+    /* ✨ 프로그레스 바 컨테이너: flex로 자식 요소들을 가로로 나열 */
+    .progress-bar-container { width: 100%; background-color: #ddd; border-radius: 10px; height: 25px; overflow: hidden; display: flex; }
+    /* ✨ 프로그레스 바의 각 부분 스타일 */
+    #bar-achieved { background-color: #4caf50; height: 100%; transition: width 0.5s ease; }
+    #bar-excess { background-color: #e61a5f; height: 100%; transition: width 0.5s ease; }
+
+    #progress-text { font-weight: bold; margin-top: 8px; }
+    
+    #result-display { margin-top: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px;}
+    #result-display p { margin: 5px 0; font-weight: bold; }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>내 몸 정보 입력</h2>
+    <div class="input-grid">
+        <select id="gender">
+            <option value="male">남성</option>
+            <option value="female">여성</option>
+        </select>
+        <input type="number" id="age" placeholder="나이">
+        <input type="number" id="height" placeholder="키 (cm)">
+        <input type="number" id="weight" placeholder="현재 체중 (kg)">
+        <input type="number" id="fat" placeholder="체지방률 (%)">
+        <input type="number" id="muscle" placeholder="근육량 (kg)">
+    </div>
+    <input type="number" id="goalWeight" placeholder="목표 체중 (kg)">
+    <button onclick="updateAllInfo()">확인</button>
+    
+    <div id="character-display">
+        <img id="characterImage" src="" alt="캐릭터">
+    </div>
+    
+    <div id="goal-progress">
+        <div class="progress-bar-container">
+            <div id="bar-achieved"></div>
+            <div id="bar-excess"></div>
+        </div>
+        <div id="progress-text">목표를 설정해주세요.</div>
+    </div>
+
+    <div id="result-display">
+        <p id="bmi-result">BMI: -</p>
+        <p id="bmr-result">기초대사량(BMR): -</p>
+    </div>
+</div>
+
+<script>
+    /*
+     ✨✨✨ 중요 ✨✨✨
+     아래 주소는 임시 예시입니다. 실제 이미지를 표시하려면
+     이 주소들을 실제 업로드된 이미지 파일 주소로 반드시 교체해야 합니다.
+     (예: Imgur, 개인 웹사이트 등에 이미지 업로드 후 주소 복사)
+    */
+    const characterImages = {
+        male: {
+            underweight: 'https://i.imgur.com/9C2As6G.png', // 마른 남성 이미지 주소
+            normal: 'https://i.imgur.com/aBSr63d.png',      // 보통 남성 이미지 주소
+            overweight: 'https://i.imgur.com/T0C4bAb.png',   // 과체중 남성 이미지 주소
+            obese: 'https://i.imgur.com/j03xI2D.png'         // 비만 남성 이미지 주소
+        },
+        female: {
+            underweight: 'https://i.imgur.com/k24z22Z.png', // 마른 여성 이미지 주소
+            normal: 'https://i.imgur.com/5V1n2a7.png',      // 보통 여성 이미지 주소
+            overweight: 'https://i.imgur.com/F03sW8R.png',   // 과체중 여성 이미지 주소
+            obese: 'https://i.imgur.com/Y13z6gG.png'         // 비만 여성 이미지 주소
+        }
+    };
+
+    function updateAllInfo() {
+        const gender = document.getElementById("gender").value;
+        const age = parseFloat(document.getElementById("age").value);
+        const height = parseFloat(document.getElementById("height").value);
+        const weight = parseFloat(document.getElementById("weight").value);
+        const goalWeight = parseFloat(document.getElementById("goalWeight").value);
+
+        // 1. BMI, BMR, 캐릭터 업데이트
+        if (height && weight) {
+            const bmi = weight / ((height / 100) ** 2);
+            let bmiStatus = "", bmiKey = "normal";
+
+            if (bmi < 18.5) { bmiStatus = "저체중"; bmiKey = "underweight"; }
+            else if (bmi < 25) { bmiStatus = "정상"; bmiKey = "normal"; }
+            else if (bmi < 30) { bmiStatus = "과체중"; bmiKey = "overweight"; }
+            else { bmiStatus = "비만"; bmiKey = "obese"; }
+            
+            document.getElementById("bmi-result").innerText = `BMI: ${bmi.toFixed(1)} (${bmiStatus})`;
+            document.getElementById("characterImage").src = characterImages[gender][bmiKey];
+            document.getElementById("characterImage").style.display = 'block';
+
+            if (age) {
+                let bmr = (gender === 'male')
+                    ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+                    : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+                document.getElementById("bmr-result").innerText = `기초대사량(BMR): 약 ${Math.round(bmr)} kcal`;
+            } else {
+                document.getElementById("bmr-result").innerText = '기초대사량(BMR): 나이를 입력하세요.';
+            }
+        }
+
+        // 2. ✨ 새로운 프로그레스 바 로직
+        const barAchieved = document.getElementById("bar-achieved");
+        const barExcess = document.getElementById("bar-excess");
+        const progressText = document.getElementById("progress-text");
+
+        barAchieved.style.width = '0%';
+        barExcess.style.width = '0%';
+
+        if (weight && goalWeight) {
+            if (weight > goalWeight) { // 감량해야 할 경우
+                const diff = weight - goalWeight;
+                const achievedPercent = (goalWeight / weight) * 100;
+                const excessPercent = 100 - achievedPercent;
+                
+                barAchieved.style.width = `${achievedPercent}%`;
+                barExcess.style.width = `${excessPercent}%`;
+                progressText.innerText = `목표까지 ${diff.toFixed(1)} kg 감량이 필요합니다!`;
+
+            } else { // 증량해야 하거나 목표에 도달한 경우
+                const diff = goalWeight - weight;
+                const achievedPercent = (weight / goalWeight) * 100;
+
+                barAchieved.style.width = `${achievedPercent}%`;
+                
+                if (diff > 0) {
+                    progressText.innerText = `목표까지 ${diff.toFixed(1)} kg 증량이 필요합니다!`;
+                } else {
+                    progressText.innerText = "🎉 목표 체중 달성! 축하합니다!";
+                }
+            }
+        } else {
+            progressText.innerText = "목표 체중을 입력해주세요.";
+        }
+    }
+    
+    window.onload = () => {
+        document.getElementById("characterImage").style.display = 'none';
+    };
+</script>
+
+</body>
+</html>
