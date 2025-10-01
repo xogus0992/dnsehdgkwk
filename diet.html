@@ -3,283 +3,89 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>전국 포켓몬 월드 — Demo</title>
+<title>포켓몬 테스트 - 내 위치 50m</title>
 <style>
-  html,body,#map { height:100%; margin:0; font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
+  html,body,#map { height:100%; margin:0; font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif; }
   #map { position:relative; }
-  .controls { position:absolute; left:10px; top:10px; z-index:1000; background:rgba(255,255,255,0.95); padding:10px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.12);} 
-  .controls button{ margin:4px 0; display:block; width:220px }
   .pokemon-marker { display:flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:50%; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.25); cursor:pointer; background:white; }
-  .pokemon-marker.captured img{ filter:grayscale(100%); opacity:0.45 }
   .pokemon-marker img{ width:44px; height:44px; image-rendering:pixelated }
-  /* Pokedex modal */
-  .modal { display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.4); }
-  .modal .box{ width:800px; max-width:95%; margin:40px auto; background:#fff; border-radius:10px; padding:18px; }
-  .pokedex-list{ max-height:60vh; overflow:auto; }
-  .pokedex-item{ display:flex; gap:12px; align-items:center; padding:8px; border-bottom:1px solid #eee }
-  .pokedex-item img{ width:60px; height:60px; border-radius:8px; }
-  .hint{ font-size:0.9em; color:#666 }
 </style>
 </head>
 <body>
 <div id="map"></div>
-<div class="controls">
-  <button id="btnShowPokedex">내 포켓몬 도감 열기</button>
-  <button id="btnRegenerate">포켓몬 위치 재배치 (지금)</button>
-  <p class="hint">지도에서 포켓몬 아이콘을 클릭하거나 내 위치에서 반경 100m 이내로 들어가면 잡을 수 있습니다.<br>포켓몬은 1번부터 50번(도감)을 사용합니다. 동일 포켓몬을 여러 마리 잡을 수 있습니다.</p>
-</div>
 
-<div id="pokedexModal" class="modal">
-  <div class="box">
-    <h2>나의 포켓몬 도감</h2>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-      <button id="btnClosePokedex">닫기</button>
-      <button id="btnClearCaptured">초기화(저장된 포켓몬 모두 삭제)</button>
-    </div>
-    <div id="pokedexList" class="pokedex-list"></div>
-  </div>
-</div>
-
-<!-- kakao maps sdk: appkey는 개발자가 본인의 것으로 교체하세요 -->
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+<!-- Kakao Maps SDK -->
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1"></script>
 <script>
-// ======= 설정 ========
-const NUM_POKEMON = 50;           // 배치할 포켓몬 수 (도감 1~50 사용)
-const CAPTURE_RADIUS_METERS = 100; // 포획 가능한 거리
-const RESPAWN_INTERVAL_MS = 1000 * 60 * 15; // 15분마다 랜덤 재배치
-const KOREA_BOUNDS = { sw:{lat:33.0, lng:125.0}, ne:{lat:38.6, lng:130.0} };
+const CAPTURE_RADIUS_METERS = 50; // 테스트용 50m
+let map, userPos, marker, pokemon;
 
-// ======= 유틸 ========
-function randBetween(a,b){ return Math.random()*(b-a)+a }
+function initMap(){
+  map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(36.5,127.8), level:5 });
+
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      map.setCenter(new kakao.maps.LatLng(userPos.lat,userPos.lng));
+
+      // 사용자 위치 마커
+      new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(userPos.lat,userPos.lng),
+        map
+      });
+
+      // 내 위치 근처 50m 이내에 포켓몬 하나 배치
+      await placePokemonNearUser();
+    });
+  }
+}
+
+async function placePokemonNearUser(){
+  // 포켓몬 ID 1 (이상해씨)
+  const res = await fetch("https://pokeapi.co/api/v2/pokemon/1");
+  const data = await res.json();
+
+  const angle = Math.random()*2*Math.PI;
+  const distance = 0.00045; // 약 50m 정도 (위도경도 변환 단순 계산)
+  const lat = userPos.lat + distance*Math.cos(angle);
+  const lng = userPos.lng + distance*Math.sin(angle);
+
+  const el = document.createElement('div');
+  el.className = 'pokemon-marker';
+  const img = document.createElement('img');
+  img.src = data.sprites.front_default;
+  el.appendChild(img);
+
+  marker = new kakao.maps.CustomOverlay({
+    position: new kakao.maps.LatLng(lat,lng),
+    content: el,
+    yAnchor: 1
+  });
+  marker.setMap(map);
+
+  el.addEventListener('click', ()=>{
+    attemptCapture(lat,lng,data);
+  });
+}
+
 function haversineDistance(lat1, lng1, lat2, lng2){
   function toRad(d){return d*Math.PI/180}
-  const R = 6371000; // meters
+  const R = 6371000;
   const dLat = toRad(lat2-lat1), dLon = toRad(lng2-lng1);
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-// ======= 앱 상태 ========
-const state = {
-  map: null,
-  ps: null, // places service
-  world: [], // {id, pokemonId, data(sprite,name...), position:{lat,lng}, uniqueId }
-  captured: JSON.parse(localStorage.getItem('pg_captured_v1')||'[]'),
-  userPos: null,
-  markers: {},
-};
-
-// ======= 초기 지도 생성 ========
-function initMap(){
-  state.map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(36.5, 127.8), level: 7 });
-  state.ps = new kakao.maps.services.Places();
-
-  // 위치 추적
-  if(navigator.geolocation){
-    navigator.geolocation.watchPosition(pos=>{
-      state.userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-      checkNearbyCaptures();
-    }, err=>console.warn(err), { enableHighAccuracy:true, maximumAge:5000 });
-  }
-
-  // 초기 월드 불러오기 혹은 생성
-  loadWorld();
-
-  // 버튼 이벤트
-  document.getElementById('btnShowPokedex').onclick = ()=>{ renderPokedex(); document.getElementById('pokedexModal').style.display='block' };
-  document.getElementById('btnClosePokedex').onclick = ()=>document.getElementById('pokedexModal').style.display='none';
-  document.getElementById('btnClearCaptured').onclick = ()=>{ if(confirm('정말로 저장된 포켓몬을 모두 삭제할까요?')){ state.captured=[]; saveCaptured(); renderPokedex(); } };
-  document.getElementById('btnRegenerate').onclick = ()=>{ regenerateWorld(); };
-
-  // 주기적 재배치
-  setInterval(()=>{ regenerateWorld(); }, RESPAWN_INTERVAL_MS);
-}
-
-// ======= world 저장/불러오기 ========
-function saveWorld(){ localStorage.setItem('pg_world_v1', JSON.stringify(state.world)); }
-function loadWorld(){ const w = JSON.parse(localStorage.getItem('pg_world_v1')||'null'); if(w && Array.isArray(w) && w.length>=NUM_POKEMON){ state.world=w; renderWorld(); } else { createWorld(); } }
-
-function saveCaptured(){ localStorage.setItem('pg_captured_v1', JSON.stringify(state.captured)); }
-
-// ======= 월드 생성: 도감 1~50 사용, 각 포켓몬을 걷기 가능한 장소 근처에 배치 ========
-async function createWorld(){
-  state.world = [];
-  // 1~50을 순서대로 배치 (중복 허용 원하면 랜덤으로 바꿀 수 있음)
-  const promises = [];
-  for(let i=1;i<=NUM_POKEMON;i++){
-    promises.push(placePokemonNearRandomSpot(i));
-  }
-  const results = await Promise.all(promises);
-  state.world = results.filter(x=>x);
-  saveWorld();
-  renderWorld();
-}
-
-// 장소 검색을 여러 키워드로 시도해서 '사람이 닿을 수 있는 곳'을 우선
-const SEARCH_KEYWORDS = ['공원','산책로','유원지','하천','트레킹코스','광장','골목길','카페거리','운동장','산책로'];
-
-function placePokemonNearRandomSpot(pokemonId){
-  return new Promise((resolve)=>{
-    // 랜덤 중심 좌표
-    const lat = randBetween(KOREA_BOUNDS.sw.lat, KOREA_BOUNDS.ne.lat);
-    const lng = randBetween(KOREA_BOUNDS.sw.lng, KOREA_BOUNDS.ne.lng);
-    const center = new kakao.maps.LatLng(lat,lng);
-
-    // 시도할 키워드들을 순서대로 비동기으로 검색
-    (async function tryKeywords(i){
-      if(i>=SEARCH_KEYWORDS.length){
-        // 실패하면 그냥 랜덤 좌표 사용
-        const base = {lat: lat + (Math.random()-0.5)*0.02, lng: lng + (Math.random()-0.5)*0.02};
-        const pd = await fetchPokemonData(pokemonId);
-        if(pd) resolve({ pokemonId, data:pd, position: base, uniqueSeed: Date.now()+Math.random() }); else resolve(null);
-        return;
-      }
-      const kw = SEARCH_KEYWORDS[i];
-      state.ps.keywordSearch(kw, async (data,status)=>{
-        if(status === kakao.maps.services.Status.OK && data && data.length>0){
-          // 가까운 것 중 랜덤 선택
-          const pick = data[Math.floor(Math.random()*Math.min(6,data.length))];
-          const pos = { lat: parseFloat(pick.y), lng: parseFloat(pick.x) };
-          const pd = await fetchPokemonData(pokemonId);
-          if(pd){ resolve({ pokemonId, data:pd, position: pos, uniqueSeed: Date.now()+Math.random() }); } else resolve(null);
-        } else {
-          tryKeywords(i+1);
-        }
-      }, { location: center, radius: 25000, sort: kakao.maps.services.SortBy.DISTANCE });
-    })(0);
-  });
-}
-
-// 포켓몬 데이터(PokeAPI) 호출 (id 1~50)
-async function fetchPokemonData(id){
-  try{
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-    if(!res.ok) return null;
-    const json = await res.json();
-    return { id:json.id, name:json.name, sprite: json.sprites.front_default || json.sprites.other?.['official-artwork']?.front_default || '', types: json.types.map(t=>t.type.name).join(', '), height: json.height/10, weight: json.weight/10 };
-  }catch(e){ console.warn('poke fetch fail',e); return null; }
-}
-
-// ======= 랜더링: 지도에 마커 표시 ========
-function renderWorld(){
-  // 기존 마커 제거
-  Object.values(state.markers).forEach(m=>m.setMap && m.setMap(null));
-  state.markers = {};
-
-  state.world.forEach((w, idx)=>{
-    const el = document.createElement('div');
-    el.className = 'pokemon-marker';
-    el.id = `marker-${idx}`;
-    const img = document.createElement('img'); img.src = w.data.sprite || 'https://via.placeholder.com/44?text=?'; img.alt = w.data.name;
-    el.appendChild(img);
-    if(isCapturedSpeciesInstance(w)) el.classList.add('captured');
-
-    const marker = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(w.position.lat, w.position.lng),
-      content: el,
-      yAnchor: 1
-    });
-    marker.setMap(state.map);
-    state.markers[w.uniqueSeed] = marker;
-
-    // 클릭 시 포획 시도(지도 상에서 직접 클릭)
-    el.addEventListener('click', ()=>{
-      attemptCapture(w);
-    });
-  });
-}
-
-function isCapturedSpeciesInstance(worldItem){
-  // 같은 species(예: 같은 pokemonId) 중 사용자가 이미 하나라도 잡았는지 체크해서 마커 회색 처리
-  return state.captured.some(c=>c.pokemonId === worldItem.pokemonId);
-}
-
-// ======= 포획 로직 ========
-function attemptCapture(worldItem){
-  // 사용자의 현재 위치 정보가 있으면 거리 계산, 없으면 지도 클릭으로 수동 캡처 불가
-  if(!state.userPos){ alert('현재 위치 정보를 받지 못했습니다. 기기의 위치 권한을 허용해주세요.'); return; }
-  const d = haversineDistance(state.userPos.lat, state.userPos.lng, worldItem.position.lat, worldItem.position.lng);
-  if(d <= CAPTURE_RADIUS_METERS){
-    // 포획 성공
-    const uniqueId = `${worldItem.pokemonId}-${Date.now()}-${Math.floor(Math.random()*9999)}`;
-    const captured = {
-      uniqueId,
-      pokemonId: worldItem.pokemonId,
-      name: worldItem.data.name,
-      sprite: worldItem.data.sprite,
-      type: worldItem.data.types,
-      height: worldItem.data.height,
-      weight: worldItem.data.weight,
-      capturedAt: new Date().toISOString(),
-      nickname: worldItem.data.name
-    };
-    state.captured.push(captured);
-    saveCaptured();
-    updateMarkerCapturedState(worldItem);
-    alert(`${captured.name}을(를) 포획했습니다! 도감에서 닉네임을 바꿀 수 있습니다.`);
-    renderPokedex();
+function attemptCapture(lat,lng,data){
+  if(!userPos){ alert('위치 정보를 불러오지 못했습니다.'); return; }
+  const d = haversineDistance(userPos.lat,userPos.lng,lat,lng);
+  if(d<=CAPTURE_RADIUS_METERS){
+    alert(`${data.name} 포획 성공!`);
   } else {
-    alert(`포획 가능 반경 ${CAPTURE_RADIUS_METERS}m 밖입니다. 현재 거리: ${Math.round(d)}m`);
+    alert(`너무 멀어요. 현재 거리: ${Math.round(d)}m`);
   }
 }
 
-function updateMarkerCapturedState(worldItem){
-  // species가 이미 잡혔으면 해당 마커 회색 처리
-  Object.values(state.markers).forEach(marker=>{
-    const el = marker.getContent();
-    if(el && el.querySelector){
-      // 간단히 species 기반으로 처리(같은 sprite면 같은 종)
-      const img = el.querySelector('img');
-      if(img && img.alt === worldItem.data.name) el.classList.add('captured');
-    }
-  });
-}
-
-function checkNearbyCaptures(){
-  if(!state.userPos) return;
-  state.world.forEach(w=>{
-    const d = haversineDistance(state.userPos.lat, state.userPos.lng, w.position.lat, w.position.lng);
-    const marker = state.markers[w.uniqueSeed];
-    if(marker){
-      const el = marker.getContent();
-      if(d <= CAPTURE_RADIUS_METERS){ el.classList.add('capturable'); }
-      else el.classList.remove('capturable');
-    }
-  });
-}
-
-// ======= Pokedex 렌더링 ========
-function renderPokedex(){
-  const container = document.getElementById('pokedexList');
-  container.innerHTML='';
-  if(state.captured.length===0){ container.innerHTML='<p>아직 잡은 포켓몬이 없습니다.</p>'; return; }
-  state.captured.slice().reverse().forEach((c, idx)=>{
-    const div = document.createElement('div'); div.className='pokedex-item';
-    div.innerHTML = `\n      <img src="${c.sprite}" alt="${c.name}">\n      <div style=\"flex:1\">\n        <input data-uid="${c.uniqueId}" style=\"width:100%;font-weight:600;padding:6px;\" value=\"${escapeHtml(c.nickname)}\" />\n        <div style=\"font-size:0.9em;color:#333;margin-top:6px\">도감번호: ${c.pokemonId} | 종: ${c.name} | 타입: ${c.type} | ${c.height}m ${c.weight}kg</div>\n        <div style=\"margin-top:4px;color:#666;font-size:0.85em\">포획일시: ${new Date(c.capturedAt).toLocaleString()}</div>\n      </div>\n      <button data-uid="${c.uniqueId}">삭제</button>\n    `;
-    container.appendChild(div);
-    // 이벤트 바인딩: 이름 변경, 삭제
-    const input = div.querySelector('input'); input.addEventListener('change', (e)=>{ const uid = e.target.getAttribute('data-uid'); const found = state.captured.find(x=>x.uniqueId===uid); if(found){ found.nickname = e.target.value; saveCaptured(); }});
-    div.querySelector('button').addEventListener('click', ()=>{ if(confirm('이 포켓몬을 삭제할까요?')){ state.captured = state.captured.filter(x=>x.uniqueId!==c.uniqueId); saveCaptured(); renderPokedex(); }});
-  });
-}
-
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'": '&#39;' }[c])); }
-
-// ======= 월드 재배치(랜덤화) ========
-async function regenerateWorld(){
-  if(!confirm('포켓몬들의 위치를 전체 재배치합니다. 진행할까요? (현재 잡은 포켓몬은 도감에 남습니다)')) return;
-  // 기존 월드에서 pokemonId 목록을 보존하고 각 종을 다시 배치
-  const old = state.world.map(w=>w.pokemonId);
-  state.world = [];
-  const promises = old.map(pid=>placePokemonNearRandomSpot(pid));
-  const items = await Promise.all(promises);
-  state.world = items.filter(x=>x);
-  saveWorld();
-  renderWorld();
-  alert('재배치 완료');
-}
-
-// ======= 시작 ========
 initMap();
 </script>
 </body>
