@@ -58,9 +58,9 @@
     <div id="map"></div>
 </div>
 
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_APP_KEY&libraries=services,drawing"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services,drawing"></script>
 <script>
-    const KAKAO_REST_API_KEY = 'YOUR_REST_API_KEY'; // 여기에 발급받은 REST API 키를 입력하세요.
+    const KAKAO_REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
 
     const mapContainer = document.getElementById('map');
     const mapOption = { 
@@ -197,8 +197,6 @@
 
         routeData.routes.forEach(route => {
             const diff = Math.abs(route.summary.distance - targetDistance);
-            // 여기서 더 복잡한 '겹침' 로직을 추가할 수 있지만, API는 기본적으로 다양한 경로를 제공하므로
-            // 목표 거리에 가장 근접한 '다른' 경로를 선택하는 것만으로도 효과적입니다.
             if (diff < minDiff) {
                 minDiff = diff;
                 bestRoute = {
