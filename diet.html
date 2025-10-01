@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>다이어트 워킹 내비게이션 v24 (깔끔한 순환 코스)</title>
+<title>다이어트 워킹 내비게이션 v25 (Promise 에러 수정)</title>
 <style>
 /* 기존 v20의 CSS 디자인을 그대로 유지 */
 html, body {
@@ -76,7 +76,7 @@ flex-basis: 320px; background-color: #f9f9f9; flex-grow: 1;
 <div class="container">
 <div id="map"></div>
 <div class="info-panel">
-<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v24</span></h2>
+<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v25</span></h2>
 <div class="input-group">
 <div class="input-wrapper start">
 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -137,7 +137,7 @@ if (!waypoints || waypoints.length < 2 || waypoints.some(p => !p || !p.x || !p.y
 const origin = `${waypoints[0].x},${waypoints[0].y}`;
 const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
 const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
-// walking_mode=WALK 옵션 추가로 걷기 최적화 유도 (v24)
+// walking_mode=WALK 옵션 추가로 걷기 최적화 유도
 const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND&car_avoid=1&walking_mode=WALK`; 
 try {
 const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
@@ -213,20 +213,19 @@ card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
 return card;
 }
 
-// --- ✨ [v24] 깔끔한 순환 코스 생성 함수로 변경 (경유지 수 7개, 보정값 1.8) ---
+// --- [v24] 깔끔한 순환 코스 생성 함수 (경유지 수 7개, 보정값 1.8) ---
 async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
 const R = 6371e3; // 지구 반경
 
 let bestRoute = null;
 let bestDistanceDiff = Infinity;
-let correctionFactor = 1.8; // 보정값 조정 (1.6 -> 1.8)
+let correctionFactor = 1.8; 
 
 // 최대 3번 반복하여 거리 오차 보정
 for (let i = 0; i < 3; i++) {
-const waypointsCount = 7; // 경유지 수 증가 (5 -> 7)
-// 순환이므로, 직선 거리는 목표 거리 / (경유지 수 * 보정값)
+const waypointsCount = 7; 
 const sideLength = (targetDistance / waypointsCount) / correctionFactor; 
-const startAngle = Math.random() * 360; // 시작 각도 랜덤으로 설정하여 다양한 형태 유도
+const startAngle = Math.random() * 360; 
 
 const waypoints = [];
 let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
@@ -246,7 +245,7 @@ for (let j = 0; j < waypointsCount - 1; j++) {
     waypoints.push(newPoint);
 
     lastPoint = newPoint;
-    lastAngle += 360 / waypointsCount; // 다각형의 외각만큼 회전 (360/7)
+    lastAngle += 360 / waypointsCount; // 다각형의 외각만큼 회전
 }
 
 const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]);
@@ -266,7 +265,7 @@ if (currentRoute) {
     if (bestDistanceDiff < targetDistance * 0.1) return bestRoute; // 오차 10% 이내면 종료
 
     const errorRatio = actualDistance / targetDistance;
-    // 보정 로직 개선: 오차가 클수록 보정값을 더 크게 반영
+    // 보정 로직
     if (errorRatio > 0.1) correctionFactor *= errorRatio * 0.8 + 0.2; 
 }
 }
@@ -286,7 +285,7 @@ try {
 const startPoint = await searchPlace(elements.startInput.value);
 const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
 
-// 깔끔한 순환 코스 생성 함수 사용 (v24 개선)
+// 출발지 기준으로만 순환 코스 생성
 const loopPromise = generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters);
 
 let optimalPromise = Promise.resolve(null);
@@ -303,7 +302,8 @@ resolve(getRoute([startPoint, data[0], endPoint]));
 });
 }
 
-const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalRoute, scenicPromise]);
+// ⚠️ 핵심 수정: Promise.all 배열 내에서 변수명 오류 수정
+const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalPromise, scenicPromise]);
 
 elements.resultArea.innerHTML = '';
 let routeCount = 0;
@@ -319,7 +319,9 @@ drawRouteWithColorSegments(optimalRoute, targetDistanceMeters, { in: '#007bff', 
 elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal', targetDistanceKm));
 routeCount++;
 }
-if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > optimalRoute.summary.distance * 1.1)) {
+
+// ⚠️ 오류 방지 수정: optimalRoute가 null인지 확인하는 조건 추가
+if (scenicRoute && (!optimalRoute || (optimalRoute && scenicRoute.summary.distance > optimalRoute.summary.distance * 1.1))) {
 drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
 elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
 routeCount++;
