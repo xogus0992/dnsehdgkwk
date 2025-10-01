@@ -1,219 +1,343 @@
-<!doctype html>
-<html lang="ko">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>전국 포켓몬 월드 — 실사용(섬 제외) + 내위치 50m 보장</title>
+<meta charset="utf-8">
+<title>다이어트 워킹 내비게이션 v20 (안정적인 순환 코스)</title>
 <style>
-  html,body,#map { height:100%; margin:0; font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; }
-  #map { position:relative; }
-  .controls { position:absolute; left:10px; top:10px; z-index:1000; background:rgba(255,255,255,0.95); padding:10px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.12);} 
-  .controls button{ margin:4px 0; display:block; width:220px }
-  .pokemon-marker { display:flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:50%; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.25); cursor:pointer; background:white; }
-  .pokemon-marker.captured img{ filter:grayscale(100%); opacity:0.45 }
-  .pokemon-marker img{ width:44px; height:44px; image-rendering:pixelated }
-  .modal { display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.4); }
-  .modal .box{ width:800px; max-width:95%; margin:40px auto; background:#fff; border-radius:10px; padding:18px; }
-  .pokedex-list{ max-height:60vh; overflow:auto; }
-  .pokedex-item{ display:flex; gap:12px; align-items:center; padding:8px; border-bottom:1px solid #eee }
-  .pokedex-item img{ width:60px; height:60px; border-radius:8px; }
-  .hint{ font-size:0.9em; color:#666 }
+html, body {
+width: 100%; height: 100%; margin: 0; padding: 0;
+font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
+}
+.container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+#map { width: 100%; flex-grow: 1; min-height: 400px; }
+.info-panel {
+width: 100%; padding: 20px; background-color: white;
+box-shadow: 0 -2px 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 10;
+overflow-y: auto; max-height: 45%;
+}
+h2 {
+margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center;
+display: flex; align-items: center; justify-content: center;
+}
+.version-tag {
+font-size: 0.5em; font-weight: bold; color: white; background-color: #000;
+padding: 3px 6px; border-radius: 8px; margin-left: 10px;
+}
+.input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+.input-wrapper { flex-grow: 1; position: relative; min-width: 180px; }
+.input-wrapper::before {
+position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
+font-weight: bold; color: #4CAF50;
+}
+.input-wrapper.start::before { content: '출발'; }
+.input-wrapper.end::before { content: '도착'; }
+.input-wrapper.target::before { content: '👟 km';}
+#calculated-calories { font-size: 0.9em; color: #555; font-weight: bold; flex-shrink: 0; min-width: 90px; }
+
+input[type="text"], input[type="number"] {
+width: 100%; padding: 12px 12px 12px 60px; border: 1px solid #ccc;
+border-radius: 5px; font-size: 1em; box-sizing: border-box;
+}
+
+#searchBtn {
+padding: 12px 25px; background-color: #4CAF50; color: white; border: none;
+border-radius: 5px; font-size: 1em; font-weight: bold; cursor: pointer;
+transition: background-color 0.2s; flex-shrink: 0; height: 45px;
+}
+#searchBtn:hover { background-color: #45a049; }
+
+#result-area { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; text-align: left; }
+.route-card, .info-message {
+border: 2px solid #ccc; border-radius: 8px; padding: 15px;
+flex-basis: 320px; background-color: #f9f9f9; flex-grow: 1;
+}
+.info-message { border-style: dashed; color: #666; font-size: 0.95em; }
+.route-card.optimal { border-color: #007bff; }
+.route-card.scenic { border-color: #28a745; }
+.route-card.loop { border-color: #ffc107; }
+
+.route-card h3 { margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; align-items: center; }
+.route-card p { margin: 5px 0; font-size: 1em; }
+.route-card b { font-size: 1.1em; color: #E61A5F; }
+.color-box { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border-radius: 3px; vertical-align: middle; }
+.optimal .color-box { background-color: #007bff; }
+.scenic .color-box { background-color: #28a745; }
+.loop .color-box { background-color: #ffc107; }
+
+.suggestions-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; z-index: 1000; max-height: 220px; overflow-y: auto; }
+.suggestion-item { padding: 12px 15px; cursor: pointer; font-size: 0.95em; }
+.suggestion-item:hover { background-color: #f5f5f5; }
+.suggestion-item small { display: block; color: #888; margin-top: 2px; }
 </style>
 </head>
 <body>
+
+<div class="container">
 <div id="map"></div>
-<div class="controls">
-  <button id="btnShowPokedex">내 포켓몬 도감 열기</button>
-  <button id="btnRegenerate">포켓몬 위치 재배치 (지금)</button>
-  <p class="hint">지도에서 포켓몬 아이콘을 클릭하거나 내 위치에서 반경 50m 이내로 들어가면 잡을 수 있습니다.<br>포켓몬은 1번부터 50번(도감)을 사용. 동일 포켓몬을 여러 마리 잡을 수 있습니다.</p>
+<div class="info-panel">
+<h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v20</span></h2>
+<div class="input-group">
+<div class="input-wrapper start">
+<input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
+<div id="start-suggestions" class="suggestions-list"></div>
+</div>
+<div class="input-wrapper end">
+<input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off">
+<div id="end-suggestions" class="suggestions-list"></div>
+</div>
+<div class="input-wrapper target">
+<input type="number" id="targetDistance" placeholder="목표 거리">
+</div>
+<span id="calculated-calories">약 0 kcal</span>
+<button id="searchBtn">코스 생성</button>
+</div>
+<div id="result-area">
+<p>장소와 목표 거리를 입력하고 맞춤형 코스를 추천받으세요.</p>
+</div>
+</div>
 </div>
 
-<div id="pokedexModal" class="modal">
-  <div class="box">
-    <h2>나의 포켓몬 도감</h2>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-      <button id="btnClosePokedex">닫기</button>
-      <button id="btnClearCaptured">초기화(저장된 포켓몬 모두 삭제)</button>
-    </div>
-    <div id="pokedexList" class="pokedex-list"></div>
-  </div>
-</div>
-
-<!-- kakao maps sdk: appkey는 필요시 본인 것으로 교체하세요 -->
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 <script>
-// ======= 설정 ========
-const NUM_POKEMON = 50;           // 배치할 포켓몬 수 (도감 1~50 사용)
-const CAPTURE_RADIUS_METERS = 50; // 포획 가능한 거리 (요청대로 50m)
-const RESPAWN_INTERVAL_MS = 1000 * 60 * 15; // 15분마다 랜덤 재배치
-const KOREA_BOUNDS = { sw:{lat:33.0, lng:125.0}, ne:{lat:38.6, lng:130.0} };
-const EXCLUDE_PLACE_NAMES = ['제주','울릉','독도','백령','거문','마라','추자','완도','보길','덕적','연평','울도','비금','가거','사량'];
+const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
+const KCAL_PER_KM = 60;
 
-function randBetween(a,b){ return Math.random()*(b-a)+a }
-function haversineDistance(lat1, lng1, lat2, lng2){ function toRad(d){return d*Math.PI/180} const R = 6371000; const dLat = toRad(lat2-lat1), dLon = toRad(lng2-lng1); const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2; return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); }
+const elements = {
+mapContainer: document.getElementById('map'),
+startInput: document.getElementById('start'),
+endInput: document.getElementById('end'),
+targetDistanceInput: document.getElementById('targetDistance'),
+calculatedCalories: document.getElementById('calculated-calories'),
+searchBtn: document.getElementById('searchBtn'),
+resultArea: document.getElementById('result-area'),
+startSuggestions: document.getElementById('start-suggestions'),
+endSuggestions: document.getElementById('end-suggestions')
+};
 
-const state = { map:null, ps:null, world:[], captured: JSON.parse(localStorage.getItem('pg_captured_v2')||'[]'), userPos:null, markers:{}, userNearSpawn:null };
+const map = new kakao.maps.Map(elements.mapContainer, { center: new kakao.maps.LatLng(37.5034, 126.7661), level: 5 });
+const ps = new kakao.maps.services.Places();
+let mapObjects = [];
 
-function initMap(){
-  state.map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(36.5, 127.8), level: 7 });
-  state.ps = new kakao.maps.services.Places();
+elements.targetDistanceInput.addEventListener('input', () => {
+const distance = parseFloat(elements.targetDistanceInput.value) || 0;
+elements.calculatedCalories.textContent = `약 ${Math.round(distance * KCAL_PER_KM)} kcal`;
+});
 
-  if(navigator.geolocation){
-    navigator.geolocation.watchPosition(pos=>{
-      state.userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-      // 지도 중앙 자동 이동은 하지 않음(사용자 편의)
-      // 보장 스폰: 사용자가 있을 때마다 그 위치 반경 50m 내 포켓몬 1마리 보장
-      ensureUserNearbyPokemon();
-      checkNearbyCaptures();
-    }, err=>console.warn(err), { enableHighAccuracy:true, maximumAge:5000 });
-  }
+const searchPlace = query => new Promise((resolve, reject) => {
+if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
+ps.keywordSearch(query, (data, status) => {
+if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data[0]);
+else reject(new Error(`'${query}' 검색 실패. 정확한 장소명을 입력해주세요.`));
+});
+});
 
-  // 세계 로드
-  loadWorld();
+const getRoute = waypoints => new Promise(async (resolve) => {
+if (!waypoints || waypoints.length < 2 || waypoints.some(p => !p || !p.x || !p.y)) return resolve(null);
+const origin = `${waypoints[0].x},${waypoints[0].y}`;
+const destination = `${waypoints[waypoints.length - 1].x},${waypoints[waypoints.length - 1].y}`;
+const via = waypoints.slice(1, -1).map(p => `${p.x},${p.y}`).join('|');
+const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin}&destination=${destination}${via ? `&waypoints=${via}` : ''}&priority=RECOMMEND`;
+try {
+const response = await fetch(url, { headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } });
+if (!response.ok) return resolve(null);
+const data = await response.json();
+if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) {
+resolve(data.routes[0]);
+} else { resolve(null); }
+} catch { resolve(null); }
+});
 
-  document.getElementById('btnShowPokedex').onclick = ()=>{ renderPokedex(); document.getElementById('pokedexModal').style.display='block' };
-  document.getElementById('btnClosePokedex').onclick = ()=>document.getElementById('pokedexModal').style.display='none';
-  document.getElementById('btnClearCaptured').onclick = ()=>{ if(confirm('정말로 저장된 포켓몬을 모두 삭제할까요?')){ state.captured=[]; saveCaptured(); renderPokedex(); } };
-  document.getElementById('btnRegenerate').onclick = ()=>{ regenerateWorld(); };
-  setInterval(()=>{ regenerateWorld(); }, RESPAWN_INTERVAL_MS);
+const clearMap = () => { mapObjects.forEach(obj => obj.setMap(null)); mapObjects = []; };
+
+const debounce = (func, delay) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => func.apply(null, a), delay); }; };
+const setupAutocomplete = (inputEl, listEl) => {
+const showSuggestions = debounce(query => {
+if (!query.trim()) { listEl.style.display = 'none'; return; }
+ps.keywordSearch(query, (data, status) => {
+listEl.innerHTML = '';
+if (status === kakao.maps.services.Status.OK) {
+const f = document.createDocumentFragment();
+data.forEach(p => {
+const i = document.createElement('div');
+i.className = 'suggestion-item';
+i.innerHTML = `${p.place_name}<small>${p.road_address_name || p.address_name}</small>`;
+i.addEventListener('click', () => { inputEl.value = p.place_name; listEl.style.display = 'none'; });
+f.appendChild(i);
+});
+listEl.appendChild(f); listEl.style.display = 'block';
+}
+});
+}, 250);
+inputEl.addEventListener('input', () => showSuggestions(inputEl.value));
+};
+setupAutocomplete(elements.startInput, elements.startSuggestions);
+setupAutocomplete(elements.endInput, elements.endSuggestions);
+document.addEventListener('click', e => { if (!e.target.closest('.input-wrapper')) { elements.startSuggestions.style.display = 'none'; elements.endSuggestions.style.display = 'none'; }});
+
+function drawRouteWithColorSegments(route, targetDistanceMeters, colors) {
+if (!route || !route.sections) return;
+let accumulatedDistance = 0;
+const pathInTarget = [], pathOverTarget = [];
+route.sections.forEach(sec => sec.roads.forEach(road => {
+const roadPath = [];
+for (let i = 0; i < road.vertexes.length; i += 2) roadPath.push(new kakao.maps.LatLng(road.vertexes[i + 1], road.vertexes[i]));
+if (accumulatedDistance < targetDistanceMeters) pathInTarget.push(...roadPath);
+else pathOverTarget.push(...roadPath);
+accumulatedDistance += road.distance;
+}));
+if (pathInTarget.length > 0) mapObjects.push(new kakao.maps.Polyline({ map, path: pathInTarget, strokeWeight: 8, strokeColor: colors.in, strokeOpacity: 0.8 }));
+if (pathOverTarget.length > 0) {
+if (pathInTarget.length > 0) pathOverTarget.unshift(pathInTarget[pathInTarget.length - 1]);
+mapObjects.push(new kakao.maps.Polyline({ map, path: pathOverTarget, strokeWeight: 8, strokeColor: colors.over, strokeOpacity: 0.8 }));
+}
 }
 
-function saveWorld(){ localStorage.setItem('pg_world_v2', JSON.stringify(state.world)); }
-function loadWorld(){ const w = JSON.parse(localStorage.getItem('pg_world_v2')||'null'); if(w && Array.isArray(w) && w.length>=NUM_POKEMON){ state.world=w; renderWorld(); } else { createWorld(); } }
-function saveCaptured(){ localStorage.setItem('pg_captured_v2', JSON.stringify(state.captured)); }
-
-const SEARCH_KEYWORDS = ['공원','산책로','유원지','하천','트레킹코스','광장','골목길','카페거리','운동장','산책로'];
-
-async function createWorld(){
-  state.world = [];
-  const promises = [];
-  for(let i=1;i<=NUM_POKEMON;i++) promises.push(placePokemonAtRandom(i));
-  const results = await Promise.all(promises);
-  state.world = results.filter(x=>x);
-  saveWorld(); renderWorld();
+function displayRouteInfo(route, type, targetDistanceKm) {
+const card = document.createElement('div');
+card.className = `route-card ${type}`;
+const distanceKm = (route.summary.distance / 1000).toFixed(2);
+const durationMin = Math.round(route.summary.duration / 60);
+const calories = Math.round(parseFloat(distanceKm) * KCAL_PER_KM);
+const titles = { optimal: '최적 추천 경로', scenic: '산책로 경유 경로', loop: '목표 거리 순환 코스' };
+card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
+<p>총 거리: <b>${distanceKm} km</b></p>
+<p>예상 시간: <b>${durationMin} 분</b></p>
+<p>소모 칼로리: <b>${calories} kcal</b> (목표: 약 ${Math.round(targetDistanceKm * KCAL_PER_KM)} kcal)</p>`;
+return card;
 }
 
-// 랜덤 좌표에서 Places 검색으로 '사람이 닿을 수 있는' 장소 찾고, 섬/제외지명 필터링
-function placePokemonAtRandom(pokemonId){
-  return new Promise((resolve)=>{
-    (async function attempt(){
-      const lat = randBetween(KOREA_BOUNDS.sw.lat, KOREA_BOUNDS.ne.lat);
-      const lng = randBetween(KOREA_BOUNDS.sw.lng, KOREA_BOUNDS.ne.lng);
-      const center = new kakao.maps.LatLng(lat,lng);
-      // 키워드 랜덤 선택
-      const kw = SEARCH_KEYWORDS[Math.floor(Math.random()*SEARCH_KEYWORDS.length)];
-      state.ps.keywordSearch(kw, async (data,status)=>{
-        if(status === kakao.maps.services.Status.OK && data && data.length>0){
-          // 선택된 결과 중 랜덤
-          const pick = data[Math.floor(Math.random()*Math.min(6,data.length))];
-          const addr = (pick.address_name||'') + ' ' + (pick.place_name||'');
-          // 섬 관련 주소 필터링
-          const lower = addr.toLowerCase();
-          if(EXCLUDE_PLACE_NAMES.some(ex=>lower.indexOf(ex.toLowerCase())!==-1)){
-            // 섬이라 판단되면 재시도
-            attempt();
-            return;
-          }
-          const pos = { lat: parseFloat(pick.y), lng: parseFloat(pick.x) };
-          const pd = await fetchPokemonData(pokemonId);
-          if(pd) resolve({ pokemonId, data:pd, position: pos, uniqueId: `${pokemonId}-${Date.now()}-${Math.random()}` }); else resolve(null);
-        } else {
-          // 실패 시 작은 랜덤 오프셋 좌표 사용(그러나 여전히 섬 필터 적용)
-          const pos = { lat: lat + (Math.random()-0.5)*0.02, lng: lng + (Math.random()-0.5)*0.02 };
-          // 간단히 위도/경도로 제주-ish 필터: 제주 주변 경도/위도 제외
-          if(pos.lat < 33.2 && (pos.lng>126 && pos.lng<127.1)) { attempt(); return; }
-          const pd = await fetchPokemonData(pokemonId);
-          if(pd) resolve({ pokemonId, data:pd, position: pos, uniqueId: `${pokemonId}-${Date.now()}-${Math.random()}` }); else resolve(null);
-        }
-      }, { location:center, radius:25000, sort:kakao.maps.services.SortBy.DISTANCE });
-    })();
-  });
+// --- ✨ [핵심 개선] 겹침 없는 단일 순환 코스 생성 함수 (v20) ---
+async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
+const R = 6371e3; // 지구 반경
+
+let bestRoute = null;
+let bestDistanceDiff = Infinity;
+let correctionFactor = 1.6; // 초기 보정값
+
+// 최대 3번 반복하여 거리 오차 보정
+for (let i = 0; i < 3; i++) {
+const waypointsCount = 5; // 5개의 경유지로 6각형 모양 생성 (골목길 탐색 확률 증가)
+const sideLength = (targetDistance / waypointsCount) / correctionFactor;
+const startAngle = 30; // 일관성을 위해 랜덤 요소 제거, 고정 각도 사용
+
+const waypoints = [];
+let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
+let lastAngle = startAngle;
+
+// ✨ '한붓그리기' 방식으로 경유지 순차 생성 (겹침 방지)
+for (let j = 0; j < waypointsCount - 1; j++) {
+const lastLatRad = lastPoint.y * Math.PI / 180;
+const lastLonRad = lastPoint.x * Math.PI / 180;
+const brngRad = lastAngle * Math.PI / 180;
+
+const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
+const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
+
+const newPoint = { y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI };
+waypoints.push(newPoint);
+
+lastPoint = newPoint;
+lastAngle += 360 / waypointsCount; // 다각형의 외각만큼 회전
 }
 
-async function fetchPokemonData(id){ try{ const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`); if(!res.ok) return null; const json = await res.json(); return { id:json.id, name:json.name, sprite: json.sprites.front_default || json.sprites.other?.['official-artwork']?.front_default || '', types: json.types.map(t=>t.type.name).join(', '), height: json.height/10, weight: json.weight/10 }; }catch(e){ console.warn('poke fetch fail',e); return null; } }
+const currentRoute = await getRoute([startPoint, ...waypoints, startPoint]);
 
-function renderWorld(){ Object.values(state.markers).forEach(m=>m.setMap && m.setMap(null)); state.markers = {};
-  state.world.forEach((w)=>{
-    const el = document.createElement('div'); el.className='pokemon-marker'; el.id = `marker-${w.uniqueId}`;
-    const img = document.createElement('img'); img.src = w.data.sprite || 'https://via.placeholder.com/44?text=?'; img.alt = w.data.name; el.appendChild(img);
-    if(isCapturedSpecies(w.pokemonId)) el.classList.add('captured');
-    const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(w.position.lat,w.position.lng), content: el, yAnchor:1 }); overlay.setMap(state.map); state.markers[w.uniqueId]=overlay;
-    el.addEventListener('click', ()=> attemptCapture(w));
-  });
+if (currentRoute) {
+const actualDistance = currentRoute.summary.distance;
+const distanceDiff = Math.abs(actualDistance - targetDistance);
+
+if (distanceDiff < bestDistanceDiff) {
+bestDistanceDiff = distanceDiff;
+bestRoute = currentRoute;
 }
 
-function isCapturedSpecies(pokemonId){ return state.captured.some(c=>c.pokemonId===pokemonId); }
+if (bestDistanceDiff < targetDistance * 0.1) return bestRoute; // 오차 10% 이내면 종료
 
-// 보장 스폰: 사용자의 현재 위치 기준 50m 내에 '무조건' 포켓몬 1마리 유지
-async function ensureUserNearbyPokemon(){
-  if(!state.userPos) return;
-  // 이미 userNearSpawn 존재하고 그 마커가 남아있다면 끝
-  if(state.userNearSpawn && state.markers[state.userNearSpawn.uniqueId]) return;
-  // 사용자의 위치 근처에 월드에 있는 포켓몬이 있는지 확인
-  const nearby = state.world.find(w=> haversineDistance(state.userPos.lat,state.userPos.lng,w.position.lat,w.position.lng) <= CAPTURE_RADIUS_METERS );
-  if(nearby){ state.userNearSpawn = nearby; return; }
-  // 없으면 새로 하나 생성: 랜덤으로 사용자 반경 30~50m 내 위치 잡기
-  const angle = Math.random()*2*Math.PI;
-  const distMeters = randBetween(10, CAPTURE_RADIUS_METERS-1);
-  // 지구 곡률 간단 변환
-  const deltaLat = (distMeters/111320) * Math.cos(angle);
-  const deltaLng = (distMeters/(111320*Math.cos(state.userPos.lat*Math.PI/180))) * Math.sin(angle);
-  const pos = { lat: state.userPos.lat + deltaLat, lng: state.userPos.lng + deltaLng };
-
-  // 포켓몬 종은 랜덤 1~50
-  const pid = Math.floor(Math.random()*50)+1;
-  const pd = await fetchPokemonData(pid);
-  if(!pd) return;
-  const inst = { pokemonId: pid, data: pd, position: pos, uniqueId: `${pid}-user-${Date.now()}-${Math.random()}` };
-  state.world.push(inst);
-  saveWorld();
-  // 렌더링(마커 추가)
-  const el = document.createElement('div'); el.className='pokemon-marker'; const img = document.createElement('img'); img.src = pd.sprite || 'https://via.placeholder.com/44?text=?'; img.alt = pd.name; el.appendChild(img);
-  const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(pos.lat,pos.lng), content: el, yAnchor:1 }); overlay.setMap(state.map); state.markers[inst.uniqueId]=overlay; el.addEventListener('click', ()=> attemptCapture(inst)); state.userNearSpawn = inst;
+const errorRatio = actualDistance / targetDistance;
+if (errorRatio > 0.1) correctionFactor *= errorRatio; // 오차가 너무 작으면 보정값 유지
+}
+}
+return bestRoute;
 }
 
-function attemptCapture(worldItem){
-  if(!state.userPos){ alert('현재 위치 정보를 받지 못했습니다. 위치 권한을 허용해주세요.'); return; }
-  const d = haversineDistance(state.userPos.lat,state.userPos.lng, worldItem.position.lat, worldItem.position.lng);
-  if(d <= CAPTURE_RADIUS_METERS){
-    const uniqueId = `${worldItem.pokemonId}-${Date.now()}-${Math.floor(Math.random()*9999)}`;
-    const captured = { uniqueId, pokemonId: worldItem.pokemonId, name: worldItem.data.name, sprite: worldItem.data.sprite, type: worldItem.data.types, height: worldItem.data.height, weight: worldItem.data.weight, capturedAt: new Date().toISOString(), nickname: worldItem.data.name };
-    state.captured.push(captured); saveCaptured();
-    // 월드에서 해당 인스턴스 제거(해당 위치에서 사라짐)
-    state.world = state.world.filter(w=> w.uniqueId !== worldItem.uniqueId);
-    // 마커 제거
-    const mk = state.markers[worldItem.uniqueId]; if(mk){ mk.setMap(null); delete state.markers[worldItem.uniqueId]; }
-    // userNearSpawn 리셋하여 다음 접근 시 새 보장 스폰 생성 가능
-    if(state.userNearSpawn && state.userNearSpawn.uniqueId===worldItem.uniqueId) state.userNearSpawn=null;
-    alert(`${captured.name}을(를) 포획했습니다! 도감에서 닉네임을 바꿀 수 있습니다.`);
-    renderPokedex(); saveWorld();
-  } else {
-    alert(`포획 가능 반경 ${CAPTURE_RADIUS_METERS}m 밖입니다. 현재 거리: ${Math.round(d)}m`);
-  }
+async function generateCourses() {
+if (!elements.startInput.value || !elements.targetDistanceInput.value) {
+alert('출발지와 목표 거리를 모두 입력해주세요!'); return;
+}
+clearMap();
+elements.resultArea.innerHTML = '<p>최적의 코스를 생성 중입니다...</p>';
+const targetDistanceKm = parseFloat(elements.targetDistanceInput.value);
+const targetDistanceMeters = targetDistanceKm * 1000;
+
+try {
+const startPoint = await searchPlace(elements.startInput.value);
+const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
+
+// 출발지 기준으로만 순환 코스 생성
+const loopPromise = generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters);
+
+let optimalPromise = Promise.resolve(null);
+let scenicPromise = Promise.resolve(null);
+
+if (endPoint) {
+optimalPromise = getRoute([startPoint, endPoint]);
+scenicPromise = new Promise(resolve => {
+ps.keywordSearch("공원 산책로 하천", (data, status) => {
+if (status === kakao.maps.services.Status.OK && data.length > 0) {
+resolve(getRoute([startPoint, data[0], endPoint]));
+} else resolve(null);
+}, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 3000, sort: kakao.maps.services.SortBy.DISTANCE });
+});
 }
 
-function checkNearbyCaptures(){ if(!state.userPos) return; Object.values(state.markers).forEach(marker=>{ const el = marker.getContent ? marker.getContent() : null; if(!el) return; // find corresponding world item
-  // 찾기: id는 marker element의 id를 마커 객체에 접근 불가하므로 skip visual toggle
- }); }
+const [loopRoute, optimalRoute, scenicRoute] = await Promise.all([loopPromise, optimalPromise, scenicPromise]);
 
-function renderPokedex(){ const container = document.getElementById('pokedexList'); container.innerHTML=''; if(state.captured.length===0){ container.innerHTML='<p>아직 잡은 포켓몬이 없습니다.</p>'; return; } state.captured.slice().reverse().forEach((c, idx)=>{ const div = document.createElement('div'); div.className='pokedex-item'; div.innerHTML = `
-      <img src="${c.sprite}" alt="${c.name}">
-      <div style=\"flex:1\">
-        <input data-uid="${c.uniqueId}" style=\"width:100%;font-weight:600;padding:6px;\" value=\"${escapeHtml(c.nickname)}\" />
-        <div style=\"font-size:0.9em;color:#333;margin-top:6px\">도감번호: ${c.pokemonId} | 종: ${c.name} | 타입: ${c.type} | ${c.height}m ${c.weight}kg</div>
-        <div style=\"margin-top:4px;color:#666;font-size:0.85em\">포획일시: ${new Date(c.capturedAt).toLocaleString()}</div>
-      </div>
-      <button data-uid="${c.uniqueId}">삭제</button>
-    `; container.appendChild(div);
-    const input = div.querySelector('input'); input.addEventListener('change', (e)=>{ const uid = e.target.getAttribute('data-uid'); const found = state.captured.find(x=>x.uniqueId===uid); if(found){ found.nickname = e.target.value; saveCaptured(); }});
-    div.querySelector('button').addEventListener('click', ()=>{ if(confirm('이 포켓몬을 삭제할까요?')){ state.captured = state.captured.filter(x=>x.uniqueId!==c.uniqueId); saveCaptured(); renderPokedex(); }});
-  }); }
+elements.resultArea.innerHTML = '';
+let routeCount = 0;
 
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'": '&#39;' }[c])); }
+if (loopRoute) {
+drawRouteWithColorSegments(loopRoute, 9999999, { in: '#ffc107', over: '#ffc107' });
+elements.resultArea.appendChild(displayRouteInfo(loopRoute, 'loop', targetDistanceKm));
+routeCount++;
+}
+if (optimalRoute) {
+drawRouteWithColorSegments(optimalRoute, targetDistanceMeters, { in: '#007bff', over: '#fd7e14' });
+elements.resultArea.appendChild(displayRouteInfo(optimalRoute, 'optimal', targetDistanceKm));
+routeCount++;
+}
+if (scenicRoute && (!optimalRoute || scenicRoute.summary.distance > scenicRoute.summary.distance * 1.1)) {
+drawRouteWithColorSegments(scenicRoute, targetDistanceMeters, { in: '#28a745', over: '#ff7e05' });
+elements.resultArea.appendChild(displayRouteInfo(scenicRoute, 'scenic', targetDistanceKm));
+routeCount++;
+} else if (endPoint && optimalRoute && scenicRoute) {
+elements.resultArea.innerHTML += '<p class="info-message">ℹ️ 산책로 경유 코스가 최적 경로와 유사하여 생략되었습니다.</p>';
+}
 
-async function regenerateWorld(){ if(!confirm('포켓몬들의 위치를 전체 재배치합니다. 진행할까요? (현재 잡은 포켓몬은 도감에 남습니다)')) return; const old = state.world.map(w=>w.pokemonId); state.world = []; const promises = old.map(pid=>placePokemonAtRandom(pid)); const items = await Promise.all(promises); state.world = items.filter(x=>x); saveWorld(); renderWorld(); alert('재배치 완료'); }
+if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 추천할 코스를 찾지 못했습니다. 장소나 거리를 변경하여 다시 시도해보세요.</p>';
 
-initMap();
+const bounds = new kakao.maps.LatLngBounds();
+[loopRoute, optimalRoute, scenicRoute].forEach(r => {
+if (r && r.sections) r.sections.forEach(s => s.roads.forEach(rd => {
+for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
+}));
+});
+
+if (!bounds.isEmpty()) map.setBounds(bounds);
+else map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+
+mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
+if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
+
+} catch (error) {
+alert(error.message);
+elements.resultArea.innerHTML = `<p>${error.message}</p>`;
+}
+}
+elements.searchBtn.addEventListener('click', generateCourses);
+[elements.startInput, elements.endInput, elements.targetDistanceInput].forEach(input => {
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter') elements.searchBtn.click(); });
+});
 </script>
+
 </body>
 </html>
