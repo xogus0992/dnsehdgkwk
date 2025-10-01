@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 (v22 - 지능형 경로)</title>
+    <title>다이어트 워킹 내비게이션 (v23 - 거리 우선 로직)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -36,8 +36,10 @@
         }
         input[type="number"] {
             width: 100%; padding: 12px 0; border: none; font-size: 1em; box-sizing: border-box;
-            text-align: center; background: none;
+            text-align: center; background: none; -moz-appearance: textfield;
         }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"]:focus { outline: none; }
 
 
@@ -126,8 +128,7 @@
     });
     
     const getRouteAPI = (params) => new Promise(async (resolve) => {
-        // priority=RECOMMEND 대신 short_dist 삭제하고 alternatives 추가하여 골목길 탐색 유도
-        const queryParams = { ...params, priority: "RECOMMEND", alternatives: true };
+        const queryParams = { ...params, alternatives: true };
         const query = new URLSearchParams(queryParams).toString();
         const url = `https://apis-navi.kakaomobility.com/v1/directions?${query}`;
         try {
@@ -135,13 +136,12 @@
             if (!response.ok) return resolve(null);
             const data = await response.json();
             if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) {
-                resolve(data);
+                resolve(data.routes); // 모든 대체 경로 반환
             } else { resolve(null); }
         } catch { resolve(null); }
     });
 
     const clearMap = () => { mapObjects.forEach(obj => obj.setMap(null)); mapObjects = []; };
-
     const debounce = (func, delay) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => func.apply(null, a), delay); }; };
     
     const setupAutocomplete = (inputEl, listEl) => {
@@ -166,10 +166,10 @@
         inputEl.addEventListener('input', () => showSuggestions(inputEl.value));
         inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 const firstSuggestion = listEl.querySelector('.suggestion-item');
                 if (firstSuggestion) {
                     firstSuggestion.click();
-                    // 다음 입력 필드로 포커스 이동
                     if (inputEl === elements.startInput) elements.endInput.focus();
                     else if (inputEl === elements.endInput) elements.targetDistanceInput.focus();
                 } else {
@@ -200,114 +200,107 @@
         const durationMin = Math.round(summary.duration / 60);
         const titles = { 'round-trip': '왕복 코스', loop: '순환 코스' };
         card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3>
-            <p>총 거리: <b>${distanceKm} km</b></p>
+            <p>추천 거리: <b>${distanceKm} km</b></p>
             <p>예상 시간: <b>${durationMin} 분</b></p>`;
         return card;
     }
 
-    async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
-        const R = 6371e3;
+    function getPointOnCircle(center, radius, angle) {
+        const R = 6371e3; // 지구 반경
+        const latRad = center.y * Math.PI / 180;
+        const lonRad = center.x * Math.PI / 180;
+        const brngRad = angle * Math.PI / 180;
+
+        const newLatRad = Math.asin(Math.sin(latRad) * Math.cos(radius / R) + Math.cos(latRad) * Math.sin(radius / R) * Math.cos(brngRad));
+        const newLonRad = lonRad + Math.atan2(Math.sin(brngRad) * Math.sin(radius / R) * Math.cos(latRad), Math.cos(radius / R) - Math.sin(latRad) * Math.sin(newLatRad));
+
+        return { y: newLatRad * 180 / Math.PI, x: newLonRad * 180 / Math.PI };
+    }
+
+    async function findBestRoute(routes, targetDistance) {
+        if (!routes) return null;
         let bestRoute = null;
-        let bestDistanceDiff = Infinity;
-        let correctionFactor = 1.6;
-
-        for (let i = 0; i < 3; i++) {
-            const waypointsCount = 5;
-            const sideLength = (targetDistance / waypointsCount) / correctionFactor;
-            const startAngle = 30 + (i * 10);
-
-            const waypoints = [];
-            let lastPoint = { y: parseFloat(startPoint.y), x: parseFloat(startPoint.x) };
-            let lastAngle = startAngle;
-
-            for (let j = 0; j < waypointsCount - 1; j++) {
-                const lastLatRad = lastPoint.y * Math.PI / 180;
-                const lastLonRad = lastPoint.x * Math.PI / 180;
-                const brngRad = lastAngle * Math.PI / 180;
-                const latRad = Math.asin(Math.sin(lastLatRad) * Math.cos(sideLength / R) + Math.cos(lastLatRad) * Math.sin(sideLength / R) * Math.cos(brngRad));
-                const lonRad = lastLonRad + Math.atan2(Math.sin(brngRad) * Math.sin(sideLength / R) * Math.cos(lastLatRad), Math.cos(sideLength / R) - Math.sin(lastLatRad) * Math.sin(latRad));
-                waypoints.push({ y: latRad * 180 / Math.PI, x: lonRad * 180 / Math.PI });
-                lastPoint = waypoints[waypoints.length -1];
-                lastAngle += 360 / waypointsCount;
+        let minDiff = Infinity;
+        routes.forEach(route => {
+            const diff = Math.abs(route.summary.distance - targetDistance);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestRoute = route;
             }
+        });
+        return bestRoute;
+    }
 
-            const data = await getRouteAPI({ 
-                origin: `${startPoint.x},${startPoint.y}`, 
-                destination: `${startPoint.x},${startPoint.y}`,
-                waypoints: waypoints.map(p => `${p.x},${p.y}`).join('|')
-            });
+    async function generateLoopCourse(startPoint, targetDistance) {
+        let bestRoute = null;
+        let bestDiff = Infinity;
 
-            if (data && data.routes) {
-                 for (const route of data.routes) {
-                    const actualDistance = route.summary.distance;
-                    const distanceDiff = Math.abs(actualDistance - targetDistance);
-                    if (distanceDiff < bestDistanceDiff) {
-                        bestDistanceDiff = distanceDiff;
-                        bestRoute = route;
+        // 다양한 각도와 경유지 개수로 여러번 시도하여 최적 경로 탐색
+        for (const waypointsCount of [3, 4, 5]) { // 경유지 3, 4, 5개
+            for (const startAngle of [0, 45, 90]) { // 시작 각도 변경
+                const radius = (targetDistance / (waypointsCount + 1)) * 0.4; // 밖으로 더 돌도록 반지름 조정
+                const waypoints = [];
+                for (let i = 0; i < waypointsCount; i++) {
+                    const angle = startAngle + (360 / waypointsCount) * i;
+                    waypoints.push(getPointOnCircle(startPoint, radius, angle));
+                }
+
+                const routes = await getRouteAPI({ 
+                    origin: `${startPoint.x},${startPoint.y}`, 
+                    destination: `${startPoint.x},${startPoint.y}`,
+                    waypoints: waypoints.map(p => `${p.x},${p.y}`).join('|')
+                });
+
+                const candidateRoute = await findBestRoute(routes, targetDistance);
+                if (candidateRoute) {
+                    const diff = Math.abs(candidateRoute.summary.distance - targetDistance);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestRoute = candidateRoute;
                     }
-                 }
-                const errorRatio = bestRoute.summary.distance / targetDistance;
-                if (errorRatio > 0.1) correctionFactor *= errorRatio;
+                }
             }
         }
         return bestRoute;
     }
     
     async function generateRoundTripCourse(startPoint, endPoint, targetDistance) {
-        const toEndData = await getRouteAPI({ origin: `${startPoint.x},${startPoint.y}`, destination: `${endPoint.x},${endPoint.y}` });
-        if (!toEndData) return null;
+        const toEndRoutes = await getRouteAPI({ origin: `${startPoint.x},${startPoint.y}`, destination: `${endPoint.x},${endPoint.y}` });
+        if (!toEndRoutes) return null;
+        const shortestToEndRoute = toEndRoutes[0];
+        
+        const toStartRoutes = await getRouteAPI({ origin: `${endPoint.x},${endPoint.y}`, destination: `${startPoint.x},${startPoint.y}` });
+        if (!toStartRoutes) return null;
+        const shortestToStartRoute = toStartRoutes[0];
 
-        const shortestToEndRoute = toEndData.routes[0];
-        const minRoundTripDistance = shortestToEndRoute.summary.distance * 2;
+        const minRoundTripDistance = shortestToEndRoute.summary.distance + shortestToStartRoute.summary.distance;
 
-        if (targetDistance <= minRoundTripDistance) {
-            const toStartData = await getRouteAPI({ origin: `${endPoint.x},${endPoint.y}`, destination: `${startPoint.x},${startPoint.y}` });
-            if (!toStartData) return null;
-            const shortestToStartRoute = toStartData.routes[0];
-
+        // Case 1: 목표 거리가 최소 왕복 거리보다 짧으면, 최소 왕복 경로 추천
+        if (targetDistance < minRoundTripDistance) {
             const combinedSummary = {
-                distance: shortestToEndRoute.summary.distance + shortestToStartRoute.summary.distance,
+                distance: minRoundTripDistance,
                 duration: shortestToEndRoute.summary.duration + shortestToStartRoute.summary.duration,
             };
             const combinedRoute = { ...shortestToEndRoute };
             combinedRoute.summary = combinedSummary;
             combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(shortestToStartRoute.sections[0].roads);
             return combinedRoute;
-        } else {
+        } 
+        // Case 2: 목표 거리가 길면, 도착지까지 최단 경로 + 남은 거리에 맞는 순환 경로 조합
+        else {
             const remainingDistance = targetDistance - shortestToEndRoute.summary.distance;
-            const returnLoop = await generateNonOverlappingLoopCourse(endPoint, remainingDistance);
+            // 도착점에서 출발점으로 돌아오는 순환 경로 탐색
+            const returnLoop = await generateLoopCourse(endPoint, remainingDistance);
             
-            if(!returnLoop) return null; // 순환 경로 못찾으면 종료
-            
-            // endPoint -> startPoint 순환경로를 endPoint -> ... -> startPoint 로 변환
-            let bestReturnRoute = null;
-            let minDiff = Infinity;
-            
-            const toStartAlternatives = await getRouteAPI({
-                origin: `${endPoint.x},${endPoint.y}`,
-                destination: `${startPoint.x},${startPoint.y}`,
-                alternatives: true,
-            });
-
-            if(toStartAlternatives) {
-                toStartAlternatives.routes.forEach(route => {
-                    const diff = Math.abs(route.summary.distance - remainingDistance);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        bestReturnRoute = route;
-                    }
-                });
-            }
-
-            if (!bestReturnRoute) return null;
+            if (!returnLoop) return null; // 적절한 복귀 경로를 못찾으면 종료
 
             const combinedSummary = {
-                distance: shortestToEndRoute.summary.distance + bestReturnRoute.summary.distance,
-                duration: shortestToEndRoute.summary.duration + bestReturnRoute.summary.duration,
+                distance: shortestToEndRoute.summary.distance + returnLoop.summary.distance,
+                duration: shortestToEndRoute.summary.duration + returnLoop.summary.duration,
             };
             const combinedRoute = { ...shortestToEndRoute };
             combinedRoute.summary = combinedSummary;
-            combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(bestReturnRoute.sections[0].roads);
+            combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(returnLoop.sections[0].roads);
             return combinedRoute;
         }
     }
@@ -325,16 +318,16 @@
             const startPoint = await searchPlace(elements.startInput.value);
             const endPoint = elements.endInput.value ? await searchPlace(elements.endInput.value) : null;
             
-            elements.resultArea.innerHTML = '';
-            const bounds = new kakao.maps.LatLngBounds();
-
             const [loopRoute, roundTripRoute] = await Promise.all([
-                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters),
+                generateLoopCourse(startPoint, targetDistanceMeters),
                 endPoint ? generateRoundTripCourse(startPoint, endPoint, targetDistanceMeters) : Promise.resolve(null)
             ]);
-
+            
+            elements.resultArea.innerHTML = '';
+            const bounds = new kakao.maps.LatLngBounds();
             let routeCount = 0;
-            if (loopRoute) {
+
+            if (loopRoute && Math.abs(loopRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
                 drawPolyline(loopRoute, '#ffc107');
                 elements.resultArea.appendChild(displayRouteInfo(loopRoute.summary, 'loop'));
                 routeCount++;
@@ -344,18 +337,26 @@
             }
             
             if (roundTripRoute) {
-                drawPolyline(roundTripRoute, '#007bff');
-                elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
-                routeCount++;
-                 roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
-                    for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
-                }));
+                // 왕복 경로는 목표 거리보다 짧을 수 있으므로, 오차범위 검사를 다르게 적용
+                const isShortestCase = targetDistanceMeters < roundTripRoute.summary.distance;
+                if (isShortestCase || Math.abs(roundTripRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
+                    drawPolyline(roundTripRoute, '#007bff');
+                    elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
+                    routeCount++;
+                    roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
+                        for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
+                    }));
+                }
             }
 
-            if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 추천할 코스를 찾지 못했습니다. 장소나 거리를 변경하여 다시 시도해보세요.</p>';
+            if(routeCount === 0) elements.resultArea.innerHTML = '<p class="info-message">⚠️ 입력하신 조건에 맞는 경로를 찾지 못했습니다. 거리를 조정하거나 장소를 변경해보세요.</p>';
 
-            if (!bounds.isEmpty()) map.setBounds(bounds);
-            else map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+            if (!bounds.isEmpty()) {
+                map.setBounds(bounds);
+            } else {
+                map.setCenter(new kakao.maps.LatLng(startPoint.y, startPoint.x));
+                map.setLevel(5);
+            }
 
             mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(startPoint.y, startPoint.x), title: "출발"}));
             if (endPoint) mapObjects.push(new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(endPoint.y, endPoint.x), title: "도착"}));
@@ -368,8 +369,12 @@
 
     elements.searchBtn.addEventListener('click', generateCourses);
     [elements.startInput, elements.endInput, elements.targetDistanceInput].forEach(input => {
-        if(input !== elements.targetDistanceInput)
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+        input.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter') {
+                if(input !== elements.targetDistanceInput) e.preventDefault();
+                elements.searchBtn.click();
+            }
+        });
     });
 </script>
 
