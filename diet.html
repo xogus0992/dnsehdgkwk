@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>다이어트 워킹 내비게이션 (v23 - 거리 우선 로직)</title>
+    <title>다이어트 워킹 내비게이션 (v24 - 지능형 경로 최종)</title>
     <style>
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -136,7 +136,7 @@
             if (!response.ok) return resolve(null);
             const data = await response.json();
             if (data.routes && data.routes.length > 0 && data.routes[0].result_code === 0) {
-                resolve(data.routes); // 모든 대체 경로 반환
+                resolve(data.routes);
             } else { resolve(null); }
         } catch { resolve(null); }
     });
@@ -170,11 +170,10 @@
                 const firstSuggestion = listEl.querySelector('.suggestion-item');
                 if (firstSuggestion) {
                     firstSuggestion.click();
-                    if (inputEl === elements.startInput) elements.endInput.focus();
-                    else if (inputEl === elements.endInput) elements.targetDistanceInput.focus();
-                } else {
-                   elements.searchBtn.focus();
                 }
+                // 엔터 키 누른 후 다음 입력창으로 자동 포커스 이동
+                if (inputEl === elements.startInput) elements.endInput.focus();
+                else if (inputEl === elements.endInput) elements.targetDistanceInput.focus();
             }
         });
     };
@@ -206,7 +205,7 @@
     }
 
     function getPointOnCircle(center, radius, angle) {
-        const R = 6371e3; // 지구 반경
+        const R = 6371e3;
         const latRad = center.y * Math.PI / 180;
         const lonRad = center.x * Math.PI / 180;
         const brngRad = angle * Math.PI / 180;
@@ -231,17 +230,18 @@
         return bestRoute;
     }
 
+    // --- 순환 코스 생성 로직 (거리 정확도 대폭 향상) ---
     async function generateLoopCourse(startPoint, targetDistance) {
         let bestRoute = null;
         let bestDiff = Infinity;
 
-        // 다양한 각도와 경유지 개수로 여러번 시도하여 최적 경로 탐색
-        for (const waypointsCount of [3, 4, 5]) { // 경유지 3, 4, 5개
-            for (const startAngle of [0, 45, 90]) { // 시작 각도 변경
-                const radius = (targetDistance / (waypointsCount + 1)) * 0.4; // 밖으로 더 돌도록 반지름 조정
+        // 다양한 각도, 경유지 개수, 반지름 배율로 여러번 시도
+        for (const waypointsCount of [4, 5, 6]) { // 경유지 개수 다양화
+            for (const radiusMultiplier of [0.5, 0.6, 0.7]) { // 밖으로 도는 정도를 조절
+                const radius = (targetDistance / (waypointsCount + 1)) * radiusMultiplier;
                 const waypoints = [];
                 for (let i = 0; i < waypointsCount; i++) {
-                    const angle = startAngle + (360 / waypointsCount) * i;
+                    const angle = (360 / waypointsCount) * i;
                     waypoints.push(getPointOnCircle(startPoint, radius, angle));
                 }
 
@@ -264,6 +264,7 @@
         return bestRoute;
     }
     
+    // --- 왕복 코스 생성 로직 (지능형) ---
     async function generateRoundTripCourse(startPoint, endPoint, targetDistance) {
         const toEndRoutes = await getRouteAPI({ origin: `${startPoint.x},${startPoint.y}`, destination: `${endPoint.x},${endPoint.y}` });
         if (!toEndRoutes) return null;
@@ -275,7 +276,7 @@
 
         const minRoundTripDistance = shortestToEndRoute.summary.distance + shortestToStartRoute.summary.distance;
 
-        // Case 1: 목표 거리가 최소 왕복 거리보다 짧으면, 최소 왕복 경로 추천
+        // Case 1: 목표 거리가 최소 왕복 거리보다 짧으면, '최소 왕복 경로' 추천
         if (targetDistance < minRoundTripDistance) {
             const combinedSummary = {
                 distance: minRoundTripDistance,
@@ -286,7 +287,7 @@
             combinedRoute.sections[0].roads = shortestToEndRoute.sections[0].roads.concat(shortestToStartRoute.sections[0].roads);
             return combinedRoute;
         } 
-        // Case 2: 목표 거리가 길면, 도착지까지 최단 경로 + 남은 거리에 맞는 순환 경로 조합
+        // Case 2: 목표 거리가 길면, 도착지까지 최단 경로 + 남은 거리에 맞는 '우회 복귀 경로' 추천
         else {
             const remainingDistance = targetDistance - shortestToEndRoute.summary.distance;
             // 도착점에서 출발점으로 돌아오는 순환 경로 탐색
@@ -337,13 +338,12 @@
             }
             
             if (roundTripRoute) {
-                // 왕복 경로는 목표 거리보다 짧을 수 있으므로, 오차범위 검사를 다르게 적용
                 const isShortestCase = targetDistanceMeters < roundTripRoute.summary.distance;
                 if (isShortestCase || Math.abs(roundTripRoute.summary.distance - targetDistanceMeters) / targetDistanceMeters <= 0.1) {
                     drawPolyline(roundTripRoute, '#007bff');
                     elements.resultArea.appendChild(displayRouteInfo(roundTripRoute.summary, 'round-trip'));
                     routeCount++;
-                    roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
+                     roundTripRoute.sections.forEach(s => s.roads.forEach(rd => {
                         for(let i=0; i<rd.vertexes.length; i+=2) bounds.extend(new kakao.maps.LatLng(rd.vertexes[i+1], rd.vertexes[i]));
                     }));
                 }
@@ -368,13 +368,10 @@
     }
 
     elements.searchBtn.addEventListener('click', generateCourses);
-    [elements.startInput, elements.endInput, elements.targetDistanceInput].forEach(input => {
-        input.addEventListener('keydown', (e) => { 
-            if (e.key === 'Enter') {
-                if(input !== elements.targetDistanceInput) e.preventDefault();
-                elements.searchBtn.click();
-            }
-        });
+    elements.targetDistanceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            elements.searchBtn.click();
+        }
     });
 </script>
 
