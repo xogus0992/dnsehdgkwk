@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>다이어트 내비게이션 & 내 정보 (최종 연동판)</title>
+<title>다이어트 내비게이션 & 내 정보 (감량 연동 최종판)</title>
 <style>
     /* 공통 스타일 */
     html, body {
@@ -33,6 +33,9 @@
     .input-wrapper.target .icon { padding-left: 12px; }
     .input-wrapper.target .unit { padding-right: 12px; color: #888; font-weight: bold; }
     #calculated-calories { font-size: 0.9em; color: #555; font-weight: bold; flex-shrink: 0; }
+    /* [신규] 감량 결과 표시 스타일 */
+    #weight-loss-result { font-size: 0.9em; color: #007bff; font-weight: bold; flex-shrink: 0; margin-left: 5px; }
+    
     input[type="text"], .input-wrapper.target input[type="number"] {
         width: 100%; padding: 12px; border: 1px solid #ccc;
         border-radius: 5px; font-size: 1em; box-sizing: border-box;
@@ -122,6 +125,7 @@
                 <span class="unit">km</span>
             </div>
             <span id="calculated-calories">약 0 kcal</span>
+            <span id="weight-loss-result">(약 0.00kg 감량)</span>
             <button id="searchBtn">코스 생성</button>
             <button id="openModalBtn">내 정보</button>
         </div>
@@ -162,29 +166,34 @@
 <script>
     /* --- 공통 변수 및 함수 --- */
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
-    let userWeight = null; // ✅ 사용자의 체중을 저장할 변수 (데이터 연동의 핵심)
+    const KCAL_PER_KG = 7700; // ✅ 1kg 감량을 위한 칼로리
+    let userWeight = null; 
 
     /* --- 내비게이션 앱 스크립트 --- */
     const navElements = {
         mapContainer: document.getElementById('map'), startInput: document.getElementById('start'), endInput: document.getElementById('end'),
         targetDistanceInput: document.getElementById('targetDistance'), calculatedCalories: document.getElementById('calculated-calories'),
         searchBtn: document.getElementById('searchBtn'), resultArea: document.getElementById('result-area'),
-        startSuggestions: document.getElementById('start-suggestions'), endSuggestions: document.getElementById('end-suggestions')
+        startSuggestions: document.getElementById('start-suggestions'), endSuggestions: document.getElementById('end-suggestions'),
+        weightLossResult: document.getElementById('weight-loss-result') // ✅ 감량 결과 엘리먼트 추가
     };
 
     const map = new kakao.maps.Map(navElements.mapContainer, { center: new kakao.maps.LatLng(37.5034, 126.7661), level: 5 });
     const ps = new kakao.maps.services.Places();
     let mapObjects = [];
     
-    // ✅ 칼로리 계산 로직을 별도 함수로 분리
-    function updateCalories() {
+    // ✅ 칼로리와 감량 계산 로직을 통합한 함수
+    function updateCalculations() {
         const distance = parseFloat(navElements.targetDistanceInput.value) || 0;
-        // 체중이 입력되었으면 체중 기반으로, 아니면 기본값(60)으로 계산
-        const calories = userWeight ? Math.round(distance * userWeight) : Math.round(distance * 60);
-        navElements.calculatedCalories.textContent = `약 ${calories} kcal`;
+        const kcalFactor = userWeight || 60; // 체중이 있으면 체중으로, 아니면 60으로
+        const totalCalories = Math.round(distance * kcalFactor);
+        const weightLoss = totalCalories / KCAL_PER_KG;
+
+        navElements.calculatedCalories.textContent = `약 ${totalCalories} kcal`;
+        navElements.weightLossResult.textContent = `(약 ${weightLoss.toFixed(2)}kg 감량)`;
     }
 
-    navElements.targetDistanceInput.addEventListener('input', updateCalories);
+    navElements.targetDistanceInput.addEventListener('input', updateCalculations);
 
     const searchPlace = query => new Promise((resolve, reject) => {
         if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
@@ -256,10 +265,10 @@
         card.className = `route-card ${type}`;
         const distanceKm = (route.summary.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.summary.duration / 60);
-        const KCAL_FACTOR = userWeight || 60; // ✅ 체중이 있으면 체중으로, 없으면 60으로 칼로리 계산
-        const calories = Math.round(parseFloat(distanceKm) * KCAL_FACTOR);
+        const kcalFactor = userWeight || 60;
+        const calories = Math.round(parseFloat(distanceKm) * kcalFactor);
         const titles = { optimal: '최적 추천 경로', scenic: '주변 산책로 추천 코스', loop: '목표 거리 순환 코스' };
-        card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3><p>총 거리: <b>${distanceKm} km</b></p><p>예상 시간: <b>${durationMin} 분</b></p><p>소모 칼로리: <b>${calories} kcal</b> (목표: 약 ${Math.round(targetDistanceKm * KCAL_FACTOR)} kcal)</p>`;
+        card.innerHTML = `<h3><span class="color-box"></span>${titles[type]}</h3><p>총 거리: <b>${distanceKm} km</b></p><p>예상 시간: <b>${durationMin} 분</b></p><p>소모 칼로리: <b>${calories} kcal</b> (목표: 약 ${Math.round(targetDistanceKm * kcalFactor)} kcal)</p>`;
         return card;
     }
 
@@ -338,7 +347,7 @@
             height = parseFloat(document.getElementById("height").value), weight = parseFloat(document.getElementById("weight").value),
             fat = parseFloat(document.getElementById("fat").value), goalWeight = parseFloat(document.getElementById("goalWeight").value);
         if (height && weight) {
-            userWeight = weight; // ✅ 입력된 체중을 공용 변수에 저장 (데이터 연동)
+            userWeight = weight;
             const bmi = weight / ((height / 100) ** 2);
             let bmiStatus = (bmi < 18.5) ? "저체중" : (bmi < 25) ? "정상" : (bmi < 30) ? "과체중" : "비만";
             document.getElementById("bmi-result").innerText = `BMI: ${bmi.toFixed(1)} (${bmiStatus})`;
@@ -372,8 +381,8 @@
             }
         } else { progressText.innerText = "목표 체중을 입력해주세요."; }
         
-        updateCalories(); // ✅ 정보 저장 후 메인 화면 칼로리 즉시 업데이트
-        document.getElementById("dietInfoModal").style.display = "none"; // ✅ 확인 버튼 클릭 시 팝업 닫기
+        updateCalculations();
+        document.getElementById("dietInfoModal").style.display = "none";
     }
 
     /* --- 팝업(모달) 제어 스크립트 --- */
@@ -386,7 +395,6 @@
     // 페이지 로드 시
     window.addEventListener('load', () => {
         document.getElementById("characterImage").style.display = 'none';
-        // 팝업 밖 클릭 시 닫기 기능
         document.addEventListener('click', e => {
             if (!e.target.closest('.input-wrapper') && !e.target.matches('.suggestion-item')) {
                 navElements.startSuggestions.style.display = 'none';
