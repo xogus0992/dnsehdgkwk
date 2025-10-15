@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v1.6)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v1.7)</title>
 <style>
     /* ... 이전 CSS와 동일 ... */
     html, body {
@@ -13,10 +13,7 @@
         width: 100%; max-width: 800px; margin: 20px auto;
         padding: 20px; box-sizing: border-box;
     }
-    .map-wrapper {
-        position: relative;
-        width: 100%;
-    }
+    .map-wrapper { position: relative; width: 100%; }
     #map {
         width: 100%; height: 500px;
         border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -37,7 +34,14 @@
     .info-panel h2 { margin: 0 0 15px 0; font-size: 1.5em; color: #333; text-align: center; display: flex; align-items: center; justify-content: center;}
     .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
     .input-wrapper { display: flex; flex-grow: 1; position: relative; min-width: 150px; }
-    #navPanel .input-wrapper.target { border: 1px solid #ccc; border-radius: 5px; }
+    
+    /* ✨ [수정] 'km' 단위 수직 중앙 정렬을 위한 CSS 수정 */
+    #navPanel .input-wrapper.target {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        display: flex; /* Flexbox 적용 */
+        align-items: center; /* 수직 중앙 정렬 */
+    }
     #navPanel .input-wrapper.target .icon { padding-left: 12px; }
     #navPanel .input-wrapper.target .unit { padding-right: 12px; color: #888; font-weight: bold; }
     #calculated-calories, #weight-loss-result { font-size: 0.9em; font-weight: bold; flex-shrink: 0; }
@@ -45,7 +49,7 @@
     #weight-loss-result { color: #007bff; margin-left: 5px; }
     #navPanel input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; font-size: 1em; box-sizing: border-box; border-right: none;}
     #navPanel .input-wrapper.end input[type="text"] { border-radius: 5px; border-right: 1px solid #ccc; }
-    #navPanel .input-wrapper.target input[type="number"] { border: none; text-align: center; background: none; outline: none; padding: 12px 0; }
+    #navPanel .input-wrapper.target input[type="number"] { border: none; text-align: center; background: none; outline: none; padding: 12px 0; width: 100%; flex-grow: 1; }
     #myLocationBtn {
         padding: 0 10px; background: #6c757d; color: white; border: 1px solid #ccc;
         border-left: none; border-radius: 0 5px 5px 0; cursor: pointer; font-weight: bold;
@@ -56,7 +60,8 @@
     #openModalBtn { background-color: #007bff; }
     #result-area { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; text-align: left; }
     .route-card { border: 2px solid #ccc; border-radius: 8px; padding: 15px; flex-basis: 320px; background-color: #f9f9f9; flex-grow: 1; }
-    .route-card.optimal { border-color: #007bff; } .route-card.scenic { border-color: #28a745; } .route-card.loop { border-color: #ffc107; }
+    /* ✨ [추가] 왕복 코스 카드 색상 */
+    .route-card.optimal { border-color: #007bff; } .route-card.scenic { border-color: #28a745; } .route-card.loop { border-color: #ffc107; } .route-card.round-trip { border-color: #17a2b8; }
     .suggestions-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white; border: 1px solid #ddd; z-index: 1001; max-height: 220px; overflow-y: auto; border-radius: 0 0 5px 5px; }
     .suggestion-item { padding: 12px 15px; cursor: pointer; }
     .suggestion-item:hover { background-color: #f5f5f5; }
@@ -76,7 +81,17 @@
         flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;
         background-color: #f9f9f9;
     }
-    .modal-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    /* ✨ [수정] Grid에서 Flexbox로 변경하여 레이아웃 깨짐 방지 */
+    .modal-input-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .modal-input-grid > .modal-input-group {
+        flex-basis: calc(50% - 6px); /* 50% 너비에서 gap의 절반을 뺌 */
+        flex-grow: 1;
+    }
     #saveInfoBtn {
         width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; color: white;
         background-color: #007bff; border: none; border-radius: 8px; cursor: pointer;
@@ -127,7 +142,7 @@
     </div>
 
     <div id="navPanel" class="info-panel">
-        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v1.6</span></h2>
+        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v1.7</span></h2>
         <div class="input-group">
             <div class="input-wrapper">
                 <input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off">
@@ -209,19 +224,14 @@
         myLocationBtn: document.getElementById('myLocationBtn')
     };
 
-    /**
-     * ✨ [수정] 지도 및 모든 기능을 초기화하는 함수
-     */
     function initApp() {
         const mapContainer = document.getElementById('map');
         mapContainer.innerHTML = ''; 
         const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 10 };
         map = new kakao.maps.Map(mapContainer, mapOption);
         ps = new kakao.maps.services.Places();
-        
         setupAutocomplete(navElements.startInput, navElements.startSuggestions);
         setupAutocomplete(navElements.endInput, navElements.endSuggestions);
-
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(position => {
                 const lat = position.coords.latitude, lon = position.coords.longitude;
@@ -229,10 +239,7 @@
                 const isFirstLocation = userLocation === null;
                 userLocation = newLocation;
                 if (!userLocationCircle) {
-                    userLocationCircle = new kakao.maps.Circle({
-                        center: userLocation, radius: 50, strokeWeight: 2, strokeColor: '#007BFF',
-                        fillColor: '#007BFF', fillOpacity: 0.2
-                    });
+                    userLocationCircle = new kakao.maps.Circle({ center: userLocation, radius: 50, strokeWeight: 2, strokeColor: '#007BFF', fillColor: '#007BFF', fillOpacity: 0.2 });
                     userLocationCircle.setMap(map);
                 }
                 userLocationCircle.setPosition(userLocation);
@@ -244,7 +251,6 @@
         } else { alert('이 브라우저에서는 위치 기능을 지원하지 않습니다.'); }
     }
 
-    // ✨ [수정] 페이지 로드 시 kakao.maps.load를 사용하여 API 로딩을 기다립니다.
     document.addEventListener("DOMContentLoaded", () => {
         if (typeof kakao !== "undefined" && kakao.maps) {
             kakao.maps.load(initApp);
@@ -254,7 +260,6 @@
         }
     });
 
-    /* ========== 모드 전환 로직 ========== */
     function toggleMode() {
         if (currentMode === 'navigation') {
             currentMode = 'pokemon';
@@ -272,7 +277,6 @@
     }
     modeToggleBtn.addEventListener('click', toggleMode);
 
-    /* ========== 이하 모든 로직은 이전 버전과 동일합니다 ========== */
     let navMapObjects = [];
     function updateCalculations() {
         const distance = parseFloat(navElements.targetDistanceInput.value) || 0;
@@ -289,9 +293,7 @@
             navElements.startSuggestions.style.display = 'none';
             startPointFromMyLocation = { x: userLocation.getLng(), y: userLocation.getLat(), place_name: "내 위치" };
             alert("출발지가 '내 위치'로 설정되었습니다.");
-        } else {
-            alert("위치 정보를 아직 가져오지 못했습니다.");
-        }
+        } else { alert("위치 정보를 아직 가져오지 못했습니다."); }
     });
     const searchPlace = query => new Promise((resolve, reject) => {
         if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
@@ -348,7 +350,7 @@
         const kcal = Math.round(distance * (userWeight || 60));
         const card = document.createElement('div');
         card.className = `route-card ${type}`;
-        card.innerHTML = `<h3>${{optimal:'최적 경로', scenic:'힐링 산책로', loop:'순환 코스'}[type]}</h3><p><strong>거리:</strong> ${distance.toFixed(2)} km</p><p><strong>예상 시간:</strong> ${Math.round(duration)} 분</p><p><strong>소모 칼로리:</strong> 약 ${kcal} kcal</p>`;
+        card.innerHTML = `<h3>${{optimal:'최적 경로', scenic:'공원/산책로', loop:'순환 코스', 'round-trip':'왕복 코스'}[type]}</h3><p><strong>거리:</strong> ${distance.toFixed(2)} km</p><p><strong>예상 시간:</strong> ${Math.round(duration)} 분</p><p><strong>소모 칼로리:</strong> 약 ${kcal} kcal</p>`;
         return card;
     }
     async function generateNonOverlappingLoopCourse(startPoint, targetDistance) {
@@ -359,19 +361,39 @@
             const midY = parseFloat(startPoint.y) + searchRadius * Math.sin(angle) / 111000;
             try {
                 const route = await getRoute([startPoint, {x: midX, y: midY, place_name: "mid"}, startPoint]);
-                if (Math.abs(route.summary.distance - targetDistance) < targetDistance * 0.3) return route;
+                if (Math.abs(route.summary.distance - targetDistance) < targetDistance * 0.5) return route; // ✨ [수정] 허용 오차 50%로 완화
             } catch (e) {}
         } return null;
     }
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters) {
         return new Promise(resolve => {
-            ps.keywordSearch(`${startPoint.place_name} 산책로`, async (data, status) => {
+            ps.keywordSearch(`${startPoint.place_name} 공원`, async (data, status) => { // "산책로"에서 "공원"으로 확장
                 if (status === kakao.maps.services.Status.OK && data.length > 0) {
                     try { resolve(await generateNonOverlappingLoopCourse(data[0], targetDistanceMeters)); } catch (error) { resolve(null); }
                 } else { resolve(null); }
-            }, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 5000 });
+            }, { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 3000 });
         });
     }
+
+    // ✨ [추가] 왕복 코스 생성 함수
+    async function generateRoundTripCourse(startPoint, targetDistance) {
+        const halfDistance = targetDistance / 2;
+        const searchRadius = halfDistance / 100000; // 대략적인 위도 경도 변환
+        const randomAngle = Math.random() * 360 * (Math.PI / 180);
+        const midX = parseFloat(startPoint.x) + searchRadius * Math.cos(randomAngle);
+        const midY = parseFloat(startPoint.y) + searchRadius * Math.sin(randomAngle);
+        try {
+            // 가는 길만 계산해서 거리를 2배로 보여줌
+            const oneWayRoute = await getRoute([startPoint, {x: midX, y: midY, place_name: "mid"}]);
+            // 왕복 경로이므로 거리와 시간을 2배로 수정
+            oneWayRoute.summary.distance *= 2;
+            oneWayRoute.summary.duration *= 2;
+            return oneWayRoute;
+        } catch (e) {
+            return null;
+        }
+    }
+
     async function generateCourses() {
         if (!navElements.startInput.value || !navElements.targetDistanceInput.value) { alert('출발지와 목표 거리를 모두 입력해주세요!'); return; }
         clearNavMapObjects(); navElements.resultArea.innerHTML = '<p>코스 생성 중...</p>';
@@ -379,13 +401,18 @@
         try {
             let startPoint = (navElements.startInput.value === "내 위치" && startPointFromMyLocation) ? startPointFromMyLocation : await searchPlace(navElements.startInput.value);
             const endPoint = navElements.endInput.value ? await searchPlace(navElements.endInput.value) : null;
+            
+            // ✨ [수정] 왕복 코스 생성 로직 추가
             const results = await Promise.allSettled([
-                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters),
                 endPoint ? getRoute([startPoint, endPoint]) : Promise.resolve(null),
+                generateRoundTripCourse(startPoint, targetDistanceMeters),
+                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters),
                 generateNearbyTrailCourse(startPoint, targetDistanceMeters)
             ]);
+            
             navElements.resultArea.innerHTML = ''; let routeCount = 0;
             const bounds = new kakao.maps.LatLngBounds();
+            
             const processResult = (result, type, color) => {
                 if (result.status === 'fulfilled' && result.value) {
                     drawRouteWithColorSegments(result.value, { in: color });
@@ -393,9 +420,12 @@
                     routeCount++;
                 }
             };
-            processResult(results[0], 'loop', '#ffc107');
-            processResult(results[1], 'optimal', '#007bff');
-            processResult(results[2], 'scenic', '#28a745');
+            
+            processResult(results[0], 'optimal', '#007bff');
+            processResult(results[1], 'round-trip', '#17a2b8');
+            processResult(results[2], 'loop', '#ffc107');
+            processResult(results[3], 'scenic', '#28a745');
+
             if (routeCount === 0) navElements.resultArea.innerHTML = '<p>⚠️ 추천할 코스를 찾지 못했습니다.</p>';
             navMapObjects.forEach(obj => { if (obj instanceof kakao.maps.Polyline) { obj.getPath().forEach(p => bounds.extend(p)); } });
             if (!bounds.isEmpty()) map.setBounds(bounds);
@@ -461,10 +491,35 @@
         });
     }
     function clearPokemonMarkers() { Object.values(pokemonMarkers).forEach(m => m.overlay.setMap(null)); pokemonMarkers = {}; }
+    
+    // ✨ [수정] 테스트용 포켓몬 3마리를 먼저 생성하는 로직 추가
     async function initializePokemonMode() {
         clearPokemonMarkers();
+        const promises = [];
+        const pokemonToSpawn = POKEMON_COUNT;
+
+        // 1. 내 위치 근처에 3마리 생성
+        if (userLocation) {
+            for (let i = 0; i < 3; i++) {
+                const randomId = Math.floor(Math.random() * 151) + 1;
+                const pokemonData = await fetchPokemonData(randomId);
+                if (pokemonData) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const radius = Math.random() * 0.0004; // 약 40-50m 반경
+                    const lat = userLocation.getLat() + radius * Math.cos(angle);
+                    const lng = userLocation.getLng() + radius * Math.sin(angle);
+                    spawnPokemon(pokemonData, lat, lng);
+                }
+            }
+        }
+
+        // 2. 나머지 포켓몬을 수도권에 생성
+        const remainingCount = pokemonToSpawn - (userLocation ? 3 : 0);
         const metroAreaBounds = { minLat: 37.0, maxLat: 37.9, minLng: 126.3, maxLng: 127.8 };
-        const promises = Array.from({length: POKEMON_COUNT}, () => fetchPokemonData(Math.floor(Math.random() * 151) + 1));
+        for (let i = 0; i < remainingCount; i++) {
+            promises.push(fetchPokemonData(Math.floor(Math.random() * 151) + 1));
+        }
+        
         const pokemonDataList = await Promise.all(promises);
         pokemonDataList.forEach(pokemonData => {
             if (pokemonData) {
@@ -473,8 +528,10 @@
                 spawnPokemon(pokemonData, lat, lng);
             }
         });
+
         if(userLocation) map.setCenter(userLocation);
     }
+
     document.getElementById('btnShowPokedex').onclick = () => { renderPokedex(); document.getElementById('pokedexModal').style.display = 'flex'; };
     document.getElementById('btnRegenerate').onclick = initializePokemonMode;
     document.getElementById('openModalBtn').onclick = () => { document.getElementById('dietInfoModal').style.display = 'flex'; };
