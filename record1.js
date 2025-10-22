@@ -1,346 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>나의 운동 기록 v17 (기능 개선 완료)</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script src="exercises.js" defer></script>
-
-    <style>
-        body, html { margin:0; padding:0; height:100%; }
-        body { 
-            overflow-y:auto; 
-            scroll-behavior: smooth; 
-            background-color: #f7fafc; 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-            font-size: 1.05em; /* 전체적인 글씨 크기 증가 */
-        }
-        .card { padding:24px; border-radius:12px; background:white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
-        #calendar { display:grid; grid-template-columns: repeat(7,1fr); gap:10px; }
-        .calendar-day { text-align:center; padding:12px 5px; border:1px solid #e2e8f0; border-radius:8px;
-            cursor:pointer; transition: all 0.2s; min-height:95px; display:flex; flex-direction:column; justify-content:space-between;
-        }
-        .calendar-day:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
-        .calendar-day.selected { background:#4299e1; color:white; font-weight:700; border-color: #4299e1; }
-        .calendar-day.has-log { border-bottom:4px solid #63b3ed; }
-        .calendar-day.today { box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5) inset; }
-        .calendar-day.future { color: #cbd5e0; pointer-events: none; background-color: #f7fafc; }
-        .day-number { font-size:1.1rem; font-weight:700; }
-        .day-volume { font-size:0.85rem; color:#4a5568; font-weight:600; }
-        .calendar-day.selected .day-volume { color:white; }
-
-        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;
-            padding:1rem; visibility:hidden; opacity:0; transition: all 0.2s ease-in-out; z-index:50;
-        }
-        .modal-overlay.open { visibility:visible; opacity:1; }
-        .modal-content { background:white; border-radius:12px; padding: 24px; width:100%; max-width:720px; max-height:90vh; overflow:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); }
-        
-        #workout-session-modal { z-index: 50; }
-        #add-to-session-modal, #custom-confirm-modal, #pr-celebration-modal { z-index: 60; }
-
-        #workout-session-modal .modal-content { padding: 0; max-width: 900px; height: 80vh; max-height: 700px; overflow: hidden; }
-
-        .text-btn, .icon-btn { background:none; border:none; cursor:pointer; padding:4px; transition: all 0.2s; }
-        .icon-btn:hover { transform: scale(1.1); }
-        .text-btn { font-size: 0.9rem; font-weight: 600; color: #4a5568; }
-        .stats-selector-btn { padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; background-color:#edf2f7; transition: all 0.2s;}
-        .stats-selector-btn.active { background:#4299e1; color:white; }
-        
-        .summary-item { display:flex; gap:12px; align-items:center; }
-        .summary-item img { width:64px; height:64px; object-fit:cover; border-radius:8px; background:#edf2f7; }
-        
-        .session-set-input { width: 70px; text-align: center; border: 1px solid #cbd5e0; border-radius: 6px; padding: 6px; font-size: 1.05rem; transition: all 0.2s; }
-        .session-set-input:focus { border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); outline: none; }
-        
-        #floating-timer { position: fixed; top: 80px; left: 20px; z-index: 100; transition: transform 0.1s; user-select: none;}
-        #floating-timer.dragging { transition: none; }
-
-        .warmup-set-text { color: #3b82f6; font-weight: 600; }
-        
-        .session-action-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 80px; /* 크기 고정 */
-            height: 44px; /* 크기 고정 */
-            padding: 0 1rem;
-            border-radius: 0.5rem;
-            font-weight: bold;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: none;
-            font-size: 1rem;
-        }
-
-        .add-warmup-btn {
-            color: #3b82f6;
-            background-color: transparent;
-            border: 1px solid #3b82f6;
-        }
-        .add-warmup-btn:hover {
-             background-color: rgba(59, 130, 246, 0.1);
-        }
-        
-        .delete-warmup-btn {
-            background-color: #ef4444; /* red-500 */
-            color: white;
-            font-size: 1.5rem; /* X 아이콘 크기 */
-        }
-         .delete-warmup-btn:hover {
-            background-color: #dc2626; /* red-600 */
-        }
-        
-        .timer-adjust-btn {
-            background-color: #e5e7eb; /* gray-200 */
-            color: #4b5563; /* gray-600 */
-            border-radius: 9999px; /* fully rounded */
-            width: 36px;
-            height: 36px;
-            font-size: 1.25rem;
-            font-weight: bold;
-        }
-        .timer-adjust-btn:hover {
-             background-color: #d1d5db; /* gray-300 */
-        }
-
-
-        @media (max-width: 768px) {
-            body { font-size: 1em; } /* 모바일에서는 기본 폰트 크기 유지 */
-            .modal-content { max-width: 95%; padding:16px; }
-            #workout-session-modal .modal-content { flex-direction: column; padding:0; }
-            #workout-session-modal .timer-panel { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
-            #workout-session-modal .workout-panel { width: 100%; }
-        }
-    </style>
-</head>
-<body>
-    <header class="bg-blue-500 text-white p-4 relative text-center shadow-md">
-        <button id="back-to-main-btn" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white text-blue-500 px-3 py-1 rounded-md shadow-sm hover:bg-gray-100 transition">← 뒤로가기</button>
-        <h1 class="text-3xl font-semibold">나의 운동 기록</h1>
-    </header>
-
-    <div id="floating-timer" class="hidden cursor-pointer">
-        <div class="relative w-24 h-24">
-            <svg class="w-full h-full" viewBox="0 0 100 100">
-                <circle class="text-gray-200" stroke-width="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50"/>
-                <circle id="floating-timer-progress" class="text-blue-500" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s linear;"/>
-            </svg>
-            <div id="floating-timer-display" class="absolute inset-0 flex items-center justify-center font-mono font-bold text-2xl text-gray-800"></div>
-            <button id="close-floating-timer" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold text-sm shadow-md">&times;</button>
-        </div>
-    </div>
-    
-    <main class="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2">
-            <section class="card">
-                <div class="flex items-center justify-between mb-4 gap-4">
-                    <div class="flex items-center gap-2">
-                        <button id="prev-month-btn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-lg">‹</button>
-                        <h3 id="calendar-title" class="text-2xl font-bold w-48 text-center"></h3>
-                        <button id="next-month-btn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-lg">›</button>
-                    </div>
-                    <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
-                        <button id="today-btn" class="px-4 py-1.5 bg-white rounded-md shadow-sm text-blue-600 font-semibold hover:bg-gray-50 transition">오늘</button>
-                        <button id="date-search-btn" class="p-2 bg-white rounded-md shadow-sm hover:bg-gray-50 transition text-lg">📅</button>
-                        <input id="date-search-input" type="date" class="absolute opacity-0 -z-10 w-0 h-0">
-                    </div>
-                </div>
-                <div class="grid grid-cols-7 text-center font-bold mb-2 text-gray-500">
-                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                </div>
-                <div id="calendar"></div>
-            </section>
-        </div>
-        <div class="space-y-6">
-            <section class="card">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold">🗒️ 나의 루틴</h3>
-                    <button id="open-stats-modal-btn" class="bg-gray-100 px-3 py-1 rounded-md font-semibold hover:bg-gray-200 transition">📊 통계</button>
-                </div>
-                <div id="routine-template-list" class="space-y-3"></div>
-                <button id="create-new-template-btn" class="mt-4 w-full bg-gray-200 hover:bg-gray-300 p-3 rounded-lg font-bold transition">+ 새 루틴 만들기</button>
-            </section>
-        </div>
-    </main>
-
-    <!-- Modals -->
-    <div id="daily-log-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="daily-log-modal-title" class="text-2xl font-bold"></h3>
-                <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <div id="daily-log-modal-list" class="space-y-4"></div>
-        </div>
-    </div>
-    
-    <div id="pr-celebration-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content text-center">
-            <h2 class="text-3xl font-bold mb-2">🎉 PR 달성! 🎉</h2>
-            <p class="text-gray-600 mb-4">새로운 1RM 기록을 축하합니다!</p>
-            <div id="pr-list" class="space-y-2 text-left bg-gray-50 p-4 rounded-lg"></div>
-            <button id="close-pr-modal" class="mt-5 w-full bg-blue-500 text-white p-3 rounded-lg">확인</button>
-        </div>
-    </div>
-
-    <div id="template-editor-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="template-modal-title" class="text-2xl font-bold"></h3>
-                <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <input id="template-title-input" class="w-full p-3 border rounded-md mb-4" placeholder="루틴 이름 (비워두면 자동 생성)" />
-            <div class="flex justify-between items-center mb-2">
-                <h4 class="font-bold">운동 추가</h4>
-                <button id="open-add-exercise-modal-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md transition">+ 새 운동 만들기</button>
-            </div>
-            <div class="bg-gray-100 p-3 rounded-md mb-4 grid grid-cols-2 gap-3">
-                <select id="exercise-category-select" class="p-2 border rounded-md"></select>
-                <select id="exercise-list-select" class="p-2 border rounded-md"></select>
-            </div>
-            <div class="grid grid-cols-3 gap-3 my-4">
-                <input id="template-weight-input" type="number" placeholder="무게(kg)" class="p-2 border rounded-md" />
-                <input id="template-reps-input" type="number" placeholder="횟수" class="p-2 border rounded-md" />
-                <input id="template-sets-input" type="number" placeholder="세트" class="p-2 border rounded-md" />
-            </div>
-            <button id="add-update-exercise-btn" class="w-full bg-gray-700 hover:bg-gray-800 text-white p-3 rounded-lg mb-4 transition">운동 추가</button>
-            <h4 class="font-bold mb-2">현재 루틴 목록</h4>
-            <div id="template-exercise-list" class="flex-col space-y-2 max-h-56 overflow-y-auto border-t pt-3"></div>
-            <div class="mt-5 flex gap-3">
-                <button id="save-template-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg font-semibold transition">템플릿 저장</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="add-to-session-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content" style="max-width: 500px;">
-             <div class="flex justify-between items-center mb-4">
-                <h3 id="add-to-session-modal-title" class="text-xl font-bold">세션에 운동 추가</h3>
-                <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <div class="bg-gray-100 p-3 rounded-md mb-4 grid grid-cols-2 gap-3">
-                <select id="session-ex-category-select" class="p-2 border rounded-md"></select>
-                <select id="session-ex-list-select" class="p-2 border rounded-md"></select>
-            </div>
-            <div class="grid grid-cols-3 gap-3 my-4">
-                <input id="session-weight-input" type="number" placeholder="무게(kg)" class="p-2 border rounded-md" />
-                <input id="session-reps-input" type="number" placeholder="횟수" class="p-2 border rounded-md" />
-                <input id="session-sets-input" type="number" placeholder="세트" class="p-2 border rounded-md" />
-            </div>
-            <button id="save-to-session-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition">추가</button>
-        </div>
-    </div>
-
-    <div id="add-exercise-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold">새 운동 만들기</h3>
-                <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block font-bold mb-1">운동 부위</label>
-                    <select id="new-exercise-part" class="w-full p-2 border rounded-md"></select>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">운동 이름</label>
-                    <input id="new-exercise-name" class="w-full p-2 border rounded-md" placeholder="예: 나만의 벤치프레스" />
-                </div>
-            </div>
-            <div class="flex gap-3 mt-5">
-                <button id="save-new-exercise-btn" class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition">저장</button>
-                <button id="cancel-add-exercise-btn" class="w-1/2 bg-gray-300 hover:bg-gray-400 p-3 rounded-lg transition">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="summary-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold">오늘의 운동 요약</h3>
-                <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <div id="summary-content" class="space-y-3"></div>
-            <button id="close-summary-btn" class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition">확인</button>
-        </div>
-    </div>
-    
-    <div id="stats-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold">운동 통계</h3>
-                <div class="flex items-center gap-2">
-                    <input type="date" id="stats-start-date" class="p-1.5 border rounded-md">
-                    <span>~</span>
-                    <input type="date" id="stats-end-date" class="p-1.5 border rounded-md">
-                    <button id="stats-reset-btn" class="p-2 rounded-md hover:bg-gray-200 transition">🔄</button>
-                </div>
-                 <button class="close-modal-btn text-2xl">&times;</button>
-            </div>
-            <div class="mb-4">
-                <label class="font-bold block mb-2">1. 부위 선택</label>
-                <div id="stats-part-selector" class="flex flex-wrap gap-2"></div>
-            </div>
-            <div class="mb-4">
-                <label class="font-bold block mb-2">2. 종목 선택 (선택 사항)</label>
-                <select id="stats-exercise-select" class="w-full p-2 border rounded-md bg-gray-50"></select>
-            </div>
-            <div style="height:280px">
-                <canvas id="stats-chart-canvas"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div id="custom-confirm-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content" style="max-width: 400px;">
-            <p id="confirm-message" class="text-xl mb-6"></p>
-            <div class="flex justify-end gap-3">
-                <button id="confirm-ok-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">확인</button>
-                <button id="confirm-cancel-btn" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg transition">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="workout-session-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <div class="flex h-full">
-                <div class="w-1/3 flex flex-col items-center justify-center p-6 bg-gray-50 rounded-l-lg border-r timer-panel">
-                    <p id="timer-digital-display" class="text-6xl font-mono font-bold text-gray-800 mb-4">00:00</p>
-                    <div id="analog-clock" class="relative w-48 h-48">
-                        <div class="absolute inset-0 border-8 border-gray-200 rounded-full"></div>
-                        <div class="absolute inset-2 border-2 border-gray-300 rounded-full"></div>
-                        <div id="clock-second-hand" class="absolute bottom-1/2 left-1/2 w-1 h-20 bg-blue-500 rounded-full origin-bottom transform"></div>
-                        <div class="absolute top-1/2 left-1/2 w-3 h-3 bg-gray-800 rounded-full -mt-1.5 -ml-1.5"></div>
-                    </div>
-                    <div class="mt-6 w-full text-center">
-                        <label for="timer-input" class="block font-semibold mb-2">휴식 시간 (초)</label>
-                        <div class="flex items-center justify-center gap-3">
-                             <button id="timer-minus-30" class="timer-adjust-btn">-</button>
-                             <input id="timer-input" type="number" class="w-24 p-2 text-lg text-center bg-white border rounded-md" value="60" />
-                             <button id="timer-plus-30" class="timer-adjust-btn">+</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="w-2/3 p-6 flex flex-col workout-panel">
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 id="workout-session-title" class="text-3xl font-bold"></h3>
-                        <button id="hide-session-btn" class="text-3xl font-light -mt-2">&times;</button>
-                    </div>
-                    <div id="workout-session-list" class="flex-grow space-y-4 overflow-y-auto pr-2"></div>
-                    <div class="mt-4 pt-4 border-t flex gap-3">
-                        <button id="add-exercise-to-session-btn" class="w-1/3 bg-gray-200 hover:bg-gray-300 p-3 rounded-lg font-semibold transition">운동 추가</button>
-                        <button id="save-session-btn" class="w-2/3 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg font-semibold transition">운동 완료 및 저장</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-<script>
 document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         backBtn: document.getElementById('back-to-main-btn'),
@@ -389,8 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTemplateBtn: document.getElementById('save-template-btn'),
         workoutSessionTitle: document.getElementById('workout-session-title'),
         timerInput: document.getElementById('timer-input'),
-        timerMinus30Btn: document.getElementById('timer-minus-30'),
-        timerPlus30Btn: document.getElementById('timer-plus-30'),
+        timerMinus10Btn: document.getElementById('timer-minus-10'), 
+        timerPlus10Btn: document.getElementById('timer-plus-10'),  
+        timerMinus30Btn: document.getElementById('timer-minus-30'), 
+        timerPlus30Btn: document.getElementById('timer-plus-30'),  
+        dailyLogDate: document.getElementById('daily-log-date'), 
         timerDigitalDisplay: document.getElementById('timer-digital-display'),
         clockSecondHand: document.getElementById('clock-second-hand'),
         workoutSessionList: document.getElementById('workout-session-list'),
@@ -415,7 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmOkBtn: document.getElementById('confirm-ok-btn'),
         confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
     };
+    const adjustTimerInput = (seconds) => {
+            const currentValue = parseInt(elements.timerInput.value, 10) || 0;
+            let newValue = currentValue + seconds;
+            if (newValue < 0) newValue = 0; // 0초 미만으로 내려가지 않도록
+            elements.timerInput.value = newValue;
+        };
 
+        if (elements.timerMinus10Btn) elements.timerMinus10Btn.addEventListener('click', () => adjustTimerInput(-10));
+        if (elements.timerPlus10Btn) elements.timerPlus10Btn.addEventListener('click', () => adjustTimerInput(10));
+        if (elements.timerMinus30Btn) elements.timerMinus30Btn.addEventListener('click', () => adjustTimerInput(-30));
+        if (elements.timerPlus30Btn) elements.timerPlus30Btn.addEventListener('click', () => adjustTimerInput(30));
     const ROUTINE_TEMPLATE_KEY = 'my_fitness_templates_v15';
     const LOG_KEY = 'my_fitness_logs_v18_warmup'; // Key updated for new structure
     const CUSTOM_EXERCISES_KEY = 'my_fitness_custom_exercises_v9';
@@ -1165,18 +835,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (addWarmupBtn) {
                 const exIndex = Number(addWarmupBtn.dataset.exerciseIndex);
+                
+                // 이 운동의 첫 번째 '본 세트'를 찾습니다.
                 const firstMainSet = currentWorkoutSession.log.sets.find(s => s.exerciseIndex === exIndex && !s.isWarmup);
+
+                // 웜업 세트에 복사할 기본 데이터를 준비합니다.
+                // (본 세트가 있으면 그걸 쓰고, 없으면 운동 정보에서 가져옵니다)
+                const baseSetData = firstMainSet || currentWorkoutSession.log.exercises[exIndex];
+
+                const newWarmupSet = {
+                    name: baseSetData.name, // 'name'이 누락되지 않도록
+                    exerciseIndex: exIndex,
+                    weight: baseSetData.weight || 0,
+                    reps: baseSetData.reps || 10,
+                    isWarmup: true,
+                    completed: false,
+                    setNumber: 0 // 웜업 세트는 0번
+                };
+
                 if (firstMainSet) {
-                    const newWarmupSet = {
-                        ...firstMainSet,
-                        isWarmup: true,
-                        completed: false,
-                        setNumber: 0 // Placeholder
-                    };
+                    // 본 세트가 있으면, 그 앞에 끼워넣습니다.
                     const firstSetIndex = currentWorkoutSession.log.sets.indexOf(firstMainSet);
                     currentWorkoutSession.log.sets.splice(firstSetIndex, 0, newWarmupSet);
-                    renderWorkoutSession();
+                } else {
+                    // 본 세트가 아예 없으면, 그냥 이 운동의 세트 중 맨 앞에 추가합니다.
+                    // (이미 웜업 세트만 있는 경우, 그 맨 앞에 추가됩니다)
+                    const firstSetOfThisExercise = currentWorkoutSession.log.sets.findIndex(s => s.exerciseIndex === exIndex);
+                    if (firstSetOfThisExercise > -1) {
+                        currentWorkoutSession.log.sets.splice(firstSetOfThisExercise, 0, newWarmupSet);
+                    } else {
+                        // 이 운동의 세트가 아예 0개면, 그냥 push 합니다.
+                        currentWorkoutSession.log.sets.push(newWarmupSet);
+                    }
                 }
+                
+                renderWorkoutSession();
             }
             else if (deleteWarmupBtn) {
                 const setIndex = Number(deleteWarmupBtn.dataset.setIndex);
@@ -1390,6 +1083,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-</script>
-</body>
-</html>
