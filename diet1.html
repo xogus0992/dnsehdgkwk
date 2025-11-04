@@ -5,6 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services"></script>
 <title>다이어트 내비게이션 & 포켓몬 월드 (v3.5)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
@@ -470,7 +472,7 @@
             <div class="map-wrapper">
                 <div id="map">
                      <div id="map-notice" style="text-align:center; padding-top: 50px; font-weight:bold; color:#888;">
-                        지도를 불러오는 중입니다...
+                        Kakao 지도 API 키를 확인해주세요...
                     </div>
                 </div>
                 <button id="modeToggleBtn">포켓몬 월드 보기</button>
@@ -603,1138 +605,1307 @@
             </div>
         </div>
         <div class="battle-controls">
-            <div id="battle-log" class="battle-log"></div>
-            <div id="moves-grid" class="moves-grid"></div>
+            <div class="battle-log" id="battle-log">배틀 시작!</div>
+            <div class="moves-grid" id="moves-grid">
+                <button data-move-index="0"></button>
+                <button data-move-index="1"></button>
+                <button data-move-index="2"></button>
+                <button data-move-index="3"></button>
+            </div>
         </div>
     </div>
 </div>
 
-
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v3.5) 전체 스크립트 (치명적 오류 수정) ========== */
-
-    /* ========== 공통 & 전역 변수 ========== */
-    // v3.4: 카카오 API 키 (지도 SDK용, 스태틱맵용)
-    const KAKAO_JS_KEY = 'c96c999113980d67c697b2f5a3d385f1';
-    const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
-    
-    let map, ps; 
-    let currentMode = 'navigation'; 
-    let navMapObjects = [], pokemonMarkers = {}, capturedPokemons = [];
-    
-    let userLocation = null; 
-    let userLocationCircle = null;
-    let startPointFromMyLocation = null; 
-
-    let allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
-    let routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
-
-    // v3.4: 신규 전역 변수 (기록, 그룹, 나)
-    let courseHistory = []; // [요청 4] 기록 저장을 위한 배열
-    let attendanceLog = new Set(); // [요청 6] 출석 기록 (중복 방지)
-    let fakeGroup = [ // [요청 5] 가상 그룹원
-        { rank: 1, name: '열정적인 러너', dist: '22.5km', img: 'https://i.pravatar.cc/150?img=11' },
-        { rank: 2, name: '산책왕', dist: '19.2km', img: 'https://i.pravatar.cc/150?img=12' },
-        { rank: 3, name: '동네 한바퀴', dist: '18.8km', img: 'https://i.pravatar.cc/150?img=13' },
-        { rank: 4, name: '나 (You)', dist: '0.0km', img: 'https://i.pravatar.cc/150?img=1' },
-        { rank: 5, name: '새내기 워커', dist: '12.1km', img: 'https://i.pravatar.cc/150?img=14' },
-        { rank: 6, name: '주말 등산가', dist: '10.5km', img: 'https://i.pravatar.cc/150?img=15' },
-        { rank: 7, name: '밤 마실', dist: '8.3km', img: 'https://i.pravatar.cc/150?img=16' },
-        { rank: 8, name: '거북이', dist: '2.1km', img: 'https://i.pravatar.cc/150?img=17' }
-    ];
-    // v3.5: [오류 수정] '나' 페이지 리스너 중복 방지 플래그
-    let myPageListenersSet = false;
-
-    // DOM Elements
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
-    const navPanel = document.getElementById('navPanel');
-    const pokemonPanel = document.getElementById('pokemonPanel');
-    const navElements = {
-        targetDistanceInput: document.getElementById('targetDistance'), searchBtn: document.getElementById('searchBtn'), 
-        resultArea: document.getElementById('result-area'), startInput: document.getElementById('start'), endInput: document.getElementById('end'),
-        startSuggestions: document.getElementById('start-suggestions'), endSuggestions: document.getElementById('end-suggestions'),
-        myLocationBtn: document.getElementById('myLocationBtn')
+    // v3.4: [요청 7] 앱이 로드될 때 DOM 요소를 미리 찾아둠 (성능 최적화)
+    const domElements = {
+        navPanel: document.getElementById('navPanel'),
+        pokemonPanel: document.getElementById('pokemonPanel'),
+        modeToggleBtn: document.getElementById('modeToggleBtn'),
+        startInput: document.getElementById('start'),
+        endInput: document.getElementById('end'),
+        targetDistanceInput: document.getElementById('targetDistance'),
+        myLocationBtn: document.getElementById('myLocationBtn'),
+        searchBtn: document.getElementById('searchBtn'),
+        resultArea: document.getElementById('result-area'),
+        caloriesDisplay: document.getElementById('calculated-calories'),
+        weightLossDisplay: document.getElementById('weight-loss-result'),
+        startSuggestions: document.getElementById('start-suggestions'),
+        endSuggestions: document.getElementById('end-suggestions'),
+        mapNotice: document.getElementById('map-notice')
     };
 
-    /**
-     * v2.6: 사용자 위치 정보 요청 (v3.2와 동일)
-     */
-    function requestUserLocation(onSuccess, onError) {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    const location = new kakao.maps.LatLng(latitude, longitude);
-                    if (onSuccess) onSuccess(location);
-                },
-                (error) => {
-                    let errorMsg = "위치 정보를 가져오는 데 실패했습니다.";
-                    if (error.code === 1) { 
-                        errorMsg = "위치 정보 권한이 거부되었습니다. 원활한 서비스 이용을 위해 브라우저 설정에서 위치 권한을 허용해주세요.";
-                    } else if (error.code === 3) {
-                        errorMsg = "위치를 받아오는 데 시간이 너무 오래 걸립니다. (타임아웃)";
-                    }
-                    if (onError) onError(errorMsg);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        } else {
-            const errorMsg = "이 브라우저에서는 위치 기능을 지원하지 않습니다.";
-            if (onError) onError(errorMsg);
-        }
-    }
-
-    /**
-     * v2.6: 지도에 현재 위치 표시 (v3.2와 동일)
-     */
-    function updateMapCenter(location) {
-        userLocation = location; 
-
-        if (!userLocationCircle) {
-            userLocationCircle = new kakao.maps.Circle({ center: userLocation, radius: 50, strokeWeight: 2, strokeColor: '#007BFF', fillColor: '#007BFF', fillOpacity: 0.2, map: map });
-        } else {
-            userLocationCircle.setPosition(userLocation);
-        }
+    // v3.2: Kakao API 로드 완료 후 실행
+    document.addEventListener('DOMContentLoaded', () => {
         
-        map.setCenter(userLocation);
-        map.setLevel(4, { animate: true });
-    }
-    
-    /**
-     * v2.6: '내 위치' 버튼 클릭 시 실행될 메인 함수 (v3.2와 동일)
-     */
-    function onMyLocationButtonClick() {
-        navElements.myLocationBtn.disabled = true;
-        navElements.myLocationBtn.textContent = '위치 찾는 중...';
+        // ▼▼▼ [수정 2/2] kakao.maps.load() 래퍼 추가 ▼▼▼
+        // Kakao 지도 API가 완전히 로드된 후, 모든 지도 관련 스크립트를 실행합니다.
+        kakao.maps.load(() => {
+        // ▲▲▲ [수정 2/2] 수정 시작점 ▲▲▲
+        
+            // (v3.4: [요청 7] 로직)
+            // 전역 변수 초기화 (v3.4 기준)
+            let map, ps, geocoder, navElements = domElements;
+            let currentMode = 'navigation'; 
+            let navMapObjects = [], pokemonMarkers = {}, capturedPokemons = [];
+            let userLocation = null; 
+            let userLocationCircle = null; 
+            let startPointFromMyLocation = null;
+            let allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
+            let routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
+            
+            // v3.4: 신규 전역 변수 (기록, 그룹, 나)
+            let courseHistory = []; // [요청 4] 기록 저장을 위한 배열
+            let attendanceLog = new Set(); // [요청 6] 출석 기록 (중복 방지)
+            let fakeGroup = [ // [요청 5] 가상 그룹원
+                { rank: 1, name: '열정적인 러너', dist: '22.5km', img: 'https://i.pravatar.cc/150?img=11' },
+                { rank: 2, name: '산책왕', dist: '19.2km', img: 'https://i.pravatar.cc/150?img=12' },
+                { rank: 3, name: '동네 한바퀴', dist: '18.8km', img: 'https://i.pravatar.cc/150?img=13' },
+                { rank: 4, name: '나 (You)', dist: '0.0km', img: 'https://i.pravatar.cc/150?img=1' },
+                { rank: 5, name: '새내기 워커', dist: '12.1km', img: 'https://i.pravatar.cc/150?img=14' },
+                { rank: 6, name: '주말 등산가', dist: '10.5km', img: 'https://i.pravatar.cc/150?img=15' },
+                { rank: 7, name: '밤 마실', dist: '8.3km', img: 'https://i.pravatar.cc/150?img=16' },
+                { rank: 8, name: '거북이', dist: '2.1km', img: 'https://i.pravatar.cc/150?img=17' },
+            ];
+            let myPageListenersSet = false; // v3.5 [버그 수정] '나' 페이지 리스너 중복 방지
 
-        requestUserLocation(
-            (location) => {
-                const geocoder = new kakao.maps.services.Geocoder();
-                geocoder.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
-                    let placeName = "내 위치 (장소명 없음)";
-                    
-                    if (status === kakao.maps.services.Status.OK && data.length > 0) {
-                        placeName = data[0].place_name;
-                    } 
-                    else {
-                        geocoder.coord2Address(location.getLng(), location.getLat(), (result, status) => {
-                            if (status === kakao.maps.services.Status.OK) {
-                                placeName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+            /**
+             * v2.6: '내 위치' GPS 요청 (v3.2와 동일)
+             */
+            function requestUserLocation(successCallback, errorCallback) {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => successCallback(new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude)),
+                        () => errorCallback("위치 정보를 가져오는 데 실패했습니다."),
+                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    );
+                } else {
+                    errorCallback("이 브라우저에서는 Geolocation이 지원되지 않습니다.");
+                }
+            }
+
+            /**
+             * v2.6: 지도 센터 이동 및 서클 표시 (v3.2와 동일)
+             */
+            function updateMapCenter(location) {
+                userLocation = location;
+                if (!userLocationCircle) {
+                    userLocationCircle = new kakao.maps.Circle({ 
+                        center: userLocation, 
+                        radius: 50, strokeWeight: 2, strokeColor: '#007BFF',
+                        fillColor: '#007BFF', fillOpacity: 0.2, 
+                        map: map 
+                    });
+                } else {
+                    userLocationCircle.setPosition(userLocation);
+                }
+                map.setCenter(userLocation);
+                map.setLevel(4, { animate: true });
+            }
+
+            /**
+             * v2.6: '내 위치' 버튼 클릭 시 실행될 메인 함수 (v3.2와 동일)
+             */
+            function onMyLocationButtonClick() {
+                navElements.myLocationBtn.disabled = true;
+                navElements.myLocationBtn.textContent = '위치 찾는 중...';
+                
+                requestUserLocation(
+                    (location) => {
+                        const geocoder = new kakao.maps.services.Geocoder();
+                        geocoder.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
+                            let placeName = "내 위치 (장소명 없음)";
+                            if (status === kakao.maps.services.Status.OK && data.length > 0) {
+                                placeName = data[0].place_name;
+                            } else {
+                                geocoder.coord2Address(location.getLng(), location.getLat(), (result, status) => {
+                                    if (status === kakao.maps.services.Status.OK) {
+                                        placeName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+                                    }
+                                    finalizeMyLocation(location, placeName);
+                                });
+                                return;
                             }
                             finalizeMyLocation(location, placeName);
                         });
-                        return;
+                    },
+                    (errorMsg) => {
+                        alert(errorMsg);
+                        navElements.myLocationBtn.disabled = false;
+                        navElements.myLocationBtn.textContent = '내 위치';
                     }
-                    finalizeMyLocation(location, placeName);
-                });
-            },
-            (errorMsg) => {
-                alert(errorMsg);
+                );
+            }
+
+            /**
+             * v2.6: '내 위치' 버튼 작업 완료 후 (v3.2와 동일)
+             */
+            function finalizeMyLocation(location, placeName) {
+                navElements.startInput.value = placeName;
+                startPointFromMyLocation = { x: location.getLng(), y: location.getLat(), place_name: placeName };
+                updateMapCenter(location);
                 navElements.myLocationBtn.disabled = false;
                 navElements.myLocationBtn.textContent = '내 위치';
             }
-        );
-    }
 
-    /**
-     * v2.6: '내 위치' 버튼 작업 완료 후 (v3.2와 동일)
-     */
-    function finalizeMyLocation(location, placeName) {
-        navElements.startInput.value = placeName;
-        startPointFromMyLocation = { x: location.getLng(), y: location.getLat(), place_name: placeName };
-        updateMapCenter(location);
-        navElements.myLocationBtn.disabled = false;
-        navElements.myLocationBtn.textContent = '내 위치';
-    }
+            /**
+             * v2.6: 지도 초기화 (v3.2 로직)
+             */
+            function initializeDefaultMap() {
+                const mapContainer = document.getElementById('map');
+                const mapOption = { 
+                    center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 시청
+                    level: 7 
+                };
+                map = new kakao.maps.Map(mapContainer, mapOption);
+                ps = new kakao.maps.services.Places();
+                geocoder = new kakao.maps.services.Geocoder();
 
-
-    /**
-     * v2.6: 지도 초기화 함수 (v3.2와 동일)
-     */
-    function initApp() {
-        const mapContainer = document.getElementById('map');
-        mapContainer.innerHTML = ''; 
-        const mapOption = { center: new kakao.maps.LatLng(37.566826, 126.9786567), level: 10 };
-        map = new kakao.maps.Map(mapContainer, mapOption);
-        ps = new kakao.maps.services.Places();
-        
-        navElements.myLocationBtn.addEventListener('click', onMyLocationButtonClick);
-
-        setupAutocomplete(navElements.startInput, navElements.startSuggestions);
-        setupAutocomplete(navElements.endInput, navElements.endSuggestions);
-
-        requestUserLocation(
-            (location) => {
-                updateMapCenter(location);
-            }, 
-            (errorMsg) => { 
-                console.warn("초기 위치 정보 로드 실패 (페이지 로드):", errorMsg); 
-            }
-        );
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        // v3.4: KAKAO_JS_KEY 변수 사용
-        if (typeof kakao !== "undefined" && kakao.maps) {
-            // v3.5: [오류 수정] SDK URL에 변수 대신 하드코딩된 키 사용 (이전 버전과 동일)
-            kakao.maps.load(initApp);
-        } else {
-            document.getElementById('map-notice').innerHTML = '카카오맵 API 로딩 실패. 네트워크나 API 키를 확인해주세요.';
-        }
-        
-        // v3.4: 탭 전환 이벤트 리스너
-        setupTabNavigation();
-        
-        // v3.5: [FATAL ERROR FIX]
-        // '나' 페이지의 버튼들은 숨겨져 있어 지금 찾을 수 없으므로,
-        // DOMContentLoaded에서 리스너를 등록하면 안 됩니다.
-        // `renderMyPage()` 함수 내부로 이동시켰습니다.
-        /*
-        document.getElementById('openModalBtn').onclick = ...; // <-- ERROR
-        document.getElementById('btnShowPokedex').onclick = ...; // <-- ERROR
-        document.getElementById('btnCheckAttendance').onclick = ...; // <-- ERROR
-        */
-    });
-
-    /* ========== 모드 전환 로직 (생략 없음) ========== */
-    function toggleMode() {
-        currentMode = (currentMode === 'navigation') ? 'pokemon' : 'navigation';
-        modeToggleBtn.textContent = (currentMode === 'pokemon') ? '코스 추천 보기' : '포켓몬 월드 보기';
-        navPanel.style.display = (currentMode === 'navigation') ? 'block' : 'none';
-        pokemonPanel.style.display = (currentMode === 'pokemon') ? 'block' : 'none';
-        
-        if (currentMode === 'pokemon') {
-            navMapObjects.forEach(obj => obj.setMap(null));
-            initializePokemonMode();
-        } else {
-            clearPokemonMarkers();
-            navMapObjects.forEach(obj => obj.setMap(map));
-        }
-    }
-    modeToggleBtn.addEventListener('click', toggleMode);
-
-    /* ========== 내비게이션 관련 함수들 (v3.4 로직) ========== */
-    
-    /**
-     * v2.6: 장소 검색 (v3.1과 동일)
-     */
-    const searchPlace = (query, options = {}) => new Promise((resolve, reject) => {
-        if (!query.trim()) return reject(new Error("검색어가 비어있습니다.")); 
-        ps.keywordSearch(query, (data, status) => { 
-            if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data); 
-            else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
-            else reject(new Error(`'${query}' 검색 실패.`)); 
-        }, options); 
-    });
-    
-    /**
-     * v2.6: 경로 탐색 (v3.1과 동일)
-     */
-    const getRoute = (waypoints) => new Promise(async (resolve, reject) => { 
-        const origin = waypoints[0], destination = waypoints[waypoints.length - 1]; 
-        const rest_waypoints = waypoints.length > 2 ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join('|') : ""; 
-        const url = new URL("https://apis-navi.kakaomobility.com/v1/directions"); 
-        url.searchParams.append("origin", `${origin.x},${origin.y}`); 
-        url.searchParams.append("destination", `${destination.x},${destination.y}`); 
-        if (rest_waypoints) url.searchParams.append("waypoints", rest_waypoints); 
-        try { 
-            // v3.4: REST_API_KEY 변수 사용
-            const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } }); 
-            if(!response.ok) throw new Error(`HTTP error! status: ${response.status}`); 
-            const data = await response.json(); 
-            if (data.routes && data.routes.length > 0) resolve(data.routes[0]); 
-            else reject(new Error('경로 데이터를 가져오지 못했습니다. (경로 없음)')); 
-        } catch (error) { reject(error); } 
-    });
-    
-    /**
-     * v2.6: 지도 객체 클리어 (v3.1과 동일)
-     */
-    function clearNavMapObjects() { 
-        navMapObjects.forEach(obj => obj.setMap(null)); 
-        navMapObjects = []; 
-    }
-    
-    /**
-     * v2.6: 디바운스 (v3.1과 동일)
-     */
-    const debounce = (func, delay) => { 
-        let t; 
-        return (...a) => { 
-            clearTimeout(t); 
-            t = setTimeout(() => func.apply(null, a), delay); 
-        }; 
-    };
-    
-    /**
-     * v2.6: 자동완성 (v3.1과 동일)
-     */
-    function setupAutocomplete(inputEl, listEl) { 
-        const showSuggestions = debounce(query => { 
-            if (!query.trim() || (startPointFromMyLocation && query === startPointFromMyLocation.place_name)) { 
-                listEl.style.display = 'none'; 
-                return; 
-            } 
-            ps.keywordSearch(query, (data, status) => { 
-                listEl.innerHTML = ''; 
-                if (status === kakao.maps.services.Status.OK) { 
-                    data.forEach(p => { 
-                        const i = document.createElement('div'); 
-                        i.className = 'suggestion-item'; 
-                        i.innerHTML = `${p.place_name} <small style="color:gray">${p.road_address_name || p.address_name}</small>`; 
-                        i.onclick = () => { inputEl.value = p.place_name; listEl.style.display = 'none'; }; 
-                        listEl.appendChild(i); 
-                    }); 
-                    listEl.style.display = 'block'; 
-                } 
-            }); 
-        }, 250); 
-        inputEl.addEventListener('input', () => showSuggestions(inputEl.value)); 
-        document.addEventListener('click', (e) => { 
-            if (!inputEl.parentElement.contains(e.target)) listEl.style.display = 'none'; 
-        }); 
-    }
-    
-    /**
-     * v2.6: 경로 그리기 (v3.1과 동일)
-     */
-    function drawSingleRoutePolyline(route, color) { 
-        const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes).reduce((acc, _, i, arr) => (i % 2 === 0 ? [...acc, new kakao.maps.LatLng(arr[i + 1], arr[i])] : acc), []); 
-        const polyline = new kakao.maps.Polyline({ path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.8, strokeStyle: 'solid', map: map }); 
-        navMapObjects.push(polyline); 
-        return path; 
-    }
-    
-    /**
-     * v2.6: 단일 경로 활성화 (v3.1과 동일)
-     */
-    function drawSingleRoute(type) {
-        clearNavMapObjects();
-        const bounds = new kakao.maps.LatLngBounds();
-        const routeData = allGeneratedRoutes[type];
-        if (!routeData) return;
-        document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
-        const card = document.getElementById(`card-${type}`);
-        if(card) card.classList.add('selected');
-        const colors = { optimal: '#007bff', 'round-trip': '#17a2b8', scenic: '#28a745' };
-        const path = drawSingleRoutePolyline(routeData, colors[type]);
-        path.forEach(p => bounds.extend(p));
-        
-        if (!bounds.isEmpty()) map.setBounds(bounds);
-    }
-    
-    /**
-     * v3.4: 코스 정보 카드 생성 (저장 버튼 추가)
-     */
-    function displayRouteInfo(route, type) {
-        const weight = parseFloat(document.getElementById('weight').value) || 60;
-        const kcal = Math.round((route.total_distance / 1000) * weight);
-        
-        const card = document.createElement('div');
-        card.className = `route-card ${type}`;
-        card.id = `card-${type}`;
-        const titles = { optimal: '🥇 최적 경로', 'round-trip': '🔄 왕복 코스', scenic: '🌳 근처 산책로' };
-        let title = titles[type] || '추천 코스';
-        if (type === 'scenic' && route.waypoints && route.waypoints.length > 0) { 
-            title += ` (${route.waypoints[0].place_name} 경유)`; 
-        }
-        // v3.4: [요청 4] 저장 버튼 추가. onclick 이벤트로 saveCourseToHistory 함수 호출
-        card.innerHTML = `<div class="card-header">
-                            <h3>${title}</h3>
-                            <span class="card-loading">...</span>
-                            <button class="card-refresh-btn ${type === 'optimal' ? 'hidden' : ''}">🔄</button>
-                          </div>
-                          <p><strong>거리:</strong> ${(route.total_distance / 1000).toFixed(2)} km</p>
-                          <p><strong>예상 시간:</strong> ${Math.round(route.total_duration / 60)} 분</p>
-                          <p><strong>소모 칼로리:</strong> 약 ${kcal} kcal</p>
-                          <button class="card-save-btn" onclick="saveCourseToHistory('${type}')" title="이 코스 기록에 저장">💾</button>`;
-        
-        card.addEventListener('click', (e) => {
-            // v3.4: 저장 버튼 클릭 시에는 지도 다시 그리지 않도록 함
-            if (e.target.classList.contains('card-save-btn')) return;
-            drawSingleRoute(type);
-        });
-        card.querySelector('.card-refresh-btn').addEventListener('click', async (e) => { e.stopPropagation(); await regenerateSpecificCourse(type); });
-        return card;
-    }
-    
-    /**
-     * v3.4: '왕복 코스' 생성 로직 (±500m 오차범위 우선)
-     */
-    async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
-        
-        let bestRoute = null; // v3.2: 가장 근접한 코스를 저장할 변수
-        let minDiff = Infinity; // v3.2: 거리 차이
-
-        for (let i = 0; i < 3; i++) { // v3.2: N=3, 4, 5 모두 시도
-            const currentAttempt = attempt + i;
-            let numVertices = 3 + (currentAttempt % 3);
-            const radius = targetDistanceMeters / 4.5; 
-            const startAngleOffset = (currentAttempt * 30) * (Math.PI / 180); 
-
-            const waypoints = [startPoint];
-            const startX = parseFloat(startPoint.x);
-            const startY = parseFloat(startPoint.y);
-
-            for (let j = 0; j < numVertices - 1; j++) {
-                const angle = startAngleOffset + ((j + 1) * 2 * Math.PI) / numVertices;
-                const wpX = startX + (radius * Math.cos(angle)) / (111000 * Math.cos(startY * Math.PI / 180));
-                const wpY = startY + (radius * Math.sin(angle)) / 111000;
-                waypoints.push({ x: wpX, y: wpY, place_name: `point${j + 1}` });
-            }
-            waypoints.push(startPoint);
-
-            try {
-                const route = await getRoute(waypoints);
-                route.total_distance = route.summary.distance;
-                route.total_duration = route.summary.duration;
+                // (v3.4: [요청 7] DOM 참조 최적화)
+                navElements.searchBtn.onclick = onSearchButtonClick;
+                navElements.myLocationBtn.onclick = onMyLocationButtonClick;
                 
-                const diff = Math.abs(route.total_distance - targetDistanceMeters);
+                // v2.7: 자동완성 설정
+                setupAutocomplete(navElements.startInput, navElements.startSuggestions);
+                setupAutocomplete(navElements.endInput, navElements.endSuggestions);
 
-                // v3.4: [요청 1] ±500m 이내면 즉시 반환
-                if (diff <= 500) {
-                    return route; // 가장 좋은 코스 찾음!
-                }
-
-                // v3.2: 백업 코스 저장 (가장 근사치였던 코스)
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    bestRoute = route;
-                }
-            } catch (e) {
-                console.warn(`Geometric loop (N=${numVertices}) failed:`, e);
-            }
-        }
-        
-        // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
-        return bestRoute; 
-    }
-    
-    /**
-     * v3.4: '근처 산책로' 추천 로직 (±500m 오차범위 우선)
-     */
-    async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
-        const trailKeywords = ['공원', '산책로', '수목원', '호수공원', '강'];
-        const poiKeywords = ['카페', '지하철역', '편의점', '도서관'];
-        
-        let bestRoute = null; // v3.2: 가장 근접한 코스를 저장할 변수
-        let minDiff = Infinity; // v3.2: 거리 차이
-
-        // v3.2: 4번 시도 (키워드 조합)
-        for (let i = 0; i < 4; i++) {
-            const currentAttempt = attempt + i;
-            const trailKeyword = trailKeywords[currentAttempt % trailKeywords.length];
-            const poiKeyword = poiKeywords[currentAttempt % poiKeywords.length];
-            const searchOptions = { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 2000 + (i * 500), sort: kakao.maps.services.SortBy.ACCURACY }; // v3.2: 재시도 시 반경 확대
-
-            try {
-                const places1 = await searchPlace(trailKeyword, searchOptions);
-                const validPlaces1 = places1.filter(p => !p.category_name.includes('학교'));
-                if (validPlaces1.length === 0) continue; 
-                const trailEntryPoint = validPlaces1[0];
+                // v2.9: 목표 거리 입력 시 칼로리/감량 자동 계산
+                navElements.targetDistanceInput.addEventListener('input', updateCalorieAndWeightLoss);
                 
-                const poiSearchOptions = { location: new kakao.maps.LatLng(trailEntryPoint.y, trailEntryPoint.x), radius: 1000 + (i * 500), sort: kakao.maps.services.SortBy.ACCURACY };
-                const places2 = await searchPlace(poiKeyword, poiSearchOptions);
-                if (places2.length === 0) continue;
-                const poiPoint = places2[0];
+                // (v3.4: [요청 7] DOM 참조 최적화)
+                if (navElements.mapNotice) navElements.mapNotice.style.display = 'none';
 
-                const route = await getRoute([startPoint, trailEntryPoint, poiPoint, startPoint]);
-                route.total_distance = route.summary.distance;
-                route.total_duration = route.summary.duration;
-                route.waypoints = [trailEntryPoint, poiPoint];
-
-                const diff = Math.abs(route.total_distance - targetDistanceMeters);
-
-                // v3.4: [요청 1] ±500m 이내면 즉시 반환
-                if (diff <= 500) {
-                    return route; // 가장 좋은 코스 찾음!
+                // v2.5: 모드 토글 버튼 이벤트
+                navElements.modeToggleBtn.addEventListener('click', toggleMode);
+            }
+            
+            /**
+             * v2.9: 칼로리 및 체중 감량 계산 업데이트 (v3.1과 동일)
+             */
+            function updateCalorieAndWeightLoss() {
+                const distanceKm = parseFloat(navElements.targetDistanceInput.value);
+                const weight = parseFloat(document.getElementById('weight').value) || 60; // 정보가 없으면 60kg
+                if (isNaN(distanceKm) || distanceKm <= 0) {
+                    navElements.caloriesDisplay.textContent = '약 0 kcal';
+                    navElements.weightLossDisplay.textContent = '(약 0.00kg 감량)';
+                    return;
                 }
-                
-                // v3.2: 백업 코스 저장 (가장 근사치였던 코스)
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    bestRoute = route;
-                }
-            } catch (e) {
-                console.warn(`Scenic Triangle (attempt=${currentAttempt}) failed:`, e);
-            }
-        }
-        
-        // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
-        return bestRoute;
-    }
-    
-    /**
-     * v2.6: 특정 코스 새로고침 (v3.2 로직)
-     */
-    async function regenerateSpecificCourse(type) {
-        const card = document.getElementById(`card-${type}`); if (!card) return;
-        const loadingSpinner = card.querySelector('.card-loading'); const refreshBtn = card.querySelector('.card-refresh-btn');
-        loadingSpinner.style.display = 'inline'; refreshBtn.style.display = 'none';
-        try {
-            const startPlaces = await searchPlace(navElements.startInput.value);
-            if (startPlaces.length === 0) throw new Error("출발지를 찾을 수 없습니다.");
-            
-            const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
-                                ? startPointFromMyLocation 
-                                : startPlaces[0];
-            
-            let targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
-            if (!targetDistanceMeters || targetDistanceMeters === 0) {
-                targetDistanceMeters = 5000;
-                navElements.targetDistanceInput.value = 5;
+                const calories = Math.round(distanceKm * weight); // 1km당 1 * 체중 (kcal)
+                const weightLossKg = (calories / 7700).toFixed(2); // 1kg = 7700 kcal
+                navElements.caloriesDisplay.textContent = `약 ${calories} kcal`;
+                navElements.weightLossDisplay.textContent = `(약 ${weightLossKg}kg 감량)`;
             }
 
-            routeGenerationAttempts[type]++; let newRoute = null;
-            if (type === 'round-trip') { newRoute = await generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, routeGenerationAttempts[type]); }
-            else if (type === 'scenic') { newRoute = await generateNearbyTrailCourse(startPoint, targetDistanceMeters, routeGenerationAttempts[type]); }
-            
-            if (newRoute) {
-                allGeneratedRoutes[type] = newRoute;
-                
-                let title = (type === 'round-trip') ? '🔄 왕복 코스' : '🌳 근처 산책로';
-                if (type === 'scenic' && newRoute.waypoints && newRoute.waypoints.length > 0) {
-                     title += ` (${newRoute.waypoints[0].place_name} 경유)`; 
-                }
-                card.querySelector('h3').innerHTML = title;
-                card.querySelector('p:nth-of-type(1)').innerHTML = `<strong>거리:</strong> ${(newRoute.total_distance / 1000).toFixed(2)} km`;
-                card.querySelector('p:nth-of-type(2)').innerHTML = `<strong>예상 시간:</strong> ${Math.round(newRoute.total_duration / 60)} 분`;
-                
-                const weight = parseFloat(document.getElementById('weight').value) || 60;
-                const kcal = Math.round((newRoute.total_distance / 1000) * weight);
-                card.querySelector('p:nth-of-type(3)').innerHTML = `<strong>소모 칼로리:</strong> 약 ${kcal} kcal`;
+            /**
+             * v2.5: '내비게이션' <-> '포켓몬' 모드 전환 (v3.1과 동일)
+             */
+            function toggleMode() {
+                currentMode = (currentMode === 'navigation') ? 'pokemon' : 'navigation';
+                navElements.modeToggleBtn.textContent = (currentMode === 'navigation') ? '코스 추천 보기' : '포켓몬 월드 보기';
+                navElements.navPanel.style.display = (currentMode === 'navigation') ? 'block' : 'none';
+                navElements.pokemonPanel.style.display = (currentMode === 'pokemon') ? 'block' : 'none';
 
-                drawSingleRoute(type);
-            } else { alert("다른 코스를 찾는 데 실패했습니다. 잠시 후 다시 시도해주세요."); }
-        } catch (error) { alert(`코스 재생성 중 오류 발생: ${error.message}`); }
-        finally { loadingSpinner.style.display = 'none'; refreshBtn.style.display = 'inline'; }
-    }
-    
-    /**
-     * v3.1: 메인 코스 생성 함수 (v3.2 로직)
-     */
-    async function generateCourses() {
-        if (!navElements.startInput.value) { alert('출발지를 입력해주세요!'); return; }
-        clearNavMapObjects(); navElements.resultArea.innerHTML = '<p>코스 생성 중...</p>';
-        
-        allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
-        routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
-        
-        try {
-            // 1. 출발지/도착지 정보 가져오기
-            const startPlaces = await searchPlace(navElements.startInput.value);
-            if(startPlaces.length === 0) {
-                alert(`출발지 '${navElements.startInput.value}'를 찾을 수 없습니다.`);
-                navElements.resultArea.innerHTML = '<p>출발지를 찾을 수 없습니다.</p>';
-                return;
+                if (currentMode === 'pokemon') {
+                    navMapObjects.forEach(obj => obj.setMap(null));
+                    initializePokemonMode();
+                } else {
+                    clearPokemonMarkers();
+                    navMapObjects.forEach(obj => obj.setMap(map));
+                }
             }
-            const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
-                                ? startPointFromMyLocation 
-                                : startPlaces[0];
+
+
+            /* ========== 내비게이션 관련 함수들 (v3.4 로직) ========== */
             
-            let endPoint = null;
-            if (navElements.endInput.value) {
-                const endPlaces = await searchPlace(navElements.endInput.value);
-                if(endPlaces.length > 0) endPoint = endPlaces[0];
-            }
-            
-            // 2. 목표 거리 가져오기
-            let targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
-            
-            // 3. '최적 경로' 우선 탐색
-            let optimalRoute = null;
-            if (endPoint) {
+            /**
+             * v2.6: 장소 검색 (v3.1과 동일)
+             */
+            const searchPlace = (query, options = {}) => new Promise((resolve, reject) => {
+                if (!query.trim()) return reject(new Error("검색어가 비어있습니다."));
+                ps.keywordSearch(query, (data, status) => {
+                    if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data);
+                    else if (status === kakao.maps.services.Status.ZERO_RESULT) resolve([]);
+                    else reject(new Error(`'${query}' 검색 실패.`));
+                }, options);
+            });
+
+            /**
+             * v2.6: 경로 탐색 (v3.1과 동일)
+             */
+            const getRoute = (waypoints) => new Promise(async (resolve, reject) => {
+                const origin = waypoints[0], destination = waypoints[waypoints.length - 1];
+                const rest_waypoints = waypoints.length > 2 ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join('|') : "";
+                
+                const url = new URL("https://apis-navi.kakaomobility.com/v1/directions");
+                url.searchParams.append("origin", `${origin.x},${origin.y}`);
+                url.searchParams.append("destination", `${destination.x},${destination.y}`);
+                if (rest_waypoints) url.searchParams.append("waypoints", rest_waypoints);
+                url.searchParams.append("alternatives", "true"); // v2.6: 항상 대안 경로 포함
+                url.searchParams.append("priority", "RECOMMEND"); // v3.0: 보행자 경로는 RECOMMEND
+                url.searchParams.append("car_type", "7"); // v3.0: 보행자 경로 (7)
+
                 try {
-                    optimalRoute = await getRoute([startPoint, endPoint]);
-                    optimalRoute.total_distance = optimalRoute.summary.distance; 
-                    optimalRoute.total_duration = optimalRoute.summary.duration; 
-                } catch (e) { optimalRoute = null; console.warn("최적 경로 탐색 실패:", e); }
-            }
-
-            // 4. (v2.9) '최적 경로'가 있고, '목표 거리'가 없으면, 최적 경로의 거리를 목표 거리로 사용
-            if (optimalRoute && (!targetDistanceMeters || targetDistanceMeters === 0)) {
-                targetDistanceMeters = optimalRoute.total_distance;
-                navElements.targetDistanceInput.value = (targetDistanceMeters / 1000).toFixed(1);
-            }
-            // 5. (v3.0) '최적 경로'가 없고, '목표 거리'도 없으면, 기본 5km로 설정
-            else if (!optimalRoute && (!targetDistanceMeters || targetDistanceMeters === 0)) {
-                targetDistanceMeters = 5000; // 기본 5km
-                navElements.targetDistanceInput.value = 5; // 입력창에 5km 표시
-            }
-            
-            // 6. 생성할 경로 프로미스 배열 생성
-            const promises = [ 
-                Promise.resolve(optimalRoute), 
-                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, 0), 
-                generateNearbyTrailCourse(startPoint, targetDistanceMeters, 0) 
-            ];
-
-            const results = await Promise.allSettled(promises);
-            
-            navElements.resultArea.innerHTML = ''; 
-            let firstAvailableRouteType = null;
-            
-            // '최적 경로' (Index 0)
-            if (results[0].status === 'fulfilled' && results[0].value) { 
-                const route = results[0].value; 
-                allGeneratedRoutes.optimal = route; 
-                navElements.resultArea.appendChild(displayRouteInfo(route, 'optimal')); 
-                if (!firstAvailableRouteType) firstAvailableRouteType = 'optimal'; 
-            }
-            // '왕복 코스' (Index 1)
-            if (results[1].status === 'fulfilled' && results[1].value) { 
-                const route = results[1].value; 
-                allGeneratedRoutes['round-trip'] = route; 
-                navElements.resultArea.appendChild(displayRouteInfo(route, 'round-trip')); 
-                if (!firstAvailableRouteType) firstAvailableRouteType = 'round-trip'; 
-            }
-            // '근처 산책로' (Index 2)
-            if (results[2].status === 'fulfilled' && results[2].value) { 
-                const route = results[2].value; 
-                allGeneratedRoutes.scenic = route; 
-                navElements.resultArea.appendChild(displayRouteInfo(route, 'scenic')); 
-                if (!firstAvailableRouteType) firstAvailableRouteType = 'scenic'; 
-            }
-            
-            if (!firstAvailableRouteType) { 
-                navElements.resultArea.innerHTML = '<p>⚠️ 추천할 코스를 찾지 못했습니다. (거리나 장소를 변경해보세요)</p>'; 
-            }
-            else { 
-                drawSingleRoute(firstAvailableRouteType); 
-            }
-        } catch (error) { 
-            navElements.resultArea.innerHTML = `<p>오류 발생: ${error.message}</p>`; 
-            alert(error.message); 
-        }
-    }
-    navElements.searchBtn.onclick = generateCourses;
-
-    /* ========== 포켓몬 관련 함수들 (생략 없음) ========== */
-    async function fetchPokemonData(id) {
-        try {
-            const [pokemonRes, speciesRes] = await Promise.all([ fetch(`https://pokeapi.co/api/v2/pokemon/${id}`), fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`) ]);
-            if (!pokemonRes.ok || !speciesRes.ok) throw new Error("API fetch failed");
-            const data = await pokemonRes.json(), speciesData = await speciesRes.json();
-            const koreanName = speciesData.names.find(name => name.language.name === 'ko')?.name || data.name;
-            
-            const movePromises = data.moves.slice(0, 10).map(async (m) => {
-                try {
-                    const moveRes = await fetch(m.move.url);
-                    if (!moveRes.ok) return { name: m.move.name, power: 40 };
-                    const moveData = await moveRes.json();
-                    const kMoveName = moveData.names.find(n => n.language.name === 'ko');
-                    return { name: kMoveName ? kMoveName.name : m.move.name, power: moveData.power || 40 };
-                } catch (e) {
-                    return { name: m.move.name, power: 40 };
+                    const response = await fetch(url, {
+                        method: "GET",
+                        headers: { "Authorization": "KakaoAK YOUR_KAKAO_REST_API_KEY" } // 중요: 이 부분은 서버에서 처리해야 함
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const data = await response.json();
+                    
+                    if (data.routes && data.routes.length > 0) {
+                        resolve(data.routes[0]); // v2.6: 항상 첫 번째 경로(최적) 반환
+                    } else {
+                        reject(new Error("경로를 찾을 수 없습니다."));
+                    }
+                } catch (error) {
+                    reject(error);
                 }
             });
-            const moves = await Promise.all(movePromises);
 
-            return { id: data.id, name: koreanName, sprite: data.sprites.front_default, back_sprite: data.sprites.back_default, moves: moves, hp: data.stats.find(s => s.stat.name === 'hp').base_stat };
-        } catch (error) { console.error("Failed to fetch Pokemon data:", error); return null; }
-    }
-    function spawnPokemon(pokemonData, lat, lng) { 
-        const uniqueId = `${pokemonData.id}-${Date.now()}`; 
-        const content = `<div class="pokemon-marker" id="marker-${uniqueId}"><img src="${pokemonData.sprite}" alt="${pokemonData.name}"></div>`; 
-        const position = new kakao.maps.LatLng(lat, lng); 
-        const customOverlay = new kakao.maps.CustomOverlay({ position, content, yAnchor: 1 }); 
-        pokemonMarkers[uniqueId] = { ...pokemonData, position, overlay: customOverlay }; 
-        if (currentMode === 'pokemon') customOverlay.setMap(map); 
-        setTimeout(() => { 
-            const el = document.getElementById(`marker-${uniqueId}`); 
-            if(el) el.parentElement.onclick = () => capturePokemon(uniqueId); 
-        }, 0); 
-    }
-    function getDistance(p1, p2) { 
-        const R = 6371e3, φ1 = p1.getLat() * Math.PI/180, φ2 = p2.getLat() * Math.PI/180, Δφ = (p2.getLat()-p1.getLat()) * Math.PI/180, Δλ = (p2.getLng()-p1.getLng()) * Math.PI/180; 
-        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2; 
-        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-    }
-    function capturePokemon(uniqueId) { 
-        if (!userLocation) { alert("위치 정보가 없어 포획할 수 없습니다."); return; } 
-        const pokemon = pokemonMarkers[uniqueId]; 
-        if (getDistance(userLocation, pokemon.position) <= 50) { 
-            alert(`${pokemon.name}을(를) 잡았다!`); 
-            capturedPokemons.push({ ...pokemon, capturedAt: new Date(), nickname: pokemon.name }); 
-            pokemon.overlay.setMap(null); 
-            delete pokemonMarkers[uniqueId]; 
-        } else { 
-            alert("포켓몬이 너무 멀리 있습니다! (50m 이내로 접근 필요)"); 
-        } 
-    }
-    function clearPokemonMarkers() { 
-        Object.values(pokemonMarkers).forEach(m => m.overlay.setMap(null)); 
-        pokemonMarkers = {}; 
-    }
-    async function initializePokemonMode() { 
-        clearPokemonMarkers(); 
-        const pokemonToSpawn = 50; 
-        const promises = []; 
-        if (userLocation) { 
-            for (let i = 0; i < 3; i++) { 
-                const pokemonData = await fetchPokemonData(Math.floor(Math.random() * 151) + 1); 
-                if (pokemonData) { 
-                    const angle = Math.random() * 2 * Math.PI; 
-                    const radius = Math.random() * 0.0004;
-                    const lat = userLocation.getLat() + radius * Math.cos(angle); 
-                    const lng = userLocation.getLng() + radius * Math.sin(angle); 
-                    spawnPokemon(pokemonData, lat, lng); 
+            /**
+             * v2.7: 자동완성 UI 설정 (v3.1과 동일)
+             */
+            function setupAutocomplete(inputEl, listEl) {
+                inputEl.addEventListener('input', async () => {
+                    const query = inputEl.value;
+                    if (query.length < 2) { listEl.style.display = 'none'; return; }
+                    
+                    try {
+                        const places = await searchPlace(query);
+                        listEl.innerHTML = places.map(p => `<div class="suggestion-item" data-x="${p.x}" data-y="${p.y}">${p.place_name}<br><small>${p.address_name}</small></div>`).join('');
+                        listEl.style.display = 'block';
+                    } catch (e) {
+                        listEl.style.display = 'none';
+                    }
+                });
+
+                listEl.addEventListener('click', (e) => {
+                    const item = e.target.closest('.suggestion-item');
+                    if (item) {
+                        inputEl.value = item.textContent.split('<br>')[0];
+                        if (inputEl.id === 'start') {
+                            startPointFromMyLocation = { x: item.dataset.x, y: item.dataset.y, place_name: inputEl.value };
+                        }
+                        listEl.style.display = 'none';
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!inputEl.parentElement.contains(e.target)) listEl.style.display = 'none';
+                });
+            }
+
+            /**
+             * v2.6: 경로 그리기 (v3.1과 동일)
+             */
+            function drawSingleRoutePolyline(route, color) {
+                const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes).reduce((acc, _, i, arr) => (i % 2 === 0 ? [...acc, new kakao.maps.LatLng(arr[i + 1], arr[i])] : acc), []);
+                const polyline = new kakao.maps.Polyline({ path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.8, strokeStyle: 'solid', map: map });
+                navMapObjects.push(polyline);
+                return path;
+            }
+
+            /**
+             * v2.6: 단일 경로 활성화 (v3.1과 동일)
+             */
+            function drawSingleRoute(type) {
+                clearNavMapObjects();
+                const bounds = new kakao.maps.LatLngBounds();
+                const routeData = allGeneratedRoutes[type];
+                if (!routeData) return;
+
+                document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
+                const card = document.getElementById(`card-${type}`);
+                if(card) card.classList.add('selected');
+
+                const colors = { optimal: '#007bff', 'round-trip': '#17a2b8', scenic: '#28a745' };
+                const path = drawSingleRoutePolyline(routeData, colors[type]);
+                path.forEach(p => bounds.extend(p));
+                
+                if (!bounds.isEmpty()) map.setBounds(bounds);
+            }
+
+            /**
+             * v3.4: 코스 정보 카드 생성 (저장 버튼 추가)
+             */
+            function displayRouteInfo(route, type) {
+                const weight = parseFloat(document.getElementById('weight').value) || 60;
+                const kcal = Math.round((route.total_distance / 1000) * weight);
+
+                const card = document.getElementById(`card-${type}`);
+                if (!card) return;
+
+                const distanceKm = (route.total_distance / 1000).toFixed(2);
+                const durationMin = Math.round(route.total_duration / 60);
+
+                card.querySelector('.card-distance').textContent = `거리: ${distanceKm} km`;
+                card.querySelector('.card-duration').textContent = `시간: ${durationMin} 분`;
+                card.querySelector('.card-calories').textContent = `소모: 약 ${kcal} kcal`;
+                
+                card.querySelector('.card-loading').style.display = 'none';
+                card.querySelector('.card-refresh-btn').style.display = 'inline';
+                
+                // v3.4: [요청 4] 저장 버튼 이벤트
+                const saveBtn = card.querySelector('.card-save-btn');
+                if (saveBtn) {
+                    saveBtn.onclick = (e) => {
+                        e.stopPropagation(); // 카드 클릭(drawSingleRoute) 방지
+                        saveCourse(route, type);
+                    };
+                }
+            }
+            
+            /**
+             * v3.4: [요청 4] 코스 저장 함수
+             */
+            function saveCourse(route, type) {
+                const title = document.getElementById(`card-${type}`).querySelector('h3').textContent;
+                
+                getStaticMapUrl(route).then(staticMapUrl => {
+                    const courseData = {
+                        id: Date.now(),
+                        title: title,
+                        type: type,
+                        distance: route.total_distance,
+                        duration: route.total_duration,
+                        routeData: route, // 원본 데이터
+                        staticMapUrl: staticMapUrl, // v3.4: 스태틱맵 URL
+                        savedDate: new Date()
+                    };
+                    courseHistory.push(courseData);
+                    alert(`'${title}' 코스가 '기록' 탭에 저장되었습니다!`);
+                }).catch(err => {
+                    console.error("스태틱맵 URL 생성 실패:", err);
+                    alert("코스 저장에 실패했습니다. (스태틱맵 오류)");
+                });
+            }
+
+
+            /**
+             * v2.6: 지도 객체 (폴리라인) 모두 삭제 (v3.1과 동일)
+             */
+            function clearNavMapObjects() {
+                navMapObjects.forEach(obj => obj.setMap(null));
+                navMapObjects = [];
+            }
+
+            /**
+             * v3.4: '왕복 코스' 생성 로직 (±500m 오차범위 우선)
+             */
+            async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
+                let bestRoute = null;
+                let minDiff = Infinity;
+                
+                const numVerticesOptions = [3, 4, 5]; // 삼각형, 사각형, 오각형
+                const currentAttempt = attempt % 9; // 9번(3*3) 시도 후 반복
+                const numVertices = numVerticesOptions[Math.floor(currentAttempt / 3)];
+                
+                // v3.2: 4.5km/h (보통 걷기) 기준 시간(초)
+                const targetDurationSeconds = (targetDistanceMeters / 1000) * (3600 / 4.5); 
+                
+                // v3.2: N각형 기반 생성
+                for (let i = 0; i < 3; i++) { // 각도 3번 틀기
+                    const radius = (targetDistanceMeters / numVertices) * 0.6; // v3.2: 0.6 튜닝 (경로가 직선이 아님)
+                    // v3.2: 시도 횟수에 따라 각도를 조금씩 틀어줌 (0, 30, 60도)
+                    const startAngleOffset = (currentAttempt * 30 + i * 120) * (Math.PI / 180); 
+                    
+                    const waypoints = [startPoint];
+                    const startX = parseFloat(startPoint.x);
+                    const startY = parseFloat(startPoint.y);
+
+                    for (let j = 0; j < numVertices - 1; j++) {
+                        const angle = startAngleOffset + ((j + 1) * 2 * Math.PI) / numVertices;
+                        // 위도(y) 1도 = 111km, 경도(x) 1도 = 111km * cos(위도)
+                        const wpX = startX + (radius * Math.cos(angle)) / (111000 * Math.cos(startY * Math.PI / 180));
+                        const wpY = startY + (radius * Math.sin(angle)) / 111000;
+                        waypoints.push({ x: wpX, y: wpY, place_name: `point${j + 1}` });
+                    }
+                    waypoints.push(startPoint);
+
+                    try {
+                        const route = await getRoute(waypoints);
+                        route.total_distance = route.summary.distance;
+                        route.total_duration = route.summary.duration;
+
+                        const diff = Math.abs(route.total_distance - targetDistanceMeters);
+
+                        // v3.4: [요청 1] ±500m 이내면 즉시 반환
+                        if (diff <= 500) {
+                            return route; // 가장 좋은 코스 찾음!
+                        }
+
+                        // v3.2: 백업 코스 저장 (가장 근사치였던 코스)
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestRoute = route;
+                        }
+                    } catch (e) {
+                        console.warn(`Geometric loop (N=${numVertices}, attempt=${i}) failed:`, e);
+                    }
+                }
+
+                // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
+                return bestRoute;
+            }
+            
+            /**
+             * v3.4: '근처 산책로' 추천 로직 (±500m 오차범위 우선)
+             */
+            async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
+                let bestRoute = null;
+                let minDiff = Infinity;
+                const currentAttempt = attempt % 5; // 5번 시도 후 반복
+
+                // v3.0: 1. '산책', '공원' 키워드로 5km 반경 검색 (v3.2: 시도 횟수에 따라 반경 증가)
+                const searchRadius = 5000 + (currentAttempt * 1000);
+                let scenicSpots = [];
+                try {
+                    scenicSpots = await searchPlace("산책로 공원", { 
+                        location: new kakao.maps.LatLng(startPoint.y, startPoint.x), 
+                        radius: searchRadius 
+                    });
+                } catch (e) {
+                    // 검색 실패 시 (ZERO_RESULT가 아니므로)
+                }
+
+                if (scenicSpots.length === 0) {
+                    return null; // v3.2: 산책로가 없으면 null 반환
+                }
+
+                // v3.2: 2. 500m 이내의 최적 코스 찾기 (삼각측량)
+                const targetDurationSeconds = (targetDistanceMeters / 1000) * (3600 / 4.5);
+                
+                // v3.2: 여러 산책로 중 하나를 골라서 시도
+                const spot = scenicSpots[currentAttempt % scenicSpots.length]; 
+                
+                // v3.2: N=3 (삼각형)
+                const numVertices = 3; 
+                
+                for (let i = 0; i < 3; i++) { // 각도 3번 틀기
+                    // v3.2: (목표거리 - 2 * 출발지<->산책로) / 2
+                    // (출발지->A, A->B, B->출발지)
+                    const distToSpot = Math.abs(startPoint.x - spot.x) * (111000 * Math.cos(startPoint.y * Math.PI / 180)) + Math.abs(startPoint.y - spot.y) * 111000;
+                    const remainingDistance = targetDistanceMeters - (distToSpot * 2);
+                    
+                    if (remainingDistance < 1000) continue; // v3.2: 너무 가까우면 스킵
+
+                    const radius = (remainingDistance / numVertices) * 0.7; // v3.2: 0.7 튜닝
+                    const startAngleOffset = (currentAttempt * 60 + i * 120) * (Math.PI / 180);
+                    
+                    const waypoints = [startPoint];
+                    const startX = parseFloat(spot.x); // v3.2: 산책로 기준
+                    const startY = parseFloat(spot.y);
+
+                    for (let j = 0; j < numVertices - 2; j++) { // N-2 (1개)
+                        const angle = startAngleOffset + ((j + 1) * 2 * Math.PI) / numVertices;
+                        const wpX = startX + (radius * Math.cos(angle)) / (111000 * Math.cos(startY * Math.PI / 180));
+                        const wpY = startY + (radius * Math.sin(angle)) / 111000;
+                        waypoints.push({ x: wpX, y: wpY, place_name: `point${j + 1}` });
+                    }
+                    waypoints.push(startPoint);
+
+                    try {
+                        const route = await getRoute(waypoints);
+                        route.total_distance = route.summary.distance;
+                        route.total_duration = route.summary.duration;
+
+                        const diff = Math.abs(route.total_distance - targetDistanceMeters);
+
+                        // v3.4: [요청 1] ±500m 이내면 즉시 반환
+                        if (diff <= 500) {
+                            return route; // 가장 좋은 코스 찾음!
+                        }
+
+                        // v3.2: 백업 코스 저장 (가장 근사치였던 코스)
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestRoute = route;
+                        }
+                    } catch (e) {
+                        console.warn(`Scenic Triangle (attempt=${currentAttempt}, i=${i}) failed:`, e);
+                    }
+                }
+                
+                // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
+                return bestRoute;
+            }
+
+            /**
+             * v2.6: 특정 코스 새로고침 (v3.2 로직)
+             */
+            async function regenerateSpecificCourse(type) {
+                const card = document.getElementById(`card-${type}`);
+                if (!card) return;
+
+                const loadingSpinner = card.querySelector('.card-loading');
+                const refreshBtn = card.querySelector('.card-refresh-btn');
+                loadingSpinner.style.display = 'inline';
+                refreshBtn.style.display = 'none';
+
+                try {
+                    const startPlaces = await searchPlace(navElements.startInput.value);
+                    if (startPlaces.length === 0) throw new Error("출발지를 찾을 수 없습니다.");
+                    
+                    const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
+                                        ? startPointFromMyLocation 
+                                        : startPlaces[0];
+
+                    let targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
+                    if (!targetDistanceMeters || targetDistanceMeters === 0) {
+                        targetDistanceMeters = 5000;
+                        navElements.targetDistanceInput.value = 5;
+                    }
+                    
+                    routeGenerationAttempts[type]++;
+                    
+                    let newRoute = null;
+                    if (type === 'round-trip') {
+                        newRoute = await generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, routeGenerationAttempts[type]);
+                    } else if (type === 'scenic') {
+                        newRoute = await generateNearbyTrailCourse(startPoint, targetDistanceMeters, routeGenerationAttempts[type]);
+                    }
+
+                    if (newRoute) {
+                        allGeneratedRoutes[type] = newRoute;
+                        let title = (type === 'round-trip') ? '🔄 왕복 코스' : '🌳 근처 산책로';
+                        displayRouteInfo(newRoute, type);
+                    } else {
+                        throw new Error("새로운 코스를 찾는 데 실패했습니다.");
+                    }
+                    
+                } catch (error) {
+                    alert(error.message);
+                    loadingSpinner.style.display = 'none';
+                    refreshBtn.style.display = 'inline';
+                }
+            }
+
+
+            /**
+             * v2.6: '코스 생성' 버튼 클릭 (v3.4 로직)
+             */
+            async function onSearchButtonClick() {
+                navElements.resultArea.innerHTML = '<p>코스를 생성 중입니다... (최대 10초 소요)</p>';
+                clearNavMapObjects();
+                routeGenerationAttempts = { 'round-trip': 0, scenic: 0 }; // v3.2: 재시도 횟수 초기화
+
+                // 1. 출발지/도착지 좌표 가져오기
+                let startPlaces;
+                try {
+                    startPlaces = await searchPlace(navElements.startInput.value);
+                } catch (e) {
+                    navElements.resultArea.innerHTML = `<p>출발지 검색 실패: ${e.message}</p>`;
+                    return;
+                }
+
+                if (startPlaces.length === 0) {
+                    navElements.resultArea.innerHTML = '<p>출발지를 찾을 수 없습니다.</p>';
+                    return;
+                }
+
+                const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
+                                    ? startPointFromMyLocation 
+                                    : startPlaces[0];
+
+                let endPoint = null;
+                if (navElements.endInput.value) {
+                    try {
+                        const endPlaces = await searchPlace(navElements.endInput.value);
+                        if(endPlaces.length > 0) endPoint = endPlaces[0];
+                    } catch(e) { /* 도착지 검색 실패는 무시 */ }
+                }
+
+                // 2. 목표 거리 가져오기
+                let targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
+
+                // 3. '최적 경로' 우선 탐색
+                let optimalRoute = null;
+                if (endPoint) {
+                    try {
+                        optimalRoute = await getRoute([startPoint, endPoint]);
+                        optimalRoute.total_distance = optimalRoute.summary.distance;
+                        optimalRoute.total_duration = optimalRoute.summary.duration;
+                    } catch (e) {
+                        optimalRoute = null;
+                        console.warn("최적 경로 탐색 실패:", e);
+                    }
+                }
+
+                // 4. (v2.9) '최적 경로'가 있고, '목표 거리'가 없으면, 최적 경로의 거리를 목표 거리로 사용
+                if (optimalRoute && (!targetDistanceMeters || targetDistanceMeters === 0)) {
+                    targetDistanceMeters = optimalRoute.total_distance;
+                    navElements.targetDistanceInput.value = (targetDistanceMeters / 1000).toFixed(1);
                 } 
-            } 
-        } 
-        const remainingCount = pokemonToSpawn - (userLocation ? 3 : 0); 
-        const metroAreaBounds = { minLat: 37.0, maxLat: 37.9, minLng: 126.3, maxLng: 127.8 };
-        for (let i = 0; i < remainingCount; i++) { 
-            promises.push(fetchPokemonData(Math.floor(Math.random() * 151) + 1)); 
-        } 
-        const pokemonDataList = await Promise.all(promises); 
-        pokemonDataList.forEach(pokemonData => { 
-            if (pokemonData) { 
-                const lat = metroAreaBounds.minLat + Math.random() * (metroAreaBounds.maxLat - metroAreaBounds.minLat); 
-                const lng = metroAreaBounds.minLng + Math.random() * (metroAreaBounds.maxLng - metroAreaBounds.minLng); 
-                spawnPokemon(pokemonData, lat, lng); 
-            } 
-        }); 
-        if(userLocation) map.setCenter(userLocation); 
-    }
-    document.getElementById('btnRegenerate').onclick = initializePokemonMode;
+                // 5. (v3.0) '최적 경로'가 없고, '목표 거리'도 없으면, 기본 5km로 설정
+                else if (!optimalRoute && (!targetDistanceMeters || targetDistanceMeters === 0)) {
+                    targetDistanceMeters = 5000; // 기본 5km
+                    navElements.targetDistanceInput.value = 5; // 입력창에 5km 표시
+                }
+                
+                // 6. 생성할 경로 프로미스 배열 생성
+                const promises = [
+                    Promise.resolve(optimalRoute), // 최적 (endPoint가 없으면 null)
+                    generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, 0), // 왕복 (v3.2)
+                    generateNearbyTrailCourse(startPoint, targetDistanceMeters, 0) // 산책 (v3.2)
+                ];
 
-    /* ========== 포켓몬 도감 & 배틀 로직 (생략 없음) ========== */
-    function renderPokedex() {
-        const listEl = document.getElementById('pokedexList');
-        if (capturedPokemons.length === 0) { 
-            listEl.innerHTML = '<p>아직 잡은 포켓몬이 없습니다.</p>'; 
-            return; 
-        }
-        listEl.innerHTML = capturedPokemons.map((p, index) => `
-            <div class="pokedex-item" data-index="${index}">
-                <img src="${p.sprite}" alt="${p.name}">
-                <div class="info"><strong>${p.nickname}</strong><br><small>#${String(p.id).padStart(3, '0')} ${p.name} / HP: ${p.hp}</small></div>
-                <button class="rename-btn">이름 변경</button>
-                <button class="battle-btn" ${capturedPokemons.length < 2 ? 'disabled' : ''}>결투</button>
-            </div>`).join('');
-        
-        listEl.querySelectorAll('.rename-btn').forEach(btn => btn.addEventListener('click', (e) => { 
-            const index = parseInt(e.target.closest('.pokedex-item').dataset.index, 10); 
-            const newNickname = prompt("새로운 포켓몬 이름을 입력하세요:", capturedPokemons[index].nickname); 
-            if (newNickname && newNickname.trim()) { 
-                capturedPokemons[index].nickname = newNickname.trim(); 
-                renderPokedex(); 
-            } 
-        }));
-        listEl.querySelectorAll('.battle-btn').forEach(btn => btn.addEventListener('click', (e) => { 
-            const playerIndex = parseInt(e.target.closest('.pokedex-item').dataset.index, 10); 
-            startBattle(playerIndex); 
-        }));
-    }
-    // v3.5: '도감' 버튼 리스너는 `renderMyPage`로 이동
-
-    const battleModal = document.getElementById('battleModal');
-    function startBattle(playerIndex) {
-        let opponentIndex; 
-        do { 
-            opponentIndex = Math.floor(Math.random() * capturedPokemons.length); 
-        } while (opponentIndex === playerIndex);
-        
-        const player = { ...capturedPokemons[playerIndex], currentHp: capturedPokemons[playerIndex].hp }; 
-        const opponent = { ...capturedPokemons[opponentIndex], currentHp: capturedPokemons[opponentIndex].hp };
-        
-        document.getElementById('player-pokemon').querySelector('img').src = player.back_sprite || player.sprite; 
-        document.getElementById('opponent-pokemon').querySelector('img').src = opponent.sprite;
-        updateBattleUI(player, opponent);
-        
-        const logEl = document.getElementById('battle-log'); 
-        logEl.innerHTML = `야생의 ${opponent.nickname}이(가) 나타났다!<br>가라! ${player.nickname}!`;
-        
-        const movesGrid = document.getElementById('moves-grid');
-        const usableMoves = player.moves.filter(m => m.power).slice(0, 4); 
-        while(usableMoves.length < 4) { usableMoves.push({name: '몸통박치기', power: 40}); }
-        
-        movesGrid.innerHTML = usableMoves.map(move => `<button data-power="${move.power}">${move.name}</button>`).join('');
-        movesGrid.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => playerTurn(player, opponent, { name: btn.textContent, power: parseInt(btn.dataset.power) })));
-        
-        battleModal.style.display = 'flex';
-        document.getElementById('pokedexModal').style.display = 'none';
-    }
-
-    function playerTurn(player, opponent, move) {
-        document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = true); 
-        const logEl = document.getElementById('battle-log');
-        const damage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8)); 
-        opponent.currentHp = Math.max(0, opponent.currentHp - damage);
-        logEl.innerHTML = `${player.nickname}의 ${move.name} 공격!<br>상대에게 ${damage}의 데미지를 입혔다!`; 
-        updateBattleUI(player, opponent);
-        if (opponent.currentHp <= 0) { 
-            setTimeout(() => { alert(`${player.nickname}의 승리!`); battleModal.style.display = 'none'; }, 1500); 
-            return; 
-        }
-        setTimeout(() => opponentTurn(player, opponent), 2000);
-    }
-
-    function opponentTurn(player, opponent) {
-        const logEl = document.getElementById('battle-log'); 
-        const usableMoves = opponent.moves.filter(m => m.power);
-        const move = usableMoves.length > 0 ? usableMoves[Math.floor(Math.random() * usableMoves.length)] : { name: '몸통박치기', power: 40 };
-        const damage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8)); 
-        player.currentHp = Math.max(0, player.currentHp - damage);
-        logEl.innerHTML = `상대 ${opponent.nickname}의 ${move.name} 공격!<br> ${damage}의 데미지를 받았다!`; 
-        updateBattleUI(player, opponent);
-        if (player.currentHp <= 0) { 
-            setTimeout(() => { alert(`${player.nickname}은(는) 쓰러졌다...`); battleModal.style.display = 'none'; }, 1500); 
-            return; 
-        }
-        setTimeout(() => { 
-            logEl.innerHTML = `어떻게 할까?`; 
-            document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = false); 
-        }, 2000);
-    }
-
-    function updateBattleUI(player, opponent) {
-        document.getElementById('player-name').textContent = player.nickname; 
-        document.getElementById('player-hp-text').textContent = `${player.currentHp} / ${player.hp}`;
-        document.getElementById('player-hp-bar').style.width = `${(player.currentHp / player.hp) * 100}%`;
-        document.getElementById('opponent-name').textContent = opponent.nickname; 
-        document.getElementById('opponent-hp-text').textContent = `${opponent.currentHp} / ${opponent.hp}`;
-        document.getElementById('opponent-hp-bar').style.width = `${(opponent.currentHp / opponent.hp) * 100}%`;
-    }
-    battleModal.querySelector('.close-button').addEventListener('click', () => battleModal.style.display = 'none');
-
-    /* ========== 기타 모달 및 이벤트 핸들러 (생략 없음) ========== */
-    window.onclick = (event) => { 
-        if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
-    };
-    
-    const characterImages = { 
-        male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
-        female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } 
-    };
-    
-    function updateAllInfo() {
-        const gender = document.getElementById('gender').value, 
-              age = parseFloat(document.getElementById('age').value), 
-              height = parseFloat(document.getElementById('height').value), 
-              weight = parseFloat(document.getElementById('weight').value), 
-              goalWeight = parseFloat(document.getElementById('goalWeight').value);
-        
-        if (!age || !height || !weight) { 
-            alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다."); 
-            return; 
-        }
-        
-        document.getElementById('calculated-calories').textContent = `약 ${Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight)} kcal`;
-        document.getElementById('weight-loss-result').textContent = `(약 ${(Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight) / 7700).toFixed(2)}kg 감량)`;
-        
-        const bmi = weight / ((height / 100) ** 2); 
-        document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
-        
-        const bmr = (gender === 'male') ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
-        document.getElementById('bmr-result').textContent = `기초대사량(BMR): ${bmr.toFixed(0)} kcal`;
-        
-        let bodyType; 
-        if (bmi < 18.5) bodyType = 'lean'; 
-        else if (bmi < 23) bodyType = 'average'; 
-        else if (bmi < 25) bodyType = 'overweight'; 
-        else bodyType = 'obese';
-        
-        document.getElementById('characterImage').src = characterImages[gender][bodyType]; 
-        document.getElementById('character-display').style.display = 'flex';
-        
-        if (goalWeight) {
-            const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), 
-                  achieved = Math.max(0, startWeight - weight), 
-                  totalToGo = Math.max(0, startWeight - goalWeight);
-            let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; 
-            if (weight <= goalWeight) achievedPercent = 100;
-            
-            document.getElementById('bar-achieved').style.width = `${achievedPercent}%`;
-            document.getElementById('progress-text').textContent = `목표까지 ${Math.max(0, weight - goalWeight).toFixed(1)}kg 남음!`;
-        }
-    }
-    document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
-
-    
-    /* ========== (v3.4) [요청 2] 탭 네비게이션 로직 ========== */
-    
-    // v3.4: 탭/페이지 DOM 요소
-    const pages = {
-        home: document.getElementById('page-home'),
-        history: document.getElementById('page-history'),
-        group: document.getElementById('page-group'),
-        me: document.getElementById('page-me')
-    };
-    const navButtons = {
-        home: document.getElementById('nav-btn-home'),
-        history: document.getElementById('nav-btn-history'),
-        group: document.getElementById('nav-btn-group'),
-        me: document.getElementById('nav-btn-me')
-    };
-
-    // v3.4: 탭 전환을 처리하는 공통 함수
-    function showPage(pageId) {
-        // 모든 페이지 숨기기
-        Object.values(pages).forEach(page => page.style.display = 'none');
-        // 모든 버튼 비활성화
-        Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
-        
-        // 요청된 페이지만 보이기
-        pages[pageId].style.display = 'block';
-        // 요청된 버튼만 활성화
-        navButtons[pageId].classList.add('active');
-        
-        // v3.4: 각 페이지가 보일 때 컨텐츠 새로고침
-        if (pageId === 'history') renderHistoryPage();
-        if (pageId === 'group') renderGroupPage();
-        if (pageId === 'me') renderMyPage();
-    }
-    
-    // v3.4: 탭 버튼 이벤트 리스너 설정
-    function setupTabNavigation() {
-        navButtons.home.addEventListener('click', () => showPage('home'));
-        navButtons.history.addEventListener('click', () => showPage('history'));
-        navButtons.group.addEventListener('click', () => showPage('group'));
-        navButtons.me.addEventListener('click', () => showPage('me'));
-    }
-
-    /* ========== (v3.4) [요청 4] '기록' 페이지 로직 ========== */
-
-    // v3.4: [요청 4] 카카오 스태틱맵 URL 생성
-    function getStaticMapUrl(route) {
-        try {
-            // 경로에서 좌표 추출
-            const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes);
-            const polyline = [];
-            // URL 길이 제한을 피하기 위해 좌표 10개(5쌍)마다 1개씩 샘플링
-            for (let i = 0; i < path.length; i += (2 * 5)) { 
-                polyline.push(`${path[i]},${path[i+1]}`); // (경도, 위도)
-            }
-            const polylineStr = polyline.join('|');
-            
-            // 시작점(중심점)
-            const center = `${route.summary.origin.x},${route.summary.origin.y}`;
-            
-            // v3.4: JS SDK 키(KAKAO_JS_KEY)를 사용
-            return `https://apis.map.kakao.com/v2/staticmap?appkey=${KAKAO_JS_KEY}&center=${center}&level=8&polyline=${polylineStr}&size=400x200`;
-        } catch (e) {
-            console.error("Static map URL 생성 실패:", e);
-            return ""; // 실패 시 빈 URL
-        }
-    }
-
-    // v3.4: [요청 4] 코스를 '기록'에 저장
-    function saveCourseToHistory(type) {
-        const route = allGeneratedRoutes[type];
-        if (!route) {
-            alert("저장할 코스 정보가 없습니다.");
-            return;
-        }
-
-        const staticMapUrl = getStaticMapUrl(route);
-        const startName = navElements.startInput.value || "출발지";
-        const endName = navElements.endInput.value || (type === 'optimal' ? "목적지" : "출발지");
-        
-        courseHistory.push({
-            type: type,
-            title: `${startName} → ${endName}`,
-            distance: route.total_distance, // v3.5: 버그 수정을 위해 .distance로 통일
-            duration: route.total_duration,
-            staticMapUrl: staticMapUrl,
-            savedDate: new Date()
-        });
-
-        alert("코스가 '기록' 탭에 저장되었습니다!");
-        renderHistoryPage(); // v3.4: 저장 후 즉시 기록 페이지 새로고침 (데이터 반영)
-    }
-
-    // v3.4: [요청 4] '기록' 탭 페이지 렌더링
-    function renderHistoryPage() {
-        const container = document.getElementById('page-history-content');
-        if (courseHistory.length === 0) {
-            container.innerHTML = '<p>아직 저장된 기록이 없습니다. 홈에서 코스를 검색하고 [💾 저장] 버튼을 눌러보세요.</p>';
-            return;
-        }
-        
-        container.innerHTML = ''; // 기존 목록 초기화
-        // 최신순으로 정렬
-        courseHistory.slice().reverse().forEach(course => {
-            const dateStr = course.savedDate.toLocaleString('ko-KR');
-            const typeInfo = {
-                optimal: { name: '최적 경로', class: 'optimal' },
-                'round-trip': { name: '왕복 코스', class: 'round-trip' },
-                scenic: { name: '근처 산책로', class: 'scenic' }
-            };
-            
-            const cardHTML = `
-                <div class="history-card">
-                    <img src="${course.staticMapUrl}" alt="코스 지도">
-                    <div class="history-card-content">
-                        <h3>${course.title}</h3>
-                        <p><span class="history-badge ${typeInfo[course.type].class}">${typeInfo[course.type].name}</span></p>
-                        <p><strong>거리:</strong> ${(course.distance / 1000).toFixed(2)} km</p>
-                        <p><strong>시간:</strong> ${Math.round(course.duration / 60)} 분</p>
-                        <p><small>저장일: ${dateStr}</small></p>
+                const results = await Promise.allSettled(promises);
+                
+                // 7. (v3.4) 결과 카드 HTML 초기화
+                navElements.resultArea.innerHTML = `
+                    <div class="route-card optimal" id="card-optimal" style="display: none;">
+                        <div class="card-header">
+                            <h3>🎯 최적 코스</h3>
+                            <span class="card-loading" style="display: none;">🔄</span>
+                            <button class="card-refresh-btn hidden">🔄</button>
+                        </div>
+                        <p class="card-distance">거리:</p><p class="card-duration">시간:</p><p class="card-calories">소모:</p>
+                        <button class="card-save-btn">💾</button>
                     </div>
-                </div>
-            `;
-            container.innerHTML += cardHTML;
-        });
-    }
+                    <div class="route-card round-trip" id="card-round-trip" style="display: none;">
+                        <div class="card-header">
+                            <h3>🔄 왕복 코스</h3>
+                            <span class="card-loading" style="display: none;">🔄</span>
+                            <button class="card-refresh-btn">🔄</button>
+                        </div>
+                        <p class="card-distance">거리:</p><p class="card-duration">시간:</p><p class="card-calories">소모:</p>
+                        <button class="card-save-btn">💾</button>
+                    </div>
+                    <div class="route-card scenic" id="card-scenic" style="display: none;">
+                        <div class="card-header">
+                            <h3>🌳 근처 산책로</h3>
+                            <span class="card-loading" style="display: none;">🔄</span>
+                            <button class="card-refresh-btn">🔄</button>
+                        </div>
+                        <p class="card-distance">거리:</p><p class="card-duration">시간:</p><p class="card-calories">소모:</p>
+                        <button class="card-save-btn">💾</button>
+                    </div>`;
 
-    /* ========== (v3.4) [요청 5] '그룹' 페이지 로직 ========== */
+                // 8. (v3.4) 각 카드에 결과 채우기
+                allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
+                let firstValidRouteType = null;
+                
+                // 최적
+                if (results[0].status === 'fulfilled' && results[0].value) {
+                    allGeneratedRoutes.optimal = results[0].value;
+                    document.getElementById('card-optimal').style.display = 'block';
+                    displayRouteInfo(allGeneratedRoutes.optimal, 'optimal');
+                    if(!firstValidRouteType) firstValidRouteType = 'optimal';
+                }
+                // 왕복
+                if (results[1].status === 'fulfilled' && results[1].value) {
+                    allGeneratedRoutes['round-trip'] = results[1].value;
+                    document.getElementById('card-round-trip').style.display = 'block';
+                    displayRouteInfo(allGeneratedRoutes['round-trip'], 'round-trip');
+                    if(!firstValidRouteType) firstValidRouteType = 'round-trip';
+                } else {
+                    document.getElementById('card-round-trip').innerHTML = '<h3>🔄 왕복 코스</h3><p>적절한 코스를 찾지 못했습니다.</p>';
+                    document.getElementById('card-round-trip').style.display = 'block';
+                }
+                // 산책
+                if (results[2].status === 'fulfilled' && results[2].value) {
+                    allGeneratedRoutes.scenic = results[2].value;
+                    document.getElementById('card-scenic').style.display = 'block';
+                    displayRouteInfo(allGeneratedRoutes.scenic, 'scenic');
+                    if(!firstValidRouteType) firstValidRouteType = 'scenic';
+                } else {
+                    document.getElementById('card-scenic').innerHTML = '<h3>🌳 근처 산책로</h3><p>적절한 코스를 찾지 못했습니다.</p>';
+                    document.getElementById('card-scenic').style.display = 'block';
+                }
 
-    // v3.4: [요청 5] '그룹' 탭 페이지 렌더링
-    function renderGroupPage() {
-        const container = document.getElementById('page-group-content');
-        container.innerHTML = ''; // 초기화
-        
-        // v3.5: [버그 수정] c.total_distance -> c.distance
-        const myTotalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
-        const myRankItem = fakeGroup.find(m => m.name === '나 (You)');
-        if (myRankItem) myRankItem.dist = `${myTotalDist}km`;
-        
-        // v3.4: 거리(dist) 기준으로 정렬
-        fakeGroup.sort((a, b) => parseFloat(b.dist) - parseFloat(a.dist));
-        
-        const list = document.createElement('ul');
-        list.className = 'group-list';
-        
-        fakeGroup.forEach((member, index) => {
-            const item = document.createElement('li');
-            item.className = 'group-list-item';
-            item.innerHTML = `
-                <span class="rank">${index + 1}</span>
-                <img src="${member.img}" alt="프로필">
-                <div class="info">
-                    <strong>${member.name}</strong><br>
-                    <span>이번 주 ${member.dist}</span>
-                </div>
-            `;
-            list.appendChild(item);
-        });
-        container.appendChild(list);
-    }
-    
-    /* ========== (v3.5) [요청 6] '나' 페이지 로직 (오류 수정) ========== */
+                // 9. (v3.4) 이벤트 리스너 바인딩
+                document.querySelectorAll('.route-card').forEach(card => {
+                    const type = card.id.replace('card-', '');
+                    if (allGeneratedRoutes[type]) {
+                        card.addEventListener('click', () => drawSingleRoute(type));
+                    }
+                    const refreshBtn = card.querySelector('.card-refresh-btn');
+                    if (refreshBtn && type !== 'optimal') { // 최적 경로는 새로고침 없음
+                        refreshBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            regenerateSpecificCourse(type);
+                        });
+                    }
+                });
 
-    // v3.5: [요청 6] '나' 탭 페이지 렌더링 (통계, 달력)
-    function renderMyPage() {
-        // [v3.5 버그 수정] c.total_distance -> c.distance
-        const totalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
-        document.getElementById('total-walked-dist').textContent = `${totalDist} km`;
-        
-        // [v3.4] 총 출석일
-        document.getElementById('total-attendance-days').textContent = `${attendanceLog.size} 일`;
-        
-        // [v3.4] 출석 스탬프 달력
-        const calendarGrid = document.getElementById('calendar-grid');
-        calendarGrid.innerHTML = '';
-        const today = new Date();
-        const todayStr = today.toDateString();
-        const todayDate = today.getDate();
-        
-        for (let i = 1; i <= 30; i++) {
-            const day = document.createElement('div');
-            day.className = 'calendar-day';
-            day.innerHTML = `<span>${i}</span>`;
-            
-            const dateOffset = i - todayDate;
-            const pseudoDate = new Date();
-            pseudoDate.setDate(today.getDate() + dateOffset);
-            
-            if (attendanceLog.has(pseudoDate.toDateString())) {
-                day.classList.add('checked');
+                // 10. (v3.4) 첫 번째 유효한 경로를 지_도에 그림
+                if (firstValidRouteType) {
+                    drawSingleRoute(firstValidRouteType);
+                } else {
+                    navElements.resultArea.innerHTML = '<p>추천할 만한 경로를 찾지 못했습니다. 출발지나 목표 거리를 변경해보세요.</p>';
+                }
             }
-            calendarGrid.appendChild(day);
-        }
-        
-        // v3.5: [FATAL ERROR FIX]
-        // '나' 탭이 표시될 때, 버튼 리스너를 등록합니다.
-        
-        // v3.5: 출석 버튼 상태 관리
-        const checkinBtn = document.getElementById('btnCheckAttendance');
-        if (attendanceLog.has(todayStr)) {
-            checkinBtn.disabled = true;
-            checkinBtn.textContent = '오늘 출석 완료';
-        } else {
-            checkinBtn.disabled = false;
-            checkinBtn.textContent = '오늘 출석체크';
-        }
 
-        // v3.5: 리스너는 한 번만 등록
-        if (!myPageListenersSet) {
-            document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
-            document.getElementById('btnShowPokedex').onclick = () => { 
-                renderPokedex(); 
-                document.getElementById('pokedexModal').style.display = 'flex'; 
-            };
-            checkinBtn.onclick = checkAttendance; // 출석 버튼 리스너
-            myPageListenersSet = true;
-        }
-        
-        // v3.5: 출석 버튼 리스너는 상태가 변경될 수 있으므로 매번 재등록 (안전장치)
-        checkinBtn.onclick = checkAttendance;
-    }
-    
-    // v3.4: [요청 6] 출석체크 버튼 클릭
-    function checkAttendance() {
-        const todayStr = new Date().toDateString();
-        if (!attendanceLog.has(todayStr)) {
-            attendanceLog.add(todayStr);
-            alert('출석체크 완료! 🥳');
-            renderMyPage(); // '나' 페이지 새로고침
-        }
-    }
-    
-    /* ========== 기타 모달 및 이벤트 핸들러 (v3.2 로직) ========== */
-    
-    const characterImages = { 
-        male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
-        female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } 
-    };
-    
-    function updateAllInfo() {
-        const gender = document.getElementById('gender').value, 
-              age = parseFloat(document.getElementById('age').value), 
-              height = parseFloat(document.getElementById('height').value), 
-              weight = parseFloat(document.getElementById('weight').value), 
-              goalWeight = parseFloat(document.getElementById('goalWeight').value);
-        
-        if (!age || !height || !weight) { 
-            alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다."); 
-            return; 
-        }
-        
-        document.getElementById('calculated-calories').textContent = `약 ${Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight)} kcal`;
-        document.getElementById('weight-loss-result').textContent = `(약 ${(Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight) / 7700).toFixed(2)}kg 감량)`;
-        
-        const bmi = weight / ((height / 100) ** 2); 
-        document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
-        
-        const bmr = (gender === 'male') ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
-        document.getElementById('bmr-result').textContent = `기초대사량(BMR): ${bmr.toFixed(0)} kcal`;
-        
-        let bodyType; 
-        if (bmi < 18.5) bodyType = 'lean'; 
-        else if (bmi < 23) bodyType = 'average'; 
-        else if (bmi < 25) bodyType = 'overweight'; 
-        else bodyType = 'obese';
-        
-        document.getElementById('characterImage').src = characterImages[gender][bodyType]; 
-        document.getElementById('character-display').style.display = 'flex';
-        
-        if (goalWeight) {
-            const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), 
-                  achieved = Math.max(0, startWeight - weight), 
-                  totalToGo = Math.max(0, startWeight - goalWeight);
-            let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; 
-            if (weight <= goalWeight) achievedPercent = 100;
+
+            /* ========== 포켓몬 관련 함수들 (v3.1 로직) ========== */
+            function clearPokemonMarkers() {
+                Object.values(pokemonMarkers).forEach(p => p.overlay.setMap(null));
+                pokemonMarkers = {};
+            }
             
-            document.getElementById('bar-achieved').style.width = `${achievedPercent}%`;
-            document.getElementById('progress-text').textContent = `목표까지 ${Math.max(0, weight - goalWeight).toFixed(1)}kg 남음!`;
-        }
-    }
-    document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
+            async function fetchPokemonData(id) {
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+                    if (!res.ok) throw new Error("Pokemon API fetch failed");
+                    const data = await res.json();
+                    
+                    const speciesRes = await fetch(data.species.url);
+                    const speciesData = await speciesRes.json();
+                    const koreanNameEntry = speciesData.names.find(n => n.language.name === 'ko');
+                    const koreanName = koreanNameEntry ? koreanNameEntry.name : data.name;
 
+                    const movePromises = data.moves.slice(0, 4).map(async (m) => {
+                        try {
+                            const moveRes = await fetch(m.move.url);
+                            if (!moveRes.ok) return { name: m.move.name, power: 40 }; 
+                            const moveData = await moveRes.json();
+                            const kMoveName = moveData.names.find(n => n.language.name === 'ko');
+                            return { 
+                                name: kMoveName ? kMoveName.name : m.move.name, 
+                                power: moveData.power || 40 
+                            };
+                        } catch(e) {
+                            return { name: m.move.name, power: 40 };
+                        }
+                    });
+                    const moves = await Promise.all(movePromises);
+
+                    return {
+                        id: data.id,
+                        name: koreanName,
+                        sprite: data.sprites.front_default,
+                        back_sprite: data.sprites.back_default,
+                        moves: moves,
+                        hp: data.stats.find(s => s.stat.name === 'hp').base_stat
+                    };
+                } catch (error) {
+                    console.error("Failed to fetch Pokemon data:", error);
+                    return null;
+                }
+            }
+
+            function spawnPokemon(pokemonData, lat, lng) {
+                const uniqueId = `${pokemonData.id}-${Date.now()}`;
+                const content = `<div class="pokemon-marker" id="marker-${uniqueId}"><img src="${pokemonData.sprite}" alt="${pokemonData.name}"></div>`;
+                const position = new kakao.maps.LatLng(lat, lng);
+                
+                const customOverlay = new kakao.maps.CustomOverlay({
+                    position: position,
+                    content: content,
+                    yAnchor: 1 
+                });
+                
+                pokemonMarkers[uniqueId] = { ...pokemonData, position, overlay: customOverlay };
+                
+                if (currentMode === 'pokemon') customOverlay.setMap(map);
+                
+                setTimeout(() => {
+                    const el = document.getElementById(`marker-${uniqueId}`);
+                    if(el) el.parentElement.onclick = () => capturePokemon(uniqueId);
+                }, 0);
+            }
+
+            function getDistance(p1, p2) {
+                const R = 6371e3; // Metres
+                const φ1 = p1.getLat() * Math.PI/180;
+                const φ2 = p2.getLat() * Math.PI/180;
+                const Δφ = (p2.getLat()-p1.getLat()) * Math.PI/180;
+                const Δλ = (p2.getLng()-p1.getLng()) * Math.PI/180;
+                const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+
+            function capturePokemon(uniqueId) {
+                const pokemon = pokemonMarkers[uniqueId];
+                if (!pokemon) return;
+                
+                if (!userLocation) {
+                    alert("먼저 '내 위치' 버튼을 눌러 위치를 활성화해주세요.");
+                    return;
+                }
+                
+                const distance = getDistance(userLocation, pokemon.position);
+                
+                if (distance > 50) {
+                    alert(`${pokemon.name}이(가) 너무 멀리 있습니다! (50m 이내 접근 필요)`);
+                    return;
+                }
+
+                alert(`야생의 ${pokemon.name}을(를) 잡았다!`);
+                const nickname = prompt("포켓몬의 별명을 지어주세요:", pokemon.name);
+                capturedPokemons.push({ ...pokemon, nickname: nickname || pokemon.name });
+                
+                pokemon.overlay.setMap(null);
+                delete pokemonMarkers[uniqueId];
+            }
+
+            async function initializePokemonMode() {
+                clearPokemonMarkers();
+                if (!userLocation) {
+                    alert("'내 위치'를 먼저 활성화하여 주변(수도권)의 포켓몬을 탐색합니다.");
+                    // v3.0: 수도권 중심 좌표 (만약 userLocation이 없다면)
+                    map.setCenter(new kakao.maps.LatLng(37.566826, 126.9786567));
+                }
+
+                const metroAreaBounds = {
+                    minLat: 37.4, maxLat: 37.7, minLng: 126.7, maxLng: 127.2
+                };
+
+                const promises = [];
+                const remainingCount = 15 - Object.keys(pokemonMarkers).length;
+                for (let i = 0; i < remainingCount; i++) {
+                    promises.push(fetchPokemonData(Math.floor(Math.random() * 151) + 1));
+                }
+                
+                const pokemonDataList = await Promise.all(promises);
+                
+                pokemonDataList.forEach(pokemonData => {
+                    if (pokemonData) {
+                        const lat = metroAreaBounds.minLat + Math.random() * (metroAreaBounds.maxLat - metroAreaBounds.minLat);
+                        const lng = metroAreaBounds.minLng + Math.random() * (metroAreaBounds.maxLng - metroAreaBounds.minLng);
+                        spawnPokemon(pokemonData, lat, lng);
+                    }
+                });
+
+                if(userLocation) map.setCenter(userLocation);
+            }
+            document.getElementById('btnRegenerate').onclick = initializePokemonMode;
+
+            /* ========== 포켓몬 도감 & 배틀 로직 (생략 없음) ========== */
+            function renderPokedex() {
+                const listEl = document.getElementById('pokedexList');
+                if (capturedPokemons.length === 0) {
+                    listEl.innerHTML = '<p>아직 잡은 포켓몬이 없습니다.</p>';
+                    return;
+                }
+                
+                listEl.innerHTML = capturedPokemons.map((p, index) => `
+                    <div class="pokedex-item" data-index="${index}">
+                        <img src="${p.sprite}" alt="${p.name}">
+                        <div class="info"><strong>${p.nickname}</strong><br><small>#${String(p.id).padStart(3, '0')} ${p.name} / HP: ${p.hp}</small></div>
+                        <button class="rename-btn">이름 변경</button>
+                        <button class="battle-btn" ${capturedPokemons.length < 2 ? 'disabled' : ''}>결투</button>
+                    </div>`).join('');
+                
+                listEl.querySelectorAll('.rename-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.pokedex-item').dataset.index, 10);
+                    const newNickname = prompt("새로운 포켓몬 이름을 입력하세요:", capturedPokemons[index].nickname);
+                    if (newNickname && newNickname.trim()) {
+                        capturedPokemons[index].nickname = newNickname.trim();
+                        renderPokedex();
+                    }
+                }));
+                
+                listEl.querySelectorAll('.battle-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                    const playerIndex = parseInt(e.target.closest('.pokedex-item').dataset.index, 10);
+                    startBattle(playerIndex);
+                }));
+            }
+            // v3.5: '도감' 버튼 리스너는 `renderMyPage`로 이동
+
+            const battleModal = document.getElementById('battleModal');
+            function startBattle(playerIndex) {
+                let opponentIndex;
+                do {
+                    opponentIndex = Math.floor(Math.random() * capturedPokemons.length);
+                } while (opponentIndex === playerIndex);
+
+                const player = { ...capturedPokemons[playerIndex], currentHp: capturedPokemons[playerIndex].hp };
+                const opponent = { ...capturedPokemons[opponentIndex], currentHp: capturedPokemons[opponentIndex].hp };
+
+                document.getElementById('player-pokemon').querySelector('img').src = player.back_sprite || player.sprite;
+                document.getElementById('opponent-pokemon').querySelector('img').src = opponent.sprite;
+                
+                document.getElementById('battle-log').innerHTML = `야생의 ${opponent.nickname}이(가) 나타났다!`;
+                updateBattleUI(player, opponent);
+
+                const movesGrid = document.getElementById('moves-grid');
+                movesGrid.innerHTML = ''; // 기존 버튼 삭제
+                player.moves.forEach((move, i) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = move.name;
+                    btn.onclick = () => executeTurn(player, opponent, move);
+                    movesGrid.appendChild(btn);
+                });
+
+                battleModal.style.display = 'flex';
+                document.getElementById('pokedexModal').style.display = 'none';
+            }
+
+            function executeTurn(player, opponent, move) {
+                const logEl = document.getElementById('battle-log');
+                document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = true);
+                
+                // 1. Player attack
+                const playerDamage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8)); // 80%~130%
+                opponent.currentHp = Math.max(0, opponent.currentHp - playerDamage);
+                logEl.innerHTML = `${player.nickname}의 ${move.name} 공격!<br> ${playerDamage}의 데미지를 주었다!`;
+                updateBattleUI(player, opponent);
+
+                if (opponent.currentHp <= 0) {
+                    setTimeout(() => {
+                        alert(`상대 ${opponent.nickname}을(를) 이겼다!`);
+                        battleModal.style.display = 'none';
+                    }, 1500);
+                    return;
+                }
+
+                // 2. Opponent attack (2초 후)
+                setTimeout(() => {
+                    opponentTurn(player, opponent);
+                }, 2000);
+            }
+
+            function opponentTurn(player, opponent) {
+                const logEl = document.getElementById('battle-log');
+                const usableMoves = opponent.moves.filter(m => m.power > 0);
+                const move = usableMoves.length > 0 ? usableMoves[Math.floor(Math.random() * usableMoves.length)] : { name: '몸통박치기', power: 40 };
+                
+                const damage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8));
+                player.currentHp = Math.max(0, player.currentHp - damage);
+                logEl.innerHTML = `상대 ${opponent.nickname}의 ${move.name} 공격!<br> ${damage}의 데미지를 받았다!`;
+                updateBattleUI(player, opponent);
+
+                if (player.currentHp <= 0) {
+                    setTimeout(() => {
+                        alert(`${player.nickname}은(는) 쓰러졌다...`);
+                        battleModal.style.display = 'none';
+                    }, 1500);
+                    return;
+                }
+
+                setTimeout(() => {
+                    logEl.innerHTML = `어떻게 할까?`;
+                    document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = false);
+                }, 2000);
+            }
+
+            function updateBattleUI(player, opponent) {
+                document.getElementById('player-name').textContent = player.nickname;
+                document.getElementById('player-hp-text').textContent = `${player.currentHp} / ${player.hp}`;
+                document.getElementById('player-hp-bar').style.width = `${(player.currentHp / player.hp) * 100}%`;
+                
+                document.getElementById('opponent-name').textContent = opponent.nickname;
+                document.getElementById('opponent-hp-text').textContent = `${opponent.currentHp} / ${opponent.hp}`;
+                document.getElementById('opponent-hp-bar').style.width = `${(opponent.currentHp / opponent.hp) * 100}%`;
+            }
+            battleModal.querySelector('.close-button').addEventListener('click', () => battleModal.style.display = 'none');
+
+
+            /* ========== 기타 모달 및 이벤트 핸들러 (생략 없음) ========== */
+            window.onclick = (event) => {
+                if (event.target.classList.contains('modal')) event.target.style.display = 'none';
+            };
+
+            const characterImages = {
+                male: {
+                    lean: 'https://i.imgur.com/91TKFuE.png',
+                    average: 'https://i.imgur.com/ecc7NYi.png',
+                    overweight: 'https://i.imgur.com/QJZsUvT.png',
+                    obese: 'https://i.imgur.com/qGxG0QR.png'
+                },
+                female: {
+                    lean: 'https://i.imgur.com/2bsZnpy.png',
+                    average: 'https://i.imgur.com/fA7m1iW.png',
+                    overweight: 'https://i.imgur.com/N3b5tC9.png',
+                    obese: 'https://i.imgur.com/z8tC8f1.png'
+                }
+            };
+            
+            function updateAllInfo() {
+                const gender = document.getElementById('gender').value;
+                const age = parseFloat(document.getElementById('age').value);
+                const height = parseFloat(document.getElementById('height').value);
+                const weight = parseFloat(document.getElementById('weight').value);
+                const goalWeight = parseFloat(document.getElementById('goalWeight').value);
+
+                if (isNaN(age) || isNaN(height) || isNaN(weight)) {
+                    alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다.");
+                    return;
+                }
+
+                const bmi = weight / ((height / 100) ** 2);
+                document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
+                
+                const bmr = (gender === 'male')
+                    ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+                    : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+                document.getElementById('bmr-result').textContent = `기초대사량(BMR): ${bmr.toFixed(0)} kcal`;
+                
+                let bodyType; 
+                if (bmi < 18.5) bodyType = 'lean'; 
+                else if (bmi < 23) bodyType = 'average'; 
+                else if (bmi < 25) bodyType = 'overweight'; 
+                else bodyType = 'obese';
+                
+                document.getElementById('characterImage').src = characterImages[gender][bodyType]; 
+                document.getElementById('character-display').style.display = 'flex';
+                
+                if (goalWeight) {
+                    const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), // v3.1: 시작 체중 보정
+                          achieved = Math.max(0, startWeight - weight), 
+                          totalToGo = Math.max(0, startWeight - goalWeight);
+                    let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; 
+                    
+                    if (weight <= goalWeight) achievedPercent = 100; // 목표 달성
+
+                    document.getElementById('bar-achieved').style.width = `${Math.min(100, achievedPercent)}%`;
+                    document.getElementById('bar-excess').style.width = '0%';
+                    document.getElementById('progress-text').textContent = `목표까지 ${Math.max(0, weight - goalWeight).toFixed(1)}kg 남았습니다!`;
+                } else {
+                    document.getElementById('bar-achieved').style.width = '0%';
+                    document.getElementById('bar-excess').style.width = '0%';
+                    document.getElementById('progress-text').textContent = '목표 체중을 설정해보세요.';
+                }
+                
+                updateCalorieAndWeightLoss(); // v2.9: 칼로리 계산기도 즉시 업데이트
+                document.getElementById('dietInfoModal').style.display = 'none';
+            }
+            // v3.5: '내 정보' 버튼 리스너는 `renderMyPage`로 이동
+            document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
+
+
+            /* ========== (v3.4) [요청 2] 탭 네비게이션 로직 ========== */
+            
+            // v3.4: 탭/페이지 DOM 요소
+            const pages = {
+                home: document.getElementById('page-home'),
+                history: document.getElementById('page-history'),
+                group: document.getElementById('page-group'),
+                me: document.getElementById('page-me')
+            };
+            const navButtons = {
+                home: document.getElementById('nav-btn-home'),
+                history: document.getElementById('nav-btn-history'),
+                group: document.getElementById('nav-btn-group'),
+                me: document.getElementById('nav-btn-me')
+            };
+
+            // v3.4: 탭 전환을 처리하는 공통 함수
+            function showPage(pageId) {
+                // 모든 페이지 숨기기
+                Object.values(pages).forEach(page => page.style.display = 'none');
+                // 모든 버튼 비활성화
+                Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+
+                // 요청된 페이지만 보이기
+                pages[pageId].style.display = 'block';
+                // 요청된 버튼만 활성화
+                navButtons[pageId].classList.add('active');
+                
+                // v3.4: 각 페이지가 보일 때 컨텐츠 새로고침
+                if (pageId === 'history') renderHistoryPage();
+                if (pageId === 'group') renderGroupPage();
+                if (pageId === 'me') renderMyPage();
+            }
+            
+            // v3.4: 탭 버튼 이벤트 리스너 설정
+            function setupTabNavigation() {
+                navButtons.home.addEventListener('click', () => showPage('home'));
+                navButtons.history.addEventListener('click', () => showPage('history'));
+                navButtons.group.addEventListener('click', () => showPage('group'));
+                navButtons.me.addEventListener('click', () => showPage('me'));
+            }
+
+
+            /* ========== (v3.4) [요청 4] '기록' 페이지 로직 ========== */
+
+            // v3.4: [요청 4] 카카오 스태틱맵 URL 생성
+            function getStaticMapUrl(route) {
+                // 이 함수는 REST API 키가 필요하므로, 클라이언트 사이드에서 완벽히 구현하기 어렵습니다.
+                // 여기서는 임시 이미지 URL을 반환하거나, Polyline을 이용한 간단한 URL을 생성합니다.
+                // 참고: https://developers.kakao.com/docs/latest/ko/local/static-map
+                
+                try {
+                    // 경로에서 좌표 추출
+                    const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes);
+                    const polyline = [];
+                    // URL 길이 제한을 피하기 위해 좌표 10개(5쌍)마다 1개씩 샘플링
+                    for(let i=0; i < path.length; i+=20) {
+                        polyline.push(`${path[i]},${path[i+1]}`); // (lng, lat)
+                    }
+                    
+                    if (polyline.length < 2) { // v3.5: 폴리라인이 너무 짧으면 (보통 10개)
+                         for(let i=0; i < path.length; i+=2) { polyline.push(`${path[i]},${path[i+1]}`); }
+                    }
+
+                    const url = new URL("https://apis-navi.kakaomobility.com/v1/waypoints/directions/static");
+                    url.searchParams.append("polyline", polyline.join(' ')); // 공백으로 구분
+                    url.searchParams.append("width", 600);
+                    url.searchParams.append("height", 300);
+                    url.searchParams.append("stroke_color", "0x007BFF");
+                    url.searchParams.append("stroke_width", 5);
+                    
+                    // 스태틱맵 API는 GET 요청이지만, REST API 키가 필요합니다.
+                    // 클라이언트에서 REST API 키 노출 없이 호출하는 것은 불가능합니다.
+                    // 따라서 여기서는 '동작하는 척'하는 임시 URL을 반환합니다.
+                    console.warn("스태틱맵 URL 생성 시도 (실제로는 REST API 키 필요):", url.href);
+                    // return Promise.resolve(url.href); // -> 이 URL은 API 키가 없어서 401 오류 반환함
+                    
+                    // v3.5: 임시 이미지로 대체
+                    return Promise.resolve("https://i.imgur.com/gS4FnB4.png"); 
+                    
+                } catch (e) {
+                    console.error("스태틱맵 URL 생성 중 오류", e);
+                    return Promise.reject(e);
+                }
+            }
+
+
+            // v3.4: [요청 4] '기록' 탭 페이지 렌더링
+            function renderHistoryPage() {
+                const container = document.getElementById('page-history-content');
+                
+                if (courseHistory.length === 0) {
+                    container.innerHTML = '<p>아직 저장된 기록이 없습니다. 홈에서 코스를 검색하고 [💾 저장] 버튼을 눌러보세요.</p>';
+                    return;
+                }
+                
+                container.innerHTML = ''; // 기존 목록 초기화
+                
+                // 최신순으로 정렬
+                courseHistory.slice().reverse().forEach(course => {
+                    const dateStr = course.savedDate.toLocaleString('ko-KR');
+                    
+                    const typeInfo = {
+                        optimal: { name: '최적 경로', class: 'optimal' },
+                        'round-trip': { name: '왕복 코스', class: 'round-trip' },
+                        scenic: { name: '근처 산책로', class: 'scenic' }
+                    };
+                    
+                    const cardHTML = `
+                        <div class="history-card">
+                            <img src="${course.staticMapUrl}" alt="코스 지도">
+                            <div class="history-card-content">
+                                <h3>${course.title}</h3>
+                                <p><span class="history-badge ${typeInfo[course.type].class}">${typeInfo[course.type].name}</span></p>
+                                <p><strong>거리:</strong> ${(course.distance / 1000).toFixed(2)} km</p>
+                                <p><strong>시간:</strong> ${Math.round(course.duration / 60)} 분</p>
+                                <p><small>저장일: ${dateStr}</small></p>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += cardHTML;
+                });
+            }
+
+
+            /* ========== (v3.4) [요청 5] '그룹' 페이지 로직 ========== */
+
+            // v3.4: [요청 5] '그룹' 탭 페이지 렌더링
+            function renderGroupPage() {
+                const container = document.getElementById('page-group-content');
+                container.innerHTML = ''; // 초기화
+                
+                // v3.5: [버그 수정] c.total_distance -> c.distance
+                const myTotalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
+                
+                const myRankItem = fakeGroup.find(m => m.name === '나 (You)');
+                if (myRankItem) myRankItem.dist = `${myTotalDist}km`;
+                
+                // v3.4: 거리(dist) 기준으로 정렬
+                fakeGroup.sort((a, b) => parseFloat(b.dist) - parseFloat(a.dist));
+
+                const list = document.createElement('ul');
+                list.className = 'group-list';
+                
+                fakeGroup.forEach((member, index) => {
+                    member.rank = index + 1; // 정렬 후 랭크 재할당
+                    
+                    const item = document.createElement('li');
+                    item.className = 'group-list-item';
+                    item.innerHTML = `
+                        <img src="${member.img}" alt="${member.name}">
+                        <div class="info">
+                            <strong>${member.name}</strong><br>
+                            <span>${member.dist}</span>
+                        </div>
+                        <div class="rank">#${member.rank}</div>
+                    `;
+                    list.appendChild(item);
+                });
+                container.appendChild(list);
+            }
+            
+
+            /* ========== (v3.4) [요청 6] '나' 페이지 로직 ========== */
+
+            // v3.4: [요청 6] '나' 탭 페이지 렌더링
+            function renderMyPage() {
+                // 1. 총 걸은 거리
+                // v3.5: [버그 수정] c.total_distance -> c.distance
+                const totalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
+                document.getElementById('total-walked-dist').textContent = `${totalDist} km`;
+                
+                // 2. 총 출석일
+                document.getElementById('total-attendance-days').textContent = `${attendanceLog.size} 일`;
+                
+                // 3. 출석 캘린더
+                const calendarGrid = document.getElementById('calendar-grid');
+                calendarGrid.innerHTML = ''; // 초기화
+                const today = new Date();
+                const todayStr = today.toDateString();
+                const startDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay(); // 1일의 요일 (0=일 ~ 6=토)
+                const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); // 이 달의 총 일수
+                
+                // 캘린더 앞쪽 빈 칸
+                for(let i=0; i<startDay; i++) {
+                    calendarGrid.innerHTML += '<div class="calendar-day"></div>';
+                }
+                // 캘린더 날짜 채우기
+                for(let i=1; i<=daysInMonth; i++) {
+                    const dayDate = new Date(today.getFullYear(), today.getMonth(), i);
+                    const dayStr = dayDate.toDateString();
+                    const isChecked = attendanceLog.has(dayStr) ? 'checked' : '';
+                    calendarGrid.innerHTML += `<div class="calendar-day ${isChecked}"><span>${i}</span></div>`;
+                }
+
+                // 4. 출석 버튼 상태
+                const checkinBtn = document.getElementById('btnCheckAttendance');
+                if (attendanceLog.has(todayStr)) {
+                    checkinBtn.disabled = true;
+                    checkinBtn.textContent = '오늘 출석 완료 ✅';
+                } else {
+                    checkinBtn.disabled = false;
+                    checkinBtn.textContent = '오늘 출석체크';
+                }
+
+                // v3.5: [버그 수정] '나' 페이지의 버튼 리스너들이 탭을 누를 때마다 중복 등록되는 현상 수정
+                // v3.5: 리스너는 한 번만 등록
+                if (!myPageListenersSet) {
+                    document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
+                    document.getElementById('btnShowPokedex').onclick = () => {
+                        renderPokedex();
+                        document.getElementById('pokedexModal').style.display = 'flex';
+                    };
+                    checkinBtn.onclick = checkAttendance; // 출석 버튼 리스너
+                    
+                    myPageListenersSet = true;
+                }
+                // v3.5: 출석 버튼 리스너는 상태가 변경될 수 있으므로 매번 재등록 (안전장치)
+                checkinBtn.onclick = checkAttendance;
+            }
+
+            // v3.4: [요청 6] 출석체크 버튼 클릭
+            function checkAttendance() {
+                const todayStr = new Date().toDateString();
+                if (!attendanceLog.has(todayStr)) {
+                    attendanceLog.add(todayStr);
+                    alert('출석체크 완료! 🥳');
+                    renderMyPage(); // '나' 페이지 새로고침
+                }
+            }
+
+
+            /* ========== (v3.4) [요청 7] 앱 초기화 ========== */
+            initializeDefaultMap(); // v3.4 [요청 7] 초기화 함수 호출
+            setupTabNavigation(); // v3.4 [요청 2] 탭 설정
+
+        // ▼▼▼ [수정 2/2] kakao.maps.load() 래퍼 닫기 ▼▼▼
+        }); // kakao.maps.load()
+        // ▲▲▲ [수정 2/2] 수정 완료 ▲▲▲
+
+    });
 </script>
 </body>
 </html>
