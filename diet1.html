@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v2.4)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v2.5)</title>
 <style>
-    /* v2.4: 스타일은 v2.3와 동일합니다 */
+    /* v2.5: 스타일은 v2.4와 동일합니다 */
     html, body {
         width: 100%; height: 100%; margin: 0; padding: 0;
         font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
@@ -28,7 +28,7 @@
     #navPanel .input-wrapper.end input[type="text"] { border-radius: 5px; border-right: 1px solid #ccc; }
     #navPanel .input-wrapper.target input[type="number"] { border: none; text-align: center; background: none; outline: none; padding: 12px 0; width: 100%; flex-grow: 1; }
     #myLocationBtn { padding: 0 10px; background: #6c757d; color: white; border: 1px solid #ccc; border-left: none; border-radius: 0 5px 5px 0; cursor: pointer; font-weight: bold; white-space: nowrap; height: 45px; box-sizing: border-box; }
-    #myLocationBtn:disabled { background-color: #aaa; cursor: not-allowed; } /* v2.4: 비활성화 스타일 */
+    #myLocationBtn:disabled { background-color: #aaa; cursor: not-allowed; }
     #searchBtn, #openModalBtn { padding: 12px 20px; color: white; border: none; border-radius: 5px; font-size: 1em; font-weight: bold; cursor: pointer; flex-shrink: 0; height: 45px; }
     #searchBtn { background-color: #4CAF50; }
     #openModalBtn { background-color: #007bff; }
@@ -125,8 +125,8 @@
     </div>
 
     <div id="navPanel" class="info-panel">
-        <!-- v2.4: 버전 업그레이드 -->
-        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v2.4</span></h2>
+        <!-- v2.5: 버전 업그레이드 -->
+        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v2.5</span></h2>
         <div class="input-group">
             <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
             <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
@@ -201,7 +201,7 @@
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v2.4) 전체 스크립트 (생략 없음) ========== */
+    /* ========== (v2.5) 전체 스크립트 (생략 없음) ========== */
 
     /* ========== 공통 & 전역 변수 ========== */
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
@@ -209,8 +209,7 @@
     let currentMode = 'navigation'; 
     let navMapObjects = [], pokemonMarkers = {}, capturedPokemons = [];
     
-    // v2.4: 'userAddress' 삭제. 'userLocation'은 페이지 로드 시에만 사용
-    let userLocation = null; // LatLng 객체 (페이지 로드 시 지도 중앙 설정용)
+    let userLocation = null; // LatLng 객체 (페이지 로드 시/포켓몬 모드용)
     let userLocationCircle = null;
     let startPointFromMyLocation = null; // '코스 생성' 시 사용할 *최신* 좌표 객체
 
@@ -229,13 +228,10 @@
     };
 
     /**
-     * v2.4: 사용자 위치 정보 요청 (v2.3과 동일)
-     * @param {function} onSuccess - 성공 시 (location: LatLng) 인수로 호출
-     * @param {function} onError - 실패 시 (errorMsg: string) 인수로 호출
+     * v2.5: 사용자 위치 정보 요청 (v2.4와 동일. 캐시 비활성화)
      */
     function requestUserLocation(onSuccess, onError) {
         if (navigator.geolocation) {
-            // v2.4: 항상 최신 위치를 요청 (enableHighAccuracy, maximumAge: 0)
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
@@ -260,8 +256,7 @@
     }
 
     /**
-     * v2.4: 지도에 현재 위치 표시 및 중앙 이동 (단순 기능)
-     * @param {kakao.maps.LatLng} location - 위치 객체
+     * v2.5: 지도에 현재 위치 표시 및 중앙 이동 (v2.4와 동일)
      */
     function updateMapCenter(location) {
         userLocation = location; // (포켓몬 모드 등에서 사용하기 위해 전역 변수도 갱신)
@@ -277,7 +272,7 @@
     }
     
     /**
-     * v2.4: '내 위치' 버튼 클릭 시 실행될 메인 함수
+     * v2.5: '내 위치' 버튼 클릭 시 실행될 메인 함수 (v2.4와 동일)
      */
     function onMyLocationButtonClick() {
         navElements.myLocationBtn.disabled = true;
@@ -289,7 +284,9 @@
                 // 2. 위치 받기 성공 (좌표 획득)
                 
                 // 3. 좌표 -> 장소 이름(POI)으로 변환
-                ps.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
+                // v2.4: coord2Address(주소) 대신 coord2Keyword(장소명) 사용
+                const geocoder = new kakao.maps.services.Geocoder();
+                geocoder.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
                     let placeName = "내 위치 (장소명 없음)";
                     
                     if (status === kakao.maps.services.Status.OK && data.length > 0) {
@@ -298,13 +295,12 @@
                     } 
                     // 5. (실패 시) 장소 이름이 없으면, 주소로 변환 (백업)
                     else {
-                        ps.coord2Address(location.getLng(), location.getLat(), (result, status) => {
+                        geocoder.coord2Address(location.getLng(), location.getLat(), (result, status) => {
                             if (status === kakao.maps.services.Status.OK) {
                                 placeName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
                             }
                             // (주소 변환도 실패하면 "내 위치 (장소명 없음)"이 유지됨)
                             
-                            // (이 콜백은 비동기이므로, 여기서 UI를 최종 업데이트합니다)
                             finalizeMyLocation(location, placeName);
                         });
                         return; // 주소 변환 콜백에서 finalize를 호출하므로 여기서 종료
@@ -324,26 +320,19 @@
     }
 
     /**
-     * v2.4: '내 위치' 버튼의 모든 비동기 작업이 끝난 후 UI를 업데이트하는 함수
-     * @param {kakao.maps.LatLng} location - 최종 위치
-     * @param {string} placeName - 최종 장소명 (또는 주소)
+     * v2.5: '내 위치' 버튼의 모든 비동기 작업이 끝난 후 UI를 업데이트하는 함수 (v2.4와 동일)
      */
     function finalizeMyLocation(location, placeName) {
-        // 6. UI 업데이트
-        navElements.startInput.value = placeName; // (예: "부천대학교")
+        navElements.startInput.value = placeName;
         startPointFromMyLocation = { x: location.getLng(), y: location.getLat(), place_name: placeName };
-        
-        // 7. 지도 이동 및 파란 원 표시
         updateMapCenter(location);
-        
-        // 8. 버튼 원상 복구
         navElements.myLocationBtn.disabled = false;
         navElements.myLocationBtn.textContent = '내 위치';
     }
 
 
     /**
-     * v2.4: 지도 초기화 함수 (v2.3 수정)
+     * v2.5: 지도 초기화 함수 (v2.4와 동일)
      */
     function initApp() {
         const mapContainer = document.getElementById('map');
@@ -352,13 +341,11 @@
         map = new kakao.maps.Map(mapContainer, mapOption);
         ps = new kakao.maps.services.Places();
         
-        // v2.4: '내 위치' 버튼 이벤트 리스너 (새 로직으로 연결)
         navElements.myLocationBtn.addEventListener('click', onMyLocationButtonClick);
 
         setupAutocomplete(navElements.startInput, navElements.startSuggestions);
         setupAutocomplete(navElements.endInput, navElements.endSuggestions);
 
-        // v2.4: 페이지 로드 시, 위치를 요청하되, 지도를 *이동만* 시키고 UI에는 반영 안 함
         requestUserLocation(
             (location) => {
                 updateMapCenter(location); // 조용히 지도만 이동
@@ -394,10 +381,10 @@
     }
     modeToggleBtn.addEventListener('click', toggleMode);
 
-    /* ========== 내비게이션 관련 함수들 (v2.3과 동일) ========== */
+    /* ========== 내비게이션 관련 함수들 (v2.5 수정) ========== */
     
     /**
-     * v2.4: 장소 검색 (v2.3와 동일)
+     * v2.5: 장소 검색 (v2.4와 동일)
      */
     const searchPlace = (query, options = {}) => new Promise((resolve, reject) => {
         if (!query.trim()) return reject(new Error("검색어가 비어있습니다.")); 
@@ -408,7 +395,7 @@
     });
     
     /**
-     * v2.4: 경로 탐색 (v2.3와 동일)
+     * v2.5: 경로 탐색 (v2.4와 동일)
      */
     const getRoute = (waypoints) => new Promise(async (resolve, reject) => { 
         const origin = waypoints[0], destination = waypoints[waypoints.length - 1]; 
@@ -427,7 +414,7 @@
     });
     
     /**
-     * v2.4: 지도 객체 클리어 (v2.3와 동일)
+     * v2.5: 지도 객체 클리어 (v2.4와 동일)
      */
     function clearNavMapObjects() { 
         navMapObjects.forEach(obj => obj.setMap(null)); 
@@ -435,7 +422,7 @@
     }
     
     /**
-     * v2.4: 디바운스 (v2.3와 동일)
+     * v2.5: 디바운스 (v2.4와 동일)
      */
     const debounce = (func, delay) => { 
         let t; 
@@ -446,11 +433,10 @@
     };
     
     /**
-     * v2.4: 자동완성 (v2.3와 동일)
+     * v2.5: 자동완성 (v2.4와 동일)
      */
     function setupAutocomplete(inputEl, listEl) { 
         const showSuggestions = debounce(query => { 
-            // v2.4: 자동완성 시 '내 위치' 텍스트가 포함된 경우 검색 방지
             if (!query.trim() || query.includes("내 위치")) { 
                 listEl.style.display = 'none'; 
                 return; 
@@ -476,7 +462,7 @@
     }
     
     /**
-     * v2.4: 경로 그리기 (v2.3와 동일)
+     * v2.5: 경로 그리기 (v2.4와 동일)
      */
     function drawSingleRoutePolyline(route, color) { 
         const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes).reduce((acc, _, i, arr) => (i % 2 === 0 ? [...acc, new kakao.maps.LatLng(arr[i + 1], arr[i])] : acc), []); 
@@ -486,7 +472,7 @@
     }
     
     /**
-     * v2.4: 단일 경로 활성화 (v2.3와 동일)
+     * v2.5: 단일 경로 활성화 (v2.4와 동일)
      */
     function drawSingleRoute(type) {
         clearNavMapObjects();
@@ -509,7 +495,7 @@
     }
     
     /**
-     * v2.4: 코스 정보 카드 생성 (v2.3와 동일)
+     * v2.5: 코스 정보 카드 생성 (v2.4와 동일)
      */
     function displayRouteInfo(route, type) {
         const weight = parseFloat(document.getElementById('weight').value) || 60;
@@ -528,18 +514,14 @@
     }
     
     /**
-     * v2.4: '왕복 코스' 생성 로직 (v2.3와 동일)
+     * v2.5: '왕복 코스' 생성 로직 (v2.4 수정 -> v2.5)
+     * @param {object} startPoint - {x, y, place_name}
+     * @param {number} targetDistanceMeters - 목표 거리 (미터)
+     * @param {number} attempt - 재시도 횟수
      */
-    async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0, viaPoint = null) {
-        if (viaPoint) {
-            try {
-                const route = await getRoute([startPoint, viaPoint, startPoint]);
-                if (Math.abs(route.summary.distance - targetDistanceMeters) <= 300) {
-                     route.total_distance = route.summary.distance; route.total_duration = route.summary.duration; return route;
-                }
-            } catch (e) {}
-        }
-
+    async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
+        // v2.5: 'viaPoint' (경유지) 로직 완전 삭제. 오직 자연스러운 루프만 탐색.
+        
         const angleStep = 30; const radiusVariations = [1, 0.8, 1.2]; const startAngleOffset = attempt * 10;
         for (const radiusFactor of radiusVariations) {
             const searchRadius = (targetDistanceMeters / 4) * radiusFactor; 
@@ -558,7 +540,7 @@
     }
     
     /**
-     * v2.4: '근처 산책로' 추천 로직 (v2.3와 동일)
+     * v2.5: '근처 산책로' 추천 로직 (v2.4 수정 -> v2.5)
      */
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
         const keywords = ['공원', '산책로', '수목원', '호수공원', '강'];
@@ -584,17 +566,9 @@
 
                 if (loopDistance < 1000) continue; 
                 
-                let viaPoint = null;
-                if (validPlaces.length > 1) {
-                    viaPoint = validPlaces[1];
-                } else {
-                    try {
-                        const stations = await searchPlace("지하철역", { location: new kakao.maps.LatLng(trailStartPoint.y, trailStartPoint.x), radius: 1000 });
-                        viaPoint = stations[0];
-                    } catch(e) {}
-                }
-                
-                const trailLoop = await generateNonOverlappingLoopCourse(trailStartPoint, loopDistance, attempt, viaPoint);
+                // v2.5: 'viaPoint' (경유지) 로직을 삭제하고,
+                // '공원(B)'을 기점으로 하는 '자연스러운' 루프를 요청.
+                const trailLoop = await generateNonOverlappingLoopCourse(trailStartPoint, loopDistance, attempt);
                 
                 if (trailLoop) {
                     return { toTrail: routeToTrail, loop: trailLoop, foundPlaceName: trailStartPoint.place_name, total_distance: (distanceToTrail * 2) + trailLoop.summary.distance, total_duration: (routeToTrail.summary.duration * 2) + trailLoop.summary.duration };
@@ -604,14 +578,13 @@
     }
     
     /**
-     * v2.4: 특정 코스 새로고침 (v2.3와 동일)
+     * v2.5: 특정 코스 새로고침 (v2.4와 동일)
      */
     async function regenerateSpecificCourse(type) {
         const card = document.getElementById(`card-${type}`); if (!card) return;
         const loadingSpinner = card.querySelector('.card-loading'); const refreshBtn = card.querySelector('.card-refresh-btn');
         loadingSpinner.style.display = 'inline'; refreshBtn.style.display = 'none';
         try {
-            // v2.4: '내 위치'로 설정된 경우 startPointFromMyLocation 사용
             const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
                                 ? startPointFromMyLocation 
                                 : (await searchPlace(navElements.startInput.value))[0];
@@ -635,7 +608,7 @@
     }
     
     /**
-     * v2.4: 메인 코스 생성 함수 (v2.3와 동일)
+     * v2.5: 메인 코스 생성 함수 (v2.4와 동일)
      */
     async function generateCourses() {
         if (!navElements.startInput.value || !navElements.targetDistanceInput.value) { alert('출발지와 목표 거리를 모두 입력해주세요!'); return; }
@@ -644,7 +617,6 @@
         allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
         routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
         try {
-            // v2.4: '내 위치'로 설정된 경우 startPointFromMyLocation 사용
             const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
                                 ? startPointFromMyLocation 
                                 : (await searchPlace(navElements.startInput.value))[0];
@@ -705,12 +677,12 @@
             const movePromises = data.moves.slice(0, 10).map(async (m) => {
                 try {
                     const moveRes = await fetch(m.move.url);
-                    if (!moveRes.ok) return { name: m.move.name, power: 40 }; // 실패 시 기본 기술
+                    if (!moveRes.ok) return { name: m.move.name, power: 40 };
                     const moveData = await moveRes.json();
                     const kMoveName = moveData.names.find(n => n.language.name === 'ko');
-                    return { name: kMoveName ? kMoveName.name : m.move.name, power: moveData.power || 40 }; // power가 null이면 40
+                    return { name: kMoveName ? kMoveName.name : m.move.name, power: moveData.power || 40 };
                 } catch (e) {
-                    return { name: m.move.name, power: 40 }; // 개별 실패 시
+                    return { name: m.move.name, power: 40 };
                 }
             });
             const moves = await Promise.all(movePromises);
@@ -760,7 +732,7 @@
                 const pokemonData = await fetchPokemonData(Math.floor(Math.random() * 151) + 1); 
                 if (pokemonData) { 
                     const angle = Math.random() * 2 * Math.PI; 
-                    const radius = Math.random() * 0.0004; // 약 40m 반경
+                    const radius = Math.random() * 0.0004;
                     const lat = userLocation.getLat() + radius * Math.cos(angle); 
                     const lng = userLocation.getLng() + radius * Math.sin(angle); 
                     spawnPokemon(pokemonData, lat, lng); 
@@ -768,7 +740,7 @@
             } 
         } 
         const remainingCount = pokemonToSpawn - (userLocation ? 3 : 0); 
-        const metroAreaBounds = { minLat: 37.0, maxLat: 37.9, minLng: 126.3, maxLng: 127.8 }; // 수도권
+        const metroAreaBounds = { minLat: 37.0, maxLat: 37.9, minLng: 126.3, maxLng: 127.8 };
         for (let i = 0; i < remainingCount; i++) { 
             promises.push(fetchPokemonData(Math.floor(Math.random() * 151) + 1)); 
         } 
@@ -893,13 +865,13 @@
         if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
     };
     
-    // 캐릭터 이미지 (v2.3와 동일)
+    // 캐릭터 이미지 (v2.4와 동일)
     const characterImages = { 
         male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
         female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } 
     };
     
-    // '내 정보' 모달 업데이트 (v2.3와 동일)
+    // '내 정보' 모달 업데이트 (v2.4와 동일)
     function updateAllInfo() {
         const gender = document.getElementById('gender').value, 
               age = parseFloat(document.getElementById('age').value), 
