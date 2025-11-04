@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v3.3)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v3.4)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
     html, body {
@@ -108,7 +108,7 @@
     #weight-loss-result { color: #0EA5E9; margin-left: 5px; } /* v2.6: 색상 변경 (Light Blue) */
     
     /* v2.6: 모든 버튼 공통 스타일 (활기차게) */
-    #searchBtn, #openModalBtn, #myLocationBtn {
+    #searchBtn, #openModalBtn, #myLocationBtn, .general-btn {
         padding: 12px 20px;
         color: white;
         border: none;
@@ -120,7 +120,7 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    #searchBtn:hover, #openModalBtn:hover, #myLocationBtn:hover:not(:disabled) {
+    #searchBtn:hover, #openModalBtn:hover, #myLocationBtn:hover:not(:disabled), .general-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
@@ -145,6 +145,11 @@
         transform: none;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+    /* v3.4: '나' 페이지 버튼들 */
+    #page-me .general-btn { width: 100%; margin-bottom: 10px; }
+    #btnShowPokedex { background-color: #3B4CCA; } /* 포켓몬 */
+    #btnCheckAttendance { background-color: #10B981; } /* 출석 */
+    #btnCheckAttendance:disabled { background-color: #aaa; }
 
     #result-area { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; text-align: left; }
     
@@ -157,6 +162,8 @@
         background-color: #FFFFFF; /* 삭막한 회색 -> 흰색 */
         flex-grow: 1; cursor: pointer; 
         transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        /* v3.4: 카드 저장 버튼을 위한 position */
+        position: relative;
     }
     .route-card:hover { 
         transform: translateY(-4px);
@@ -189,6 +196,29 @@
     .card-refresh-btn:hover { background-color: #e9e9e9; }
     .card-refresh-btn.hidden { display: none; }
     .card-loading { display: none; }
+    
+    /* v3.4: 코스 저장 버튼 */
+    .card-save-btn {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        background: #64748B;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 1.2em;
+        line-height: 40px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+    .card-save-btn:hover {
+        transform: scale(1.1);
+    }
+
     .suggestions-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white; border: 1px solid #ddd; z-index: 1001; max-height: 220px; overflow-y: auto; border-radius: 0 0 8px 8px; }
     .suggestion-item { padding: 12px 15px; cursor: pointer; }
     .suggestion-item:hover { background-color: #f5f5f5; }
@@ -197,7 +227,7 @@
     /* 포켓몬 및 모달 CSS (생략 없음) */
     #pokemonPanel button { padding: 10px 15px; border: none; border-radius: 8px; color: white; font-weight: 500; cursor: pointer; transition: transform 0.2s ease; }
     #pokemonPanel button:hover { transform: translateY(-2px); }
-    #btnShowPokedex { background-color: #3B4CCA; }
+    /* #btnShowPokedex { background-color: #3B4CCA; } */ /* v3.4: '나' 페이지로 이동 */
     #btnRegenerate { background-color: #FFDE00; color: #333; }
     .pokemon-marker { display:flex; align-items:center; justify-content:center; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.8); backdrop-filter: blur(2px); border: 2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); cursor:pointer; }
     .pokemon-marker img { width:44px; height:44px; image-rendering:pixelated; transform: scale(1.5); }
@@ -255,7 +285,7 @@
     .moves-grid button { padding: 15px; font-size: 1em; background-color: #f8f9fa; border: 2px solid #333; border-radius: 8px; cursor: pointer; }
     .moves-grid button:disabled { background-color: #ccc; cursor: not-allowed; }
     
-    /* ========== v3.3: 탭 UI 스타일 ========== */
+    /* ========== v3.4: 탭 UI 스타일 ========== */
     .page-content {
         width: 100%;
     }
@@ -274,7 +304,7 @@
         box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
     }
     .nav-btn {
-        flex: 1; /* 1:1 비율 */
+        flex: 1; /* 1:1 비율 (v3.4: 4개 탭) */
         display: flex;
         flex-direction: column; /* 아이콘/텍스트 세로 정렬 */
         justify-content: center;
@@ -300,33 +330,134 @@
         color: #3B82F6; 
     }
 
-    /* v3.3: '기타' 페이지 리스트 스타일 */
-    .etc-list {
+    /* v3.4: '기록' (History) 페이지 스타일 */
+    .history-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .history-card img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #eee;
+    }
+    .history-card-content {
+        padding: 20px;
+    }
+    .history-card-content h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.2em;
+    }
+    .history-card-content p {
+        margin: 5px 0;
+        font-size: 0.95em;
+        color: #555;
+    }
+    .history-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 0.8em;
+        font-weight: bold;
+        color: white;
+    }
+    .history-badge.optimal { background-color: #3B82F6; }
+    .history-badge.round-trip { background-color: #0EA5E9; }
+    .history-badge.scenic { background-color: #10B981; }
+
+    /* v3.4: '그룹' 페이지 스타일 */
+    .group-list {
         list-style: none;
         padding: 0;
         margin: 0;
     }
-    .etc-list-item {
-        padding: 20px 15px;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: 1.1em;
-        font-weight: 500;
-        color: #333;
-        cursor: pointer;
+    .group-list-item {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
     }
-    .etc-list-item:hover {
-        background-color: #f9f9f9;
+    .group-list-item:last-child { border-bottom: none; }
+    .group-list-item img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 15px;
+        object-fit: cover;
+        background-color: #eee;
     }
-    .etc-list-item .arrow {
-        font-size: 1em;
-        color: #aaa;
+    .group-list-item .info {
+        flex-grow: 1;
+    }
+    .group-list-item .info strong {
+        font-size: 1.1em;
+        color: #333;
+    }
+    .group-list-item .info span {
+        font-size: 0.9em;
+        color: #777;
+    }
+    .group-list-item .rank {
+        font-size: 1.2em;
         font-weight: bold;
+        color: #555;
     }
-    .etc-list-item:last-child {
-        border-bottom: none;
+
+    /* v3.4: '나' 페이지 스타일 */
+    .my-page-stats {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    .stat-box {
+        flex: 1;
+        background: #F7FAFC;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+    }
+    .stat-box .label {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 8px;
+    }
+    .stat-box .value {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: #3B82F6;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        margin-bottom: 20px;
+    }
+    .calendar-day {
+        width: 100%;
+        padding-bottom: 100%; /* 정사각형 비율 */
+        position: relative;
+        background: #f0f0f0;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 0.8em;
+        font-weight: 500;
+        color: #aaa;
+    }
+    .calendar-day span {
+        position: absolute;
+    }
+    .calendar-day.checked {
+        background: #10B981;
+        color: white;
+        font-weight: bold;
     }
 </style>
 </head>
@@ -346,13 +477,12 @@
             </div>
 
             <div id="navPanel" class="info-panel">
-                <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v3.3</span></h2>
+                <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v3.4</span></h2>
                 <div class="input-group">
                     <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
                     <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
                     <div class="input-wrapper target"><span class="icon">👟</span><input type="number" id="targetDistance" placeholder="목표 거리"><span class="unit">km</span></div>
                     <span id="calculated-calories">약 0 kcal</span><span id="weight-loss-result">(약 0.00kg 감량)</span>
-                    <button id="openModalBtn">내 정보</button>
                     <button id="searchBtn">코스 생성</button>
                 </div>
                 <div id="result-area"><p>장소와 목표 거리를 입력하고 맞춤형 코스를 추천받으세요.</p></div>
@@ -361,21 +491,59 @@
             <div id="pokemonPanel" class="info-panel" style="display: none;">
                 <h2><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" style="vertical-align: middle; height: 30px;"> 포켓몬 월드</h2>
                 <p>지도에 나타난 포켓몬을 클릭해서 잡아보세요! (내 위치 50m 반경)</p>
-                <div class="input-group"><button id="btnShowPokedex">내 포켓몬 도감 열기</button><button id="btnRegenerate">포켓몬 위치 재배치</button></div>
+                <div class="input-group"><button id="btnRegenerate">포켓몬 위치 재배치</button></div>
             </div>
         </div>
     </div>
 
-    <div id="page-etc" class="page-content" style="display: none;">
+    <div id="page-history" class="page-content" style="display: none;">
         <div class="main-container">
             <div class="info-panel">
-                <h2><span class="icon-gradient">📋</span>기타</h2>
-                <ul class="etc-list">
-                    <li class="etc-list-item"><span>공지사항</span> <span class="arrow">&gt;</span></li>
-                    <li class="etc-list-item"><span>이벤트</span> <span class="arrow">&gt;</span></li>
-                    <li class="etc-list-item"><span>고객센터</span> <span class="arrow">&gt;</span></li>
-                    <li class="etc-list-item"><span>설정</span> <span class="arrow">&gt;</span></li>
-                </ul>
+                <h2><span class="icon-gradient">📚</span>나의 걷기 기록</h2>
+                <div id="page-history-content">
+                    <p>아직 저장된 기록이 없습니다. 홈에서 코스를 검색하고 [💾 저장] 버튼을 눌러보세요.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-group" class="page-content" style="display: none;">
+        <div class="main-container">
+            <div class="info-panel">
+                <h2><span class="icon-gradient">👥</span>그룹 랭킹</h2>
+                <div id="page-group-content">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-me" class="page-content" style="display: none;">
+        <div class="main-container">
+            <div class="info-panel">
+                <h2><span class="icon-gradient">👤</span>마이 페이지</h2>
+                
+                <div class="my-page-stats">
+                    <div class="stat-box">
+                        <div class="label">총 걸은 거리</div>
+                        <div class="value" id="total-walked-dist">0 km</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">총 출석일</div>
+                        <div class="value" id="total-attendance-days">0 일</div>
+                    </div>
+                </div>
+
+                <div id="page-me-content-attendance">
+                    <h3>출석 스탬프</h3>
+                    <div id="calendar-grid" class="calendar-grid">
+                        </div>
+                    <button id="btnCheckAttendance" class="general-btn">오늘 출석체크</button>
+                </div>
+                
+                <div id="page-me-content-buttons" style="margin-top: 20px;">
+                    <button id="openModalBtn" class="general-btn">내 신체정보 관리</button>
+                    <button id="btnShowPokedex" class="general-btn">내 포켓몬 도감 열기</button>
+                </div>
             </div>
         </div>
     </div>
@@ -383,7 +551,9 @@
 
 <div id="bottom-nav">
     <button id="nav-btn-home" class="nav-btn active"><span>🏠</span><br>홈</button>
-    <button id="nav-btn-etc" class="nav-btn"><span>📋</span><br>기타</button>
+    <button id="nav-btn-history" class="nav-btn"><span>📚</span><br>기록</button>
+    <button id="nav-btn-group" class="nav-btn"><span>👥</span><br>그룹</button>
+    <button id="nav-btn-me" class="nav-btn"><span>👤</span><br>나</button>
 </div>
 
 
@@ -442,10 +612,13 @@
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v3.3) 전체 스크립트 (v3.2 로직 + 탭 UI) ========== */
+    /* ========== (v3.4) 전체 스크립트 (4-Tab, History, Group, My Page) ========== */
 
     /* ========== 공통 & 전역 변수 ========== */
+    // v3.4: 카카오 API 키 (지도 SDK용, 스태틱맵용)
+    const KAKAO_JS_KEY = 'c96c999113980d67c697b2f5a3d385f1';
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
+    
     let map, ps; 
     let currentMode = 'navigation'; 
     let navMapObjects = [], pokemonMarkers = {}, capturedPokemons = [];
@@ -456,6 +629,20 @@
 
     let allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
     let routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
+
+    // v3.4: 신규 전역 변수 (기록, 그룹, 나)
+    let courseHistory = []; // [요청 4] 기록 저장을 위한 배열
+    let attendanceLog = new Set(); // [요청 6] 출석 기록 (중복 방지)
+    let fakeGroup = [ // [요청 5] 가상 그룹원
+        { rank: 1, name: '열정적인 러너', dist: '22.5km', img: 'https://i.pravatar.cc/150?img=11' },
+        { rank: 2, name: '산책왕', dist: '19.2km', img: 'https://i.pravatar.cc/150?img=12' },
+        { rank: 3, name: '동네 한바퀴', dist: '18.8km', img: 'https://i.pravatar.cc/150?img=13' },
+        { rank: 4, name: '나 (You)', dist: '0.0km', img: 'https://i.pravatar.cc/150?img=1' },
+        { rank: 5, name: '새내기 워커', dist: '12.1km', img: 'https://i.pravatar.cc/150?img=14' },
+        { rank: 6, name: '주말 등산가', dist: '10.5km', img: 'https://i.pravatar.cc/150?img=15' },
+        { rank: 7, name: '밤 마실', dist: '8.3km', img: 'https://i.pravatar.cc/150?img=16' },
+        { rank: 8, name: '거북이', dist: '2.1km', img: 'https://i.pravatar.cc/150?img=17' }
+    ];
 
     // DOM Elements
     const modeToggleBtn = document.getElementById('modeToggleBtn');
@@ -586,11 +773,22 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        // v3.4: KAKAO_JS_KEY 변수 사용
         if (typeof kakao !== "undefined" && kakao.maps) {
             kakao.maps.load(initApp);
         } else {
             document.getElementById('map-notice').innerHTML = '카카오맵 API 로딩 실패. 네트워크나 API 키를 확인해주세요.';
         }
+        
+        // v3.4: 탭 전환 이벤트 리스너
+        setupTabNavigation();
+        // v3.4: '나' 페이지 버튼 이벤트 리스너 (페이지 이동으로 인해 DOMContentLoaded에서 설정)
+        document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
+        document.getElementById('btnShowPokedex').onclick = () => { 
+            renderPokedex(); 
+            document.getElementById('pokedexModal').style.display = 'flex'; 
+        };
+        document.getElementById('btnCheckAttendance').onclick = checkAttendance;
     });
 
     /* ========== 모드 전환 로직 (생략 없음) ========== */
@@ -610,7 +808,7 @@
     }
     modeToggleBtn.addEventListener('click', toggleMode);
 
-    /* ========== 내비게이션 관련 함수들 (v3.2 로직) ========== */
+    /* ========== 내비게이션 관련 함수들 (v3.4 수정) ========== */
     
     /**
      * v2.6: 장소 검색 (v3.1과 동일)
@@ -635,6 +833,7 @@
         url.searchParams.append("destination", `${destination.x},${destination.y}`); 
         if (rest_waypoints) url.searchParams.append("waypoints", rest_waypoints); 
         try { 
+            // v3.4: REST_API_KEY 변수 사용
             const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } }); 
             if(!response.ok) throw new Error(`HTTP error! status: ${response.status}`); 
             const data = await response.json(); 
@@ -720,7 +919,7 @@
     }
     
     /**
-     * v2.6: 코스 정보 카드 생성 (v3.1과 동일)
+     * v3.4: 코스 정보 카드 생성 (저장 버튼 추가)
      */
     function displayRouteInfo(route, type) {
         const weight = parseFloat(document.getElementById('weight').value) || 60;
@@ -734,14 +933,28 @@
         if (type === 'scenic' && route.waypoints && route.waypoints.length > 0) { 
             title += ` (${route.waypoints[0].place_name} 경유)`; 
         }
-        card.innerHTML = `<div class="card-header"><h3>${title}</h3><span class="card-loading">...</span><button class="card-refresh-btn ${type === 'optimal' ? 'hidden' : ''}">🔄</button></div><p><strong>거리:</strong> ${(route.total_distance / 1000).toFixed(2)} km</p><p><strong>예상 시간:</strong> ${Math.round(route.total_duration / 60)} 분</p><p><strong>소모 칼로리:</strong> 약 ${kcal} kcal</p>`;
-        card.addEventListener('click', () => drawSingleRoute(type));
+        // v3.4: [요청 4] 저장 버튼 추가. onclick 이벤트로 saveCourseToHistory 함수 호출
+        card.innerHTML = `<div class="card-header">
+                            <h3>${title}</h3>
+                            <span class="card-loading">...</span>
+                            <button class="card-refresh-btn ${type === 'optimal' ? 'hidden' : ''}">🔄</button>
+                          </div>
+                          <p><strong>거리:</strong> ${(route.total_distance / 1000).toFixed(2)} km</p>
+                          <p><strong>예상 시간:</strong> ${Math.round(route.total_duration / 60)} 분</p>
+                          <p><strong>소모 칼로리:</strong> 약 ${kcal} kcal</p>
+                          <button class="card-save-btn" onclick="saveCourseToHistory('${type}')" title="이 코스 기록에 저장">💾</button>`;
+        
+        card.addEventListener('click', (e) => {
+            // v3.4: 저장 버튼 클릭 시에는 지도 다시 그리지 않도록 함
+            if (e.target.classList.contains('card-save-btn')) return;
+            drawSingleRoute(type);
+        });
         card.querySelector('.card-refresh-btn').addEventListener('click', async (e) => { e.stopPropagation(); await regenerateSpecificCourse(type); });
         return card;
     }
     
     /**
-     * v3.2: '왕복 코스' 생성 로직 (거리 근사치 ±20% 적용)
+     * v3.4: '왕복 코스' 생성 로직 (±500m 오차범위 우선)
      */
     async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
         
@@ -773,8 +986,8 @@
                 
                 const diff = Math.abs(route.total_distance - targetDistanceMeters);
 
-                // v3.2: [오류 수정] ±20% (0.2) 이내면 즉시 반환
-                if (diff <= targetDistanceMeters * 0.2) {
+                // v3.4: [요청 1] ±500m 이내면 즉시 반환
+                if (diff <= 500) {
                     return route; // 가장 좋은 코스 찾음!
                 }
 
@@ -788,12 +1001,12 @@
             }
         }
         
-        // v3.2: 20% 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
+        // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
         return bestRoute; 
     }
     
     /**
-     * v3.2: '근처 산책로' 추천 로직 (거리 근사치 ±20% 적용)
+     * v3.4: '근처 산책로' 추천 로직 (±500m 오차범위 우선)
      */
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
         const trailKeywords = ['공원', '산책로', '수목원', '호수공원', '강'];
@@ -827,8 +1040,8 @@
 
                 const diff = Math.abs(route.total_distance - targetDistanceMeters);
 
-                // v3.2: [오류 수정] ±20% (0.2) 이내면 즉시 반환
-                if (diff <= targetDistanceMeters * 0.2) {
+                // v3.4: [요청 1] ±500m 이내면 즉시 반환
+                if (diff <= 500) {
                     return route; // 가장 좋은 코스 찾음!
                 }
                 
@@ -842,7 +1055,7 @@
             }
         }
         
-        // v3.2: 20% 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
+        // v3.2: 500m 이내 코스를 못찾았으면, 백업 코스(bestRoute)라도 반환
         return bestRoute;
     }
     
@@ -1106,10 +1319,7 @@
             startBattle(playerIndex); 
         }));
     }
-    document.getElementById('btnShowPokedex').onclick = () => { 
-        renderPokedex(); 
-        document.getElementById('pokedexModal').style.display = 'flex'; 
-    };
+    // v3.4: '도감' 버튼 리스너는 DOMContentLoaded로 이동
 
     const battleModal = document.getElementById('battleModal');
     function startBattle(playerIndex) {
@@ -1182,7 +1392,7 @@
     battleModal.querySelector('.close-button').addEventListener('click', () => battleModal.style.display = 'none');
 
     /* ========== 기타 모달 및 이벤트 핸들러 (생략 없음) ========== */
-    document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
+    // v3.4: '내 정보' 버튼 리스너는 DOMContentLoaded로 이동
     window.onclick = (event) => { 
         if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
     };
@@ -1236,36 +1446,275 @@
     document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
 
     
-    /* ========== (v3.3) 탭 네비게이션 로직 ========== */
-        
-    // v3.3: 탭/페이지 DOM 요소
-    const pageHome = document.getElementById('page-home');
-    const pageEtc = document.getElementById('page-etc');
-    const navBtnHome = document.getElementById('nav-btn-home');
-    const navBtnEtc = document.getElementById('nav-btn-etc');
-
-    // v3.3: '홈' 버튼 클릭
-    navBtnHome.addEventListener('click', () => {
-        pageHome.style.display = 'block';
-        pageEtc.style.display = 'none';
-        navBtnHome.classList.add('active');
-        navBtnEtc.classList.remove('active');
-    });
-
-    // v3.3: '기타' 버튼 클릭
-    navBtnEtc.addEventListener('click', () => {
-        pageHome.style.display = 'none';
-        pageEtc.style.display = 'block';
-        navBtnHome.classList.remove('active');
-        navBtnEtc.classList.add('active');
-    });
+    /* ========== (v3.4) [요청 2] 탭 네비게이션 로직 ========== */
     
-    // v3.3: '기타' 메뉴 클릭 시 (임시 알림)
-    document.querySelectorAll('.etc-list-item').forEach(item => {
-        item.addEventListener('click', () => {
-            alert(`'${item.querySelector('span').textContent}' 메뉴는 현재 준비 중입니다.`);
+    // v3.4: 탭/페이지 DOM 요소
+    const pages = {
+        home: document.getElementById('page-home'),
+        history: document.getElementById('page-history'),
+        group: document.getElementById('page-group'),
+        me: document.getElementById('page-me')
+    };
+    const navButtons = {
+        home: document.getElementById('nav-btn-home'),
+        history: document.getElementById('nav-btn-history'),
+        group: document.getElementById('nav-btn-group'),
+        me: document.getElementById('nav-btn-me')
+    };
+
+    // v3.4: 탭 전환을 처리하는 공통 함수
+    function showPage(pageId) {
+        // 모든 페이지 숨기기
+        Object.values(pages).forEach(page => page.style.display = 'none');
+        // 모든 버튼 비활성화
+        Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+        
+        // 요청된 페이지만 보이기
+        pages[pageId].style.display = 'block';
+        // 요청된 버튼만 활성화
+        navButtons[pageId].classList.add('active');
+        
+        // v3.4: 각 페이지가 보일 때 컨텐츠 새로고침
+        if (pageId === 'history') renderHistoryPage();
+        if (pageId === 'group') renderGroupPage();
+        if (pageId === 'me') renderMyPage();
+    }
+    
+    // v3.4: 탭 버튼 이벤트 리스너 설정
+    function setupTabNavigation() {
+        navButtons.home.addEventListener('click', () => showPage('home'));
+        navButtons.history.addEventListener('click', () => showPage('history'));
+        navButtons.group.addEventListener('click', () => showPage('group'));
+        navButtons.me.addEventListener('click', () => showPage('me'));
+    }
+
+    /* ========== (v3.4) [요청 4] '기록' 페이지 로직 ========== */
+
+    // v3.4: [요청 4] 카카오 스태틱맵 URL 생성
+    function getStaticMapUrl(route) {
+        try {
+            // 경로에서 좌표 추출
+            const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes);
+            const polyline = [];
+            // URL 길이 제한을 피하기 위해 좌표 10개(5쌍)마다 1개씩 샘플링
+            for (let i = 0; i < path.length; i += (2 * 5)) { 
+                polyline.push(`${path[i]},${path[i+1]}`); // (경도, 위도)
+            }
+            const polylineStr = polyline.join('|');
+            
+            // 시작점(중심점)
+            const center = `${route.summary.origin.x},${route.summary.origin.y}`;
+            
+            // v3.4: JS SDK 키(KAKAO_JS_KEY)를 사용
+            return `https://apis.map.kakao.com/v2/staticmap?appkey=${KAKAO_JS_KEY}&center=${center}&level=8&polyline=${polylineStr}&size=400x200`;
+        } catch (e) {
+            console.error("Static map URL 생성 실패:", e);
+            return ""; // 실패 시 빈 URL
+        }
+    }
+
+    // v3.4: [요청 4] 코스를 '기록'에 저장
+    function saveCourseToHistory(type) {
+        const route = allGeneratedRoutes[type];
+        if (!route) {
+            alert("저장할 코스 정보가 없습니다.");
+            return;
+        }
+
+        const staticMapUrl = getStaticMapUrl(route);
+        const startName = navElements.startInput.value || "출발지";
+        const endName = navElements.endInput.value || "목적지";
+        
+        courseHistory.push({
+            type: type,
+            title: `${startName} → ${endName}`,
+            distance: route.total_distance,
+            duration: route.total_duration,
+            staticMapUrl: staticMapUrl,
+            savedDate: new Date()
         });
-    });
+
+        alert("코스가 '기록' 탭에 저장되었습니다!");
+        renderHistoryPage(); // v3.4: 저장 후 즉시 기록 페이지 새로고침 (데이터 반영)
+    }
+
+    // v3.4: [요청 4] '기록' 탭 페이지 렌더링
+    function renderHistoryPage() {
+        const container = document.getElementById('page-history-content');
+        if (courseHistory.length === 0) {
+            container.innerHTML = '<p>아직 저장된 기록이 없습니다. 홈에서 코스를 검색하고 [💾 저장] 버튼을 눌러보세요.</p>';
+            return;
+        }
+        
+        container.innerHTML = ''; // 기존 목록 초기화
+        // 최신순으로 정렬
+        courseHistory.slice().reverse().forEach(course => {
+            const dateStr = course.savedDate.toLocaleString('ko-KR');
+            const typeInfo = {
+                optimal: { name: '최적 경로', class: 'optimal' },
+                'round-trip': { name: '왕복 코스', class: 'round-trip' },
+                scenic: { name: '근처 산책로', class: 'scenic' }
+            };
+            
+            const cardHTML = `
+                <div class="history-card">
+                    <img src="${course.staticMapUrl}" alt="코스 지도">
+                    <div class="history-card-content">
+                        <h3>${course.title}</h3>
+                        <p><span class="history-badge ${typeInfo[course.type].class}">${typeInfo[course.type].name}</span></p>
+                        <p><strong>거리:</strong> ${(course.distance / 1000).toFixed(2)} km</p>
+                        <p><strong>시간:</strong> ${Math.round(course.duration / 60)} 분</p>
+                        <p><small>저장일: ${dateStr}</small></p>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += cardHTML;
+        });
+    }
+
+    /* ========== (v3.4) [요청 5] '그룹' 페이지 로직 ========== */
+
+    // v3.4: [요청 5] '그룹' 탭 페이지 렌더링
+    function renderGroupPage() {
+        const container = document.getElementById('page-group-content');
+        container.innerHTML = ''; // 초기화
+        
+        // v3.4: 내 순위 업데이트
+        const myTotalDist = (courseHistory.reduce((acc, c) => acc + c.total_distance, 0) / 1000).toFixed(1);
+        const myRankItem = fakeGroup.find(m => m.name === '나 (You)');
+        if (myRankItem) myRankItem.dist = `${myTotalDist}km`;
+        
+        // v3.4: 거리(dist) 기준으로 정렬
+        fakeGroup.sort((a, b) => parseFloat(b.dist) - parseFloat(a.dist));
+        
+        const list = document.createElement('ul');
+        list.className = 'group-list';
+        
+        fakeGroup.forEach((member, index) => {
+            const item = document.createElement('li');
+            item.className = 'group-list-item';
+            item.innerHTML = `
+                <span class="rank">${index + 1}</span>
+                <img src="${member.img}" alt="프로필">
+                <div class="info">
+                    <strong>${member.name}</strong><br>
+                    <span>이번 주 ${member.dist}</span>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+        container.appendChild(list);
+    }
+    
+    /* ========== (v3.4) [요청 6] '나' 페이지 로직 ========== */
+
+    // v3.4: [요청 6] '나' 탭 페이지 렌더링 (통계, 달력)
+    function renderMyPage() {
+        // 총 걸은 거리
+        const totalDist = (courseHistory.reduce((acc, c) => acc + c.total_distance, 0) / 1000).toFixed(1);
+        document.getElementById('total-walked-dist').textContent = `${totalDist} km`;
+        
+        // 총 출석일
+        document.getElementById('total-attendance-days').textContent = `${attendanceLog.size} 일`;
+        
+        // 출석 스탬프 달력
+        const calendarGrid = document.getElementById('calendar-grid');
+        calendarGrid.innerHTML = '';
+        const today = new Date();
+        const todayStr = today.toDateString();
+        const todayDate = today.getDate();
+        
+        // 오늘 날짜가 며칠인지 확인 (예: 5일)
+        // v3.4: 30일 달력 생성
+        for (let i = 1; i <= 30; i++) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day';
+            day.innerHTML = `<span>${i}</span>`;
+            
+            // v3.4: 가상의 날짜 문자열 생성 (정확하진 않지만 데모용)
+            // 오늘이 5일이고, i가 5면 -> 오늘
+            // 오늘이 5일이고, i가 4면 -> 어제
+            const dateOffset = i - todayDate;
+            const pseudoDate = new Date();
+            pseudoDate.setDate(today.getDate() + dateOffset);
+            
+            if (attendanceLog.has(pseudoDate.toDateString())) {
+                day.classList.add('checked');
+            }
+            calendarGrid.appendChild(day);
+        }
+        
+        // 오늘 이미 출석했으면 버튼 비활성화
+        const checkinBtn = document.getElementById('btnCheckAttendance');
+        if (attendanceLog.has(todayStr)) {
+            checkinBtn.disabled = true;
+            checkinBtn.textContent = '오늘 출석 완료';
+        } else {
+            checkinBtn.disabled = false;
+            checkinBtn.textContent = '오늘 출석체크';
+        }
+    }
+    
+    // v3.4: [요청 6] 출석체크 버튼 클릭
+    function checkAttendance() {
+        const todayStr = new Date().toDateString();
+        if (!attendanceLog.has(todayStr)) {
+            attendanceLog.add(todayStr);
+            alert('출석체크 완료! 🥳');
+            renderMyPage(); // '나' 페이지 새로고침
+        }
+    }
+    
+    /* ========== 기타 모달 및 이벤트 핸들러 (v3.2 로직) ========== */
+    // v3.4: '내 정보' 버튼 리스너는 DOMContentLoaded로 이동
+    
+    const characterImages = { 
+        male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
+        female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } 
+    };
+    
+    function updateAllInfo() {
+        const gender = document.getElementById('gender').value, 
+              age = parseFloat(document.getElementById('age').value), 
+              height = parseFloat(document.getElementById('height').value), 
+              weight = parseFloat(document.getElementById('weight').value), 
+              goalWeight = parseFloat(document.getElementById('goalWeight').value);
+        
+        if (!age || !height || !weight) { 
+            alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다."); 
+            return; 
+        }
+        
+        document.getElementById('calculated-calories').textContent = `약 ${Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight)} kcal`;
+        document.getElementById('weight-loss-result').textContent = `(약 ${(Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight) / 7700).toFixed(2)}kg 감량)`;
+        
+        const bmi = weight / ((height / 100) ** 2); 
+        document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
+        
+        const bmr = (gender === 'male') ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+        document.getElementById('bmr-result').textContent = `기초대사량(BMR): ${bmr.toFixed(0)} kcal`;
+        
+        let bodyType; 
+        if (bmi < 18.5) bodyType = 'lean'; 
+        else if (bmi < 23) bodyType = 'average'; 
+        else if (bmi < 25) bodyType = 'overweight'; 
+        else bodyType = 'obese';
+        
+        document.getElementById('characterImage').src = characterImages[gender][bodyType]; 
+        document.getElementById('character-display').style.display = 'flex';
+        
+        if (goalWeight) {
+            const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), 
+                  achieved = Math.max(0, startWeight - weight), 
+                  totalToGo = Math.max(0, startWeight - goalWeight);
+            let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; 
+            if (weight <= goalWeight) achievedPercent = 100;
+            
+            document.getElementById('bar-achieved').style.width = `${achievedPercent}%`;
+            document.getElementById('progress-text').textContent = `목표까지 ${Math.max(0, weight - goalWeight).toFixed(1)}kg 남음!`;
+        }
+    }
+    document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
 
 </script>
 </body>
