@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v2.2)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v2.3)</title>
 <style>
-    /* ... (v2.1과 동일한 CSS) ... */
+    /* v2.3: 스타일은 v2.2(v2.1)와 동일합니다 */
     html, body {
         width: 100%; height: 100%; margin: 0; padding: 0;
         font-family: 'Malgun Gothic', dotum, '돋움', sans-serif; background-color: #f0f0f0;
@@ -55,11 +55,60 @@
     .suggestion-item:hover { background-color: #f5f5f5; }
     .version-tag { display: inline-block; font-size: 0.6em; font-weight: bold; color: #fff; background-color: #6c757d; padding: 4px 8px; border-radius: 10px; vertical-align: middle; margin-left: 10px; }
     
-    /* (모달, 포켓몬 등 나머지 CSS v2.1과 동일) */
+    /* 포켓몬 및 모달 CSS (생략 없음) */
+    #pokemonPanel button { padding: 10px 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
+    #btnShowPokedex { background-color: #3B4CCA; }
+    #btnRegenerate { background-color: #FFDE00; color: #333; }
+    .pokemon-marker { display:flex; align-items:center; justify-content:center; width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.8); backdrop-filter: blur(2px); border: 2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); cursor:pointer; }
+    .pokemon-marker img { width:44px; height:44px; image-rendering:pixelated; transform: scale(1.5); }
     .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
     .modal-content { position: relative; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 90%; text-align: center; }
     .close-button { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; z-index: 10; }
-    /* ... (CSS의 나머지 부분은 v2.1과 동일) ... */
+    #dietInfoModal .modal-content { max-width: 480px; }
+    #dietInfoModal h2 { font-size: 1.8em; margin-bottom: 25px; color: #2c3e50; }
+    .modal-input-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .modal-input-group label { font-size: 1.1em; width: 24px; text-align: center; color: #555; }
+    .modal-input-group input, .modal-input-group select { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; background-color: #f9f9f9; }
+    .modal-input-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .modal-input-grid > .modal-input-group { flex-basis: calc(50% - 6px); flex-grow: 1; }
+    #saveInfoBtn { width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; margin-top: 10px; }
+    #saveInfoBtn:hover { background-color: #0056b3; }
+    #character-display { margin: 25px auto; width: 120px; height: 180px; display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+    #characterImage { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #goal-progress { margin-top: 20px; }
+    .progress-bar-container { width: 100%; background-color: #ddd; border-radius: 10px; height: 25px; overflow: hidden; display: flex; }
+    #bar-achieved, #bar-excess { height: 100%; transition: width 0.5s ease; }
+    #bar-achieved { background-color: #4caf50;} #bar-excess { background-color: #e61a5f; }
+    #progress-text, #result-display p { font-weight: bold; }
+    #result-display { margin-top: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px;}
+    #pokedexModal .modal-content { max-width: 500px; }
+    #pokedexList { max-height: 60vh; overflow-y: auto; text-align: left; }
+    .pokedex-item { display: flex; align-items: center; gap: 15px; padding: 10px; border-bottom: 1px solid #eee; }
+    .pokedex-item img { width: 60px; height: 60px; background: #f2f2f2; border-radius: 50%; }
+    .pokedex-item .info { flex-grow: 1; }
+    .pokedex-item button {
+        margin-left: 5px; padding: 5px 10px; font-size: 0.8em;
+        background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;
+    }
+    .pokedex-item button.battle-btn { background-color: #dc3545; }
+    
+    /* 배틀 모달 스타일 (생략 없음) */
+    #battleModal .modal-content { max-width: 600px; background: url('https://i.imgur.com/Gk2z2J8.png') no-repeat center center; background-size: cover; border: 5px solid #333; }
+    .battle-container { position: relative; height: 400px; }
+    .pokemon-display { position: absolute; }
+    .pokemon-display img { width: 120px; image-rendering: pixelated; transform: scale(1.5); }
+    #player-pokemon { bottom: 60px; left: 80px; }
+    #opponent-pokemon { top: 30px; right: 80px; }
+    .battle-info { position: absolute; background: rgba(255, 255, 255, 0.9); border: 3px solid #ccc; border-radius: 10px; padding: 10px; width: 200px; }
+    #player-info { bottom: 20px; right: 20px; }
+    #opponent-info { top: 20px; left: 20px; }
+    .hp-bar-container { width: 100%; height: 12px; background-color: #ddd; border-radius: 6px; overflow: hidden; border: 1px solid #aaa; }
+    .hp-bar { height: 100%; background-color: #4caf50; transition: width 0.5s ease; }
+    .battle-controls { margin-top: 10px; background: #333; padding: 15px; border-radius: 0 0 10px 10px; }
+    .battle-log { height: 60px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-family: 'Courier New', Courier, monospace; overflow-y: auto; text-align: left; }
+    .moves-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .moves-grid button { padding: 15px; font-size: 1em; background-color: #f8f9fa; border: 2px solid #333; border-radius: 8px; cursor: pointer; }
+    .moves-grid button:disabled { background-color: #ccc; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -75,8 +124,8 @@
     </div>
 
     <div id="navPanel" class="info-panel">
-        <!-- v2.2: 버전 업그레이드 -->
-        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v2.2</span></h2>
+        <!-- v2.3: 버전 업그레이드 -->
+        <h2>👟 맞춤형 걷기 코스 추천 <span class="version-tag">v2.3</span></h2>
         <div class="input-group">
             <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
             <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
@@ -87,25 +136,73 @@
         <div id="result-area"><p>장소와 목표 거리를 입력하고 맞춤형 코스를 추천받으세요.</p></div>
     </div>
     
-    <!-- (포켓몬 패널, 모달 HTML은 v2.1과 동일) -->
+    <!-- 포켓몬 패널 HTML (생략 없음) -->
     <div id="pokemonPanel" class="info-panel" style="display: none;">
-        <!-- ... -->
+        <h2><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" style="vertical-align: middle; height: 30px;"> 포켓몬 월드</h2>
+        <p>지도에 나타난 포켓몬을 클릭해서 잡아보세요! (내 위치 50m 반경)</p>
+        <div class="input-group"><button id="btnShowPokedex">내 포켓몬 도감 열기</button><button id="btnRegenerate">포켓몬 위치 재배치</button></div>
     </div>
 </div>
+
+<!-- 모달 HTML (생략 없음) -->
 <div id="dietInfoModal" class="modal">
-    <!-- ... -->
+    <div class="modal-content">
+        <span class="close-button" onclick="this.parentElement.parentElement.style.display='none'">&times;</span>
+        <h2>내 정보 관리</h2>
+        <div class="modal-input-grid">
+            <div class="modal-input-group"><label for="gender">🚻</label><select id="gender"><option value="male">남성</option><option value="female">여성</option></select></div>
+            <div class="modal-input-group"><label for="age">🎂</label><input type="number" id="age" placeholder="나이 (세)"></div>
+            <div class="modal-input-group"><label for="height">📏</label><input type="number" id="height" placeholder="키 (cm)"></div>
+            <div class="modal-input-group"><label for="weight">⚖️</label><input type="number" id="weight" placeholder="현재 체중 (kg)"></div>
+        </div>
+        <div class="modal-input-group"><label for="fat">💪</label><input type="number" id="fat" placeholder="체지방률 (%) (선택)"></div>
+        <div class="modal-input-group"><label for="goalWeight">🎯</label><input type="number" id="goalWeight" placeholder="목표 체중 (kg)"></div>
+        <button id="saveInfoBtn">정보 확인 및 저장</button>
+        <div id="character-display" style="display:none;"><img id="characterImage" src="" alt="캐릭터"></div>
+        <div id="goal-progress">
+            <div class="progress-bar-container"><div id="bar-achieved"></div><div id="bar-excess"></div></div>
+            <div id="progress-text">목표를 설정해주세요.</div>
+        </div>
+        <div id="result-display"><p id="bmi-result">BMI: -</p><p id="bmr-result">기초대사량(BMR): -</p></div>
+    </div>
 </div>
 <div id="pokedexModal" class="modal">
-    <!-- ... -->
+    <div class="modal-content">
+        <span class="close-button" onclick="this.parentElement.parentElement.style.display='none'">&times;</span>
+        <h2>나의 포켓몬 도감</h2>
+        <div id="pokedexList"></div>
+    </div>
 </div>
 <div id="battleModal" class="modal">
-    <!-- ... -->
+    <div class="modal-content">
+        <span class="close-button" onclick="this.parentElement.parentElement.style.display='none'">&times;</span>
+        <div class="battle-container">
+            <div id="opponent-pokemon" class="pokemon-display"><img src="" alt="Opponent"></div>
+            <div id="opponent-info" class="battle-info">
+                <strong id="opponent-name"></strong>
+                <div class="hp-bar-container"><div id="opponent-hp-bar" class="hp-bar"></div></div>
+                <small id="opponent-hp-text"></small>
+            </div>
+            <div id="player-pokemon" class="pokemon-display"><img src="" alt="Player"></div>
+            <div id="player-info" class="battle-info">
+                <strong id="player-name"></strong>
+                <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar"></div></div>
+                <small id="player-hp-text"></small>
+            </div>
+        </div>
+        <div class="battle-controls">
+            <div id="battle-log" class="battle-log"></div>
+            <div id="moves-grid" class="moves-grid"></div>
+        </div>
+    </div>
 </div>
 
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== 공통 & 전역 변수 (v2.2) ========== */
+    /* ========== (v2.3) 전체 스크립트 (생략 없음) ========== */
+
+    /* ========== 공통 & 전역 변수 ========== */
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
     let map, ps; 
     let currentMode = 'navigation'; 
@@ -131,7 +228,7 @@
     };
 
     /**
-     * v2.2: 사용자 위치 정보 요청 (v2.1과 동일)
+     * v2.3: 사용자 위치 정보 요청 (v2.2와 동일)
      */
     function requestUserLocation(onSuccess, onError) {
         if (navigator.geolocation) {
@@ -157,7 +254,7 @@
     }
 
     /**
-     * v2.2: 페이지 로드 시 1회 실행되는, '내 위치' 정보 갱신 함수 (v2.1 수정)
+     * v2.3: '내 위치' 정보 갱신 함수 (v2.2와 동일)
      */
     function updateGlobalUserLocation(location) {
         userLocation = location; 
@@ -168,7 +265,6 @@
             userLocationCircle.setPosition(userLocation);
         }
         
-        // v2.2: 페이지 로드 시에는 지도만 이동, 버튼 클릭 시에는 입력창에도 반영
         map.setCenter(userLocation);
         map.setLevel(4, { animate: true });
 
@@ -180,8 +276,6 @@
                 userAddress = "주소 변환 실패";
             }
             
-            // v2.2: 만약 사용자가 주소 변환 중에 '내 위치'를 눌렀다면,
-            // '변환 중...' 텍스트를 실제 주소로 업데이트
             if (navElements.startInput.value === "내 위치 (변환 중...)") {
                  navElements.startInput.value = `내 위치 (${userAddress})`;
                  startPointFromMyLocation = { x: userLocation.getLng(), y: userLocation.getLat(), place_name: userAddress };
@@ -190,7 +284,7 @@
     }
 
     /**
-     * 지도 및 모든 기능을 초기화하는 함수 (v2.2 수정)
+     * v2.3: 지도 초기화 함수 (v2.2와 동일)
      */
     function initApp() {
         const mapContainer = document.getElementById('map');
@@ -199,24 +293,18 @@
         map = new kakao.maps.Map(mapContainer, mapOption);
         ps = new kakao.maps.services.Places();
         
-        // v2.2: '내 위치' 버튼 클릭 이벤트 (v2.1 수정)
         navElements.myLocationBtn.addEventListener('click', () => {
             if (userLocation) {
-                // v2.2: 위치가 있으면, 즉시 지도를 해당 위치로 이동
                 map.setCenter(userLocation);
                 map.setLevel(4, { animate: true });
 
                 if (userAddress) {
-                    // 주소 변환까지 완료된 최상의 경우
                     navElements.startInput.value = `내 위치 (${userAddress})`;
                     startPointFromMyLocation = { x: userLocation.getLng(), y: userLocation.getLat(), place_name: userAddress };
                 } else {
-                    // 위치는 있으나, 주소 변환이 아직 안 끝난 경우 (v2.2: 텍스트 수정)
                     navElements.startInput.value = "내 위치 (변환 중...)";
-                    // (updateGlobalUserLocation의 콜백이 이 텍스트를 나중에 덮어쓸 것입니다)
                 }
             } else {
-                // 페이지 로드 시 위치 정보를 아예 못/안 가져온 경우, 재시도
                 alert("위치 정보를 가져오는 중입니다. 잠시 후 다시 시도하거나 권한을 확인해주세요.");
                 requestUserLocation(updateGlobalUserLocation, (errorMsg) => {
                     alert(errorMsg);
@@ -227,7 +315,6 @@
         setupAutocomplete(navElements.startInput, navElements.startSuggestions);
         setupAutocomplete(navElements.endInput, navElements.endSuggestions);
 
-        // 페이지 로드 시, 위치/주소 정보 미리 받아오기
         requestUserLocation(
             updateGlobalUserLocation, 
             (errorMsg) => { console.warn("초기 위치 정보 로드 실패:", errorMsg); }
@@ -242,27 +329,121 @@
         }
     });
 
-    /* ========== 모드 전환 로직 (v2.1과 동일) ========== */
-    // ... (v2.1과 동일) ...
+    /* ========== 모드 전환 로직 (생략 없음) ========== */
+    function toggleMode() {
+        currentMode = (currentMode === 'navigation') ? 'pokemon' : 'navigation';
+        modeToggleBtn.textContent = (currentMode === 'pokemon') ? '코스 추천 보기' : '포켓몬 월드 보기';
+        navPanel.style.display = (currentMode === 'navigation') ? 'block' : 'none';
+        pokemonPanel.style.display = (currentMode === 'pokemon') ? 'block' : 'none';
+        
+        if (currentMode === 'pokemon') {
+            navMapObjects.forEach(obj => obj.setMap(null));
+            initializePokemonMode();
+        } else {
+            clearPokemonMarkers();
+            navMapObjects.forEach(obj => obj.setMap(map));
+        }
+    }
+    modeToggleBtn.addEventListener('click', toggleMode);
 
-    /* ========== 내비게이션 관련 함수들 (v2.2 수정) ========== */
+    /* ========== 내비게이션 관련 함수들 (v2.3 수정) ========== */
+    
+    /**
+     * v2.3: 장소 검색 (v2.2와 동일)
+     * @param {string} query - 검색어
+     * @param {object} options - (선택) Kakao Places search options
+     * @returns {Promise<Array>} 장소 검색 결과 목록 (목록을 반환)
+     */
     const searchPlace = (query, options = {}) => new Promise((resolve, reject) => {
         if (!query.trim()) return reject(new Error("검색어가 비어있습니다.")); 
         ps.keywordSearch(query, (data, status) => { 
-            if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data); // v2.2: 단일 장소(data[0])가 아닌, 목록(data) 반환
+            if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data); // v2.2: 목록(data) 반환
             else reject(new Error(`'${query}' 검색 실패.`)); 
         }, options); 
     });
     
-    const getRoute = (waypoints) => new Promise(async (resolve, reject) => { const origin = waypoints[0], destination = waypoints[waypoints.length - 1]; const rest_waypoints = waypoints.length > 2 ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join('|') : ""; const url = new URL("https://apis-navi.kakaomobility.com/v1/directions"); url.searchParams.append("origin", `${origin.x},${origin.y}`); url.searchParams.append("destination", `${destination.x},${destination.y}`); if (rest_waypoints) url.searchParams.append("waypoints", rest_waypoints); try { const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } }); if(!response.ok) throw new Error(`HTTP error! status: ${response.status}`); const data = await response.json(); if (data.routes && data.routes.length > 0) resolve(data.routes[0]); else reject(new Error('경로 데이터를 가져오지 못했습니다.')); } catch (error) { reject(error); } });
+    /**
+     * v2.3: 경로 탐색 (v2.2와 동일)
+     * @param {Array} waypoints - [startPoint, (viaPoint), endPoint]
+     * @returns {Promise<object>} Kakao Mobility API 경로 결과
+     */
+    const getRoute = (waypoints) => new Promise(async (resolve, reject) => { 
+        const origin = waypoints[0], destination = waypoints[waypoints.length - 1]; 
+        const rest_waypoints = waypoints.length > 2 ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join('|') : ""; 
+        const url = new URL("https://apis-navi.kakaomobility.com/v1/directions"); 
+        url.searchParams.append("origin", `${origin.x},${origin.y}`); 
+        url.searchParams.append("destination", `${destination.x},${destination.y}`); 
+        if (rest_waypoints) url.searchParams.append("waypoints", rest_waypoints); 
+        try { 
+            const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `KakaoAK ${REST_API_KEY}` } }); 
+            if(!response.ok) throw new Error(`HTTP error! status: ${response.status}`); 
+            const data = await response.json(); 
+            if (data.routes && data.routes.length > 0) resolve(data.routes[0]); 
+            else reject(new Error('경로 데이터를 가져오지 못했습니다.')); 
+        } catch (error) { reject(error); } 
+    });
     
-    // (v2.1과 동일한 함수들)
-    function clearNavMapObjects() { navMapObjects.forEach(obj => obj.setMap(null)); navMapObjects = []; }
-    const debounce = (func, delay) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => func.apply(null, a), delay); }; };
-    function setupAutocomplete(inputEl, listEl) { const showSuggestions = debounce(query => { if (!query.trim() || query.startsWith("내 위치")) { listEl.style.display = 'none'; return; } ps.keywordSearch(query, (data, status) => { listEl.innerHTML = ''; if (status === kakao.maps.services.Status.OK) { data.forEach(p => { const i = document.createElement('div'); i.className = 'suggestion-item'; i.innerHTML = `${p.place_name} <small style="color:gray">${p.road_address_name || p.address_name}</small>`; i.onclick = () => { inputEl.value = p.place_name; listEl.style.display = 'none'; }; listEl.appendChild(i); }); listEl.style.display = 'block'; } }); }, 250); inputEl.addEventListener('input', () => showSuggestions(inputEl.value)); document.addEventListener('click', (e) => { if (!inputEl.parentElement.contains(e.target)) listEl.style.display = 'none'; }); }
-    function drawSingleRoutePolyline(route, color) { const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes).reduce((acc, _, i, arr) => (i % 2 === 0 ? [...acc, new kakao.maps.LatLng(arr[i + 1], arr[i])] : acc), []); const polyline = new kakao.maps.Polyline({ path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.8, strokeStyle: 'solid', map: map }); navMapObjects.push(polyline); return path; }
+    /**
+     * v2.3: 지도 객체 클리어 (v2.2와 동일)
+     */
+    function clearNavMapObjects() { 
+        navMapObjects.forEach(obj => obj.setMap(null)); 
+        navMapObjects = []; 
+    }
     
-    // (v2.1과 동일)
+    /**
+     * v2.3: 디바운스 (v2.2와 동일)
+     */
+    const debounce = (func, delay) => { 
+        let t; 
+        return (...a) => { 
+            clearTimeout(t); 
+            t = setTimeout(() => func.apply(null, a), delay); 
+        }; 
+    };
+    
+    /**
+     * v2.3: 자동완성 (v2.2와 동일)
+     */
+    function setupAutocomplete(inputEl, listEl) { 
+        const showSuggestions = debounce(query => { 
+            if (!query.trim() || query.startsWith("내 위치")) { 
+                listEl.style.display = 'none'; 
+                return; 
+            } 
+            ps.keywordSearch(query, (data, status) => { 
+                listEl.innerHTML = ''; 
+                if (status === kakao.maps.services.Status.OK) { 
+                    data.forEach(p => { 
+                        const i = document.createElement('div'); 
+                        i.className = 'suggestion-item'; 
+                        i.innerHTML = `${p.place_name} <small style="color:gray">${p.road_address_name || p.address_name}</small>`; 
+                        i.onclick = () => { inputEl.value = p.place_name; listEl.style.display = 'none'; }; 
+                        listEl.appendChild(i); 
+                    }); 
+                    listEl.style.display = 'block'; 
+                } 
+            }); 
+        }, 250); 
+        inputEl.addEventListener('input', () => showSuggestions(inputEl.value)); 
+        document.addEventListener('click', (e) => { 
+            if (!inputEl.parentElement.contains(e.target)) listEl.style.display = 'none'; 
+        }); 
+    }
+    
+    /**
+     * v2.3: 경로 그리기 (v2.2와 동일)
+     */
+    function drawSingleRoutePolyline(route, color) { 
+        const path = route.sections.flatMap(s => s.roads).flatMap(r => r.vertexes).reduce((acc, _, i, arr) => (i % 2 === 0 ? [...acc, new kakao.maps.LatLng(arr[i + 1], arr[i])] : acc), []); 
+        const polyline = new kakao.maps.Polyline({ path, strokeWeight: 8, strokeColor: color, strokeOpacity: 0.8, strokeStyle: 'solid', map: map }); 
+        navMapObjects.push(polyline); 
+        return path; 
+    }
+    
+    /**
+     * v2.3: 단일 경로 활성화 (v2.2와 동일)
+     */
     function drawSingleRoute(type) {
         clearNavMapObjects();
         const bounds = new kakao.maps.LatLngBounds();
@@ -284,11 +465,10 @@
     }
     
     /**
-     * v2.2: 코스 정보 카드 생성 (칼로리 계산 수정)
+     * v2.3: 코스 정보 카드 생성 (v2.2와 동일 - 칼로리 수정)
      */
     function displayRouteInfo(route, type) {
-        // v2.2: 칼로리 계산 수정 (route.total_distance는 미터(m) 단위임)
-        const weight = parseFloat(document.getElementById('weight').value) || 60; // 기본 체중 60kg
+        const weight = parseFloat(document.getElementById('weight').value) || 60;
         const kcal = Math.round((route.total_distance / 1000) * weight); // (km * kg)
         
         const card = document.createElement('div');
@@ -304,14 +484,9 @@
     }
     
     /**
-     * v2.2: '왕복 코스' 생성 로직 (v2.1 수정 - 경유지(viaPoint) 기능 추가)
-     * @param {object} startPoint - {x, y, place_name}
-     * @param {number} targetDistanceMeters - 목표 거리 (미터)
-     * @param {number} attempt - 재시도 횟수
-     * @param {object} [viaPoint=null] - (선택사항) '근처 산책로'가 요청 시, 경유할 장소 {x, y}
+     * v2.3: '왕복 코스' 생성 로직 (v2.2와 동일)
      */
     async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0, viaPoint = null) {
-        // v2.2: 경유지가 있다면, B -> C -> B 코스를 시도
         if (viaPoint) {
             try {
                 const route = await getRoute([startPoint, viaPoint, startPoint]);
@@ -319,10 +494,8 @@
                      route.total_distance = route.summary.distance; route.total_duration = route.summary.duration; return route;
                 }
             } catch (e) {}
-            // 경유지 코스가 실패하면, 아래의 일반 루프 코스로 넘어감
         }
 
-        // (v2.1과 동일한 일반 루프 코스 생성)
         const angleStep = 30; const radiusVariations = [1, 0.8, 1.2]; const startAngleOffset = attempt * 10;
         for (const radiusFactor of radiusVariations) {
             const searchRadius = (targetDistanceMeters / 4) * radiusFactor; 
@@ -341,17 +514,27 @@
     }
     
     /**
-     * v2.2: '근처 산책로' 추천 로직 (v2.1 수정)
+     * v2.3: '근처 산책로' 추천 로직 (v2.2 수정 -> v2.3)
      */
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
-        const keywords = ['산책로', '공원', '강', '호수공원', '대학교', '수목원', '운동장'];
+        // v2.3: 키워드 수정 ('대학교', '운동장' 제외)
+        const keywords = ['공원', '산책로', '수목원', '호수공원', '강'];
         const searchOptions = { location: new kakao.maps.LatLng(startPoint.y, startPoint.x), radius: 2000, sort: kakao.maps.services.SortBy.ACCURACY };
         const rotatedKeywords = [...keywords.slice(attempt % keywords.length), ...keywords.slice(0, attempt % keywords.length)];
 
         for (const keyword of rotatedKeywords) {
             try {
-                const places = await searchPlace(keyword, searchOptions); // v2.2: searchPlace는 이제 목록(data)을 반환
-                const trailStartPoint = places[0];
+                const places = await searchPlace(keyword, searchOptions);
+                
+                // v2.3: 검색 결과 필터링 (학교, 교육기관 제외)
+                const validPlaces = places.filter(p => {
+                    const category = p.category_name || '';
+                    return !category.includes('학교') && !category.includes('교육');
+                });
+
+                if (validPlaces.length === 0) continue; // 유효한 장소가 없으면 다음 키워드
+
+                const trailStartPoint = validPlaces[0]; // v2.3: 유효한 장소의 첫 번째
                 
                 const routeToTrail = await getRoute([startPoint, trailStartPoint]);
                 const distanceToTrail = routeToTrail.summary.distance;
@@ -359,20 +542,16 @@
 
                 if (loopDistance < 1000) continue; 
                 
-                // v2.2: 산책로 인근의 '경유지(C)' 찾기
-                // (산책로 리스트의 2번째 장소, 또는 '역' 검색)
                 let viaPoint = null;
-                if (places.length > 1) {
-                    viaPoint = places[1]; // 산책로 인근의 다른 산책로
+                if (validPlaces.length > 1) {
+                    viaPoint = validPlaces[1]; // v2.3: 유효한 장소의 두 번째
                 } else {
-                    // 근처 '지하철역'을 경유지로 검색
                     try {
                         const stations = await searchPlace("지하철역", { location: new kakao.maps.LatLng(trailStartPoint.y, trailStartPoint.x), radius: 1000 });
                         viaPoint = stations[0];
                     } catch(e) {}
                 }
                 
-                // v2.2: 경유지를 포함하여 루프 생성 요청
                 const trailLoop = await generateNonOverlappingLoopCourse(trailStartPoint, loopDistance, attempt, viaPoint);
                 
                 if (trailLoop) {
@@ -383,7 +562,7 @@
     }
     
     /**
-     * v2.2: 특정 코스 새로고침 (v2.1 수정 - searchPlace 로직 변경 대응)
+     * v2.3: 특정 코스 새로고침 (v2.2와 동일)
      */
     async function regenerateSpecificCourse(type) {
         const card = document.getElementById(`card-${type}`); if (!card) return;
@@ -392,7 +571,7 @@
         try {
             const startPoint = (navElements.startInput.value.startsWith("내 위치") && startPointFromMyLocation) 
                                 ? startPointFromMyLocation 
-                                : (await searchPlace(navElements.startInput.value))[0]; // v2.2: searchPlace는 목록을 반환하므로 [0] 선택
+                                : (await searchPlace(navElements.startInput.value))[0];
             const targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
             routeGenerationAttempts[type]++; let newRoute = null;
             if (type === 'round-trip') { newRoute = await generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, routeGenerationAttempts[type]); }
@@ -402,7 +581,6 @@
                 card.querySelector('p:nth-of-type(1)').innerHTML = `<strong>거리:</strong> ${(newRoute.total_distance / 1000).toFixed(2)} km`;
                 card.querySelector('p:nth-of-type(2)').innerHTML = `<strong>예상 시간:</strong> ${Math.round(newRoute.total_duration / 60)} 분`;
                 
-                // v2.2: 칼로리 계산 수정
                 const weight = parseFloat(document.getElementById('weight').value) || 60;
                 const kcal = Math.round((newRoute.total_distance / 1000) * weight);
                 card.querySelector('p:nth-of-type(3)').innerHTML = `<strong>소모 칼로리:</strong> 약 ${kcal} kcal`;
@@ -414,7 +592,7 @@
     }
     
     /**
-     * v2.2: 메인 코스 생성 함수 (v2.1 수정 - searchPlace 로직 변경 대응)
+     * v2.3: 메인 코스 생성 함수 (v2.2 수정 -> v2.3)
      */
     async function generateCourses() {
         if (!navElements.startInput.value || !navElements.targetDistanceInput.value) { alert('출발지와 목표 거리를 모두 입력해주세요!'); return; }
@@ -423,71 +601,306 @@
         allGeneratedRoutes = { optimal: null, 'round-trip': null, scenic: null };
         routeGenerationAttempts = { 'round-trip': 0, scenic: 0 };
         try {
-            // v2.2: searchPlace는 목록을 반환하므로 [0] 선택
             const startPoint = (navElements.startInput.value.startsWith("내 위치") && startPointFromMyLocation) 
                                 ? startPointFromMyLocation 
                                 : (await searchPlace(navElements.startInput.value))[0];
             
             const endPoint = navElements.endInput.value ? (await searchPlace(navElements.endInput.value))[0] : null;
             
-            const results = await Promise.allSettled([ endPoint ? getRoute([startPoint, endPoint]) : Promise.resolve(null), generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, 0), generateNearbyTrailCourse(startPoint, targetDistanceMeters, 0) ]);
-            navElements.resultArea.innerHTML = ''; let firstAvailableRouteType = null;
-            if (results[0].status === 'fulfilled' && results[0].value) { const route = results[0].value; route.total_distance = route.summary.distance; route.total_duration = route.summary.duration; allGeneratedRoutes.optimal = route; navElements.resultArea.appendChild(displayRouteInfo(route, 'optimal')); if (!firstAvailableRouteType) firstAvailableRouteType = 'optimal'; }
-            if (results[1].status === 'fulfilled' && results[1].value) { const route = results[1].value; allGeneratedRoutes['round-trip'] = route; navElements.resultArea.appendChild(displayRouteInfo(route, 'round-trip')); if (!firstAvailableRouteType) firstAvailableRouteType = 'round-trip'; }
-            if (results[2].status === 'fulfilled' && results[2].value) { const route = results[2].value; allGeneratedRoutes.scenic = route; navElements.resultArea.appendChild(displayRouteInfo(route, 'scenic')); if (!firstAvailableRouteType) firstAvailableRouteType = 'scenic'; }
-            if (!firstAvailableRouteType) { navElements.resultArea.innerHTML = '<p>⚠️ 추천할 코스를 찾지 못했습니다. (거리나 장소를 변경해보세요)</p>'; }
-            else { drawSingleRoute(firstAvailableRouteType); }
-        } catch (error) { navElements.resultArea.innerHTML = `<p>오류 발생: ${error.message}</p>`; alert(error.message); }
+            const results = await Promise.allSettled([ 
+                endPoint ? getRoute([startPoint, endPoint]) : Promise.resolve(null), 
+                generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, 0), 
+                generateNearbyTrailCourse(startPoint, targetDistanceMeters, 0) 
+            ]);
+            
+            navElements.resultArea.innerHTML = ''; 
+            let firstAvailableRouteType = null;
+            
+            // v2.3: '최적 경로' 버그 수정 (value가 null이 아닌지 명시적 확인)
+            if (results[0].status === 'fulfilled' && results[0].value && results[0].value !== null) { 
+                const route = results[0].value; 
+                route.total_distance = route.summary.distance; 
+                route.total_duration = route.summary.duration; 
+                allGeneratedRoutes.optimal = route; 
+                navElements.resultArea.appendChild(displayRouteInfo(route, 'optimal')); 
+                if (!firstAvailableRouteType) firstAvailableRouteType = 'optimal'; 
+            }
+            if (results[1].status === 'fulfilled' && results[1].value) { 
+                const route = results[1].value; 
+                allGeneratedRoutes['round-trip'] = route; 
+                navElements.resultArea.appendChild(displayRouteInfo(route, 'round-trip')); 
+                if (!firstAvailableRouteType) firstAvailableRouteType = 'round-trip'; 
+            }
+            if (results[2].status === 'fulfilled' && results[2].value) { 
+                const route = results[2].value; 
+                allGeneratedRoutes.scenic = route; 
+                navElements.resultArea.appendChild(displayRouteInfo(route, 'scenic')); 
+                if (!firstAvailableRouteType) firstAvailableRouteType = 'scenic'; 
+            }
+            
+            if (!firstAvailableRouteType) { 
+                navElements.resultArea.innerHTML = '<p>⚠️ 추천할 코스를 찾지 못했습니다. (거리나 장소를 변경해보세요)</p>'; 
+            }
+            else { 
+                drawSingleRoute(firstAvailableRouteType); 
+            }
+        } catch (error) { 
+            navElements.resultArea.innerHTML = `<p>오류 발생: ${error.message}</p>`; 
+            alert(error.message); 
+        }
     }
     navElements.searchBtn.onclick = generateCourses;
 
-    /* ========== 포켓몬 및 모달 관련 함수들 (v2.1과 동일) ========== */
-    // ... (v2.1의 포켓몬, 도감, 배틀, 내 정보 모달 관련 모든 함수가 여기에 포함됩니다) ...
-    // ... (코드가 너무 길어 생략. v2.1과 동일합니다.) ...
-    
-    // (v2.1의 포켓몬, 모달 스크립트 일부)
+    /* ========== 포켓몬 관련 함수들 (생략 없음) ========== */
     async function fetchPokemonData(id) {
         try {
             const [pokemonRes, speciesRes] = await Promise.all([ fetch(`https://pokeapi.co/api/v2/pokemon/${id}`), fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`) ]);
+            if (!pokemonRes.ok || !speciesRes.ok) throw new Error("API fetch failed");
             const data = await pokemonRes.json(), speciesData = await speciesRes.json();
-            const koreanName = speciesData.names.find(name => name.language.name === 'ko').name;
-            const moves = await Promise.all(data.moves.slice(0, 10).map(async m => {
-                const moveData = await (await fetch(m.move.url)).json();
-                const kMoveName = moveData.names.find(n => n.language.name === 'ko');
-                return { name: kMoveName ? kMoveName.name : m.move.name, power: moveData.power };
-            }));
+            const koreanName = speciesData.names.find(name => name.language.name === 'ko').name || data.name;
+            
+            // v2.3: 기술(moves) API 호출이 잦아 실패할 수 있으므로, 안정성 강화
+            const movePromises = data.moves.slice(0, 10).map(async (m) => {
+                try {
+                    const moveRes = await fetch(m.move.url);
+                    if (!moveRes.ok) return { name: m.move.name, power: 40 }; // 실패 시 기본 기술
+                    const moveData = await moveRes.json();
+                    const kMoveName = moveData.names.find(n => n.language.name === 'ko');
+                    return { name: kMoveName ? kMoveName.name : m.move.name, power: moveData.power || 40 }; // power가 null이면 40
+                } catch (e) {
+                    return { name: m.move.name, power: 40 }; // 개별 실패 시
+                }
+            });
+            const moves = await Promise.all(movePromises);
+
             return { id: data.id, name: koreanName, sprite: data.sprites.front_default, back_sprite: data.sprites.back_default, moves: moves, hp: data.stats.find(s => s.stat.name === 'hp').base_stat };
         } catch (error) { console.error("Failed to fetch Pokemon data:", error); return null; }
     }
-    // ... (이하 v2.1과 동일) ...
+    function spawnPokemon(pokemonData, lat, lng) { 
+        const uniqueId = `${pokemonData.id}-${Date.now()}`; 
+        const content = `<div class="pokemon-marker" id="marker-${uniqueId}"><img src="${pokemonData.sprite}" alt="${pokemonData.name}"></div>`; 
+        const position = new kakao.maps.LatLng(lat, lng); 
+        const customOverlay = new kakao.maps.CustomOverlay({ position, content, yAnchor: 1 }); 
+        pokemonMarkers[uniqueId] = { ...pokemonData, position, overlay: customOverlay }; 
+        if (currentMode === 'pokemon') customOverlay.setMap(map); 
+        setTimeout(() => { 
+            const el = document.getElementById(`marker-${uniqueId}`); 
+            if(el) el.parentElement.onclick = () => capturePokemon(uniqueId); 
+        }, 0); 
+    }
+    function getDistance(p1, p2) { 
+        const R = 6371e3, φ1 = p1.getLat() * Math.PI/180, φ2 = p2.getLat() * Math.PI/180, Δφ = (p2.getLat()-p1.getLat()) * Math.PI/180, Δλ = (p2.getLng()-p1.getLng()) * Math.PI/180; 
+        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2; 
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+    }
+    function capturePokemon(uniqueId) { 
+        if (!userLocation) { alert("위치 정보가 없어 포획할 수 없습니다."); return; } 
+        const pokemon = pokemonMarkers[uniqueId]; 
+        if (getDistance(userLocation, pokemon.position) <= 50) { 
+            alert(`${pokemon.name}을(를) 잡았다!`); 
+            capturedPokemons.push({ ...pokemon, capturedAt: new Date(), nickname: pokemon.name }); 
+            pokemon.overlay.setMap(null); 
+            delete pokemonMarkers[uniqueId]; 
+        } else { 
+            alert("포켓몬이 너무 멀리 있습니다! (50m 이내로 접근 필요)"); 
+        } 
+    }
+    function clearPokemonMarkers() { 
+        Object.values(pokemonMarkers).forEach(m => m.overlay.setMap(null)); 
+        pokemonMarkers = {}; 
+    }
+    async function initializePokemonMode() { 
+        clearPokemonMarkers(); 
+        const pokemonToSpawn = 50; 
+        const promises = []; 
+        if (userLocation) { 
+            for (let i = 0; i < 3; i++) { 
+                const pokemonData = await fetchPokemonData(Math.floor(Math.random() * 151) + 1); 
+                if (pokemonData) { 
+                    const angle = Math.random() * 2 * Math.PI; 
+                    const radius = Math.random() * 0.0004; // 약 40m 반경
+                    const lat = userLocation.getLat() + radius * Math.cos(angle); 
+                    const lng = userLocation.getLng() + radius * Math.sin(angle); 
+                    spawnPokemon(pokemonData, lat, lng); 
+                } 
+            } 
+        } 
+        const remainingCount = pokemonToSpawn - (userLocation ? 3 : 0); 
+        const metroAreaBounds = { minLat: 37.0, maxLat: 37.9, minLng: 126.3, maxLng: 127.8 }; // 수도권
+        for (let i = 0; i < remainingCount; i++) { 
+            promises.push(fetchPokemonData(Math.floor(Math.random() * 151) + 1)); 
+        } 
+        const pokemonDataList = await Promise.all(promises); 
+        pokemonDataList.forEach(pokemonData => { 
+            if (pokemonData) { 
+                const lat = metroAreaBounds.minLat + Math.random() * (metroAreaBounds.maxLat - metroAreaBounds.minLat); 
+                const lng = metroAreaBounds.minLng + Math.random() * (metroAreaBounds.maxLng - metroAreaBounds.minLng); 
+                spawnPokemon(pokemonData, lat, lng); 
+            } 
+        }); 
+        if(userLocation) map.setCenter(userLocation); 
+    }
+    document.getElementById('btnRegenerate').onclick = initializePokemonMode;
 
-    document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
-    window.onclick = (event) => { if (event.target.classList.contains('modal')) event.target.style.display = 'none'; };
-    const characterImages = { male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } };
-    
-    // v2.2: '내 정보' 모달의 칼로리 계산 (v2.1과 동일. 이 부분은 '목표 거리' km 기준이라 정상이었습니다.)
-    function updateAllInfo() {
-        const gender = document.getElementById('gender').value, age = parseFloat(document.getElementById('age').value), height = parseFloat(document.getElementById('height').value), weight = parseFloat(document.getElementById('weight').value), goalWeight = parseFloat(document.getElementById('goalWeight').value);
-        if (!age || !height || !weight) { alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다."); return; }
+    /* ========== 포켓몬 도감 & 배틀 로직 (생략 없음) ========== */
+    function renderPokedex() {
+        const listEl = document.getElementById('pokedexList');
+        if (capturedPokemons.length === 0) { 
+            listEl.innerHTML = '<p>아직 잡은 포켓몬이 없습니다.</p>'; 
+            return; 
+        }
+        listEl.innerHTML = capturedPokemons.map((p, index) => `
+            <div class="pokedex-item" data-index="${index}">
+                <img src="${p.sprite}" alt="${p.name}">
+                <div class="info"><strong>${p.nickname}</strong><br><small>#${String(p.id).padStart(3, '0')} ${p.name} / HP: ${p.hp}</small></div>
+                <button class="rename-btn">이름 변경</button>
+                <button class="battle-btn" ${capturedPokemons.length < 2 ? 'disabled' : ''}>결투</button>
+            </div>`).join('');
         
-        // 이 부분은 '목표 거리(km)' 기준이므로 v2.1과 동일하게 둡니다.
+        listEl.querySelectorAll('.rename-btn').forEach(btn => btn.addEventListener('click', (e) => { 
+            const index = parseInt(e.target.closest('.pokedex-item').dataset.index, 10); 
+            const newNickname = prompt("새로운 포켓몬 이름을 입력하세요:", capturedPokemons[index].nickname); 
+            if (newNickname && newNickname.trim()) { 
+                capturedPokemons[index].nickname = newNickname.trim(); 
+                renderPokedex(); 
+            } 
+        }));
+        listEl.querySelectorAll('.battle-btn').forEach(btn => btn.addEventListener('click', (e) => { 
+            const playerIndex = parseInt(e.target.closest('.pokedex-item').dataset.index, 10); 
+            startBattle(playerIndex); 
+        }));
+    }
+    document.getElementById('btnShowPokedex').onclick = () => { 
+        renderPokedex(); 
+        document.getElementById('pokedexModal').style.display = 'flex'; 
+    };
+
+    const battleModal = document.getElementById('battleModal');
+    function startBattle(playerIndex) {
+        let opponentIndex; 
+        do { 
+            opponentIndex = Math.floor(Math.random() * capturedPokemons.length); 
+        } while (opponentIndex === playerIndex);
+        
+        const player = { ...capturedPokemons[playerIndex], currentHp: capturedPokemons[playerIndex].hp }; 
+        const opponent = { ...capturedPokemons[opponentIndex], currentHp: capturedPokemons[opponentIndex].hp };
+        
+        document.getElementById('player-pokemon').querySelector('img').src = player.back_sprite || player.sprite; 
+        document.getElementById('opponent-pokemon').querySelector('img').src = opponent.sprite;
+        updateBattleUI(player, opponent);
+        
+        const logEl = document.getElementById('battle-log'); 
+        logEl.innerHTML = `야생의 ${opponent.nickname}이(가) 나타났다!<br>가라! ${player.nickname}!`;
+        
+        const movesGrid = document.getElementById('moves-grid');
+        const usableMoves = player.moves.filter(m => m.power).slice(0, 4); 
+        while(usableMoves.length < 4) { usableMoves.push({name: '몸통박치기', power: 40}); }
+        
+        movesGrid.innerHTML = usableMoves.map(move => `<button data-power="${move.power}">${move.name}</button>`).join('');
+        movesGrid.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => playerTurn(player, opponent, { name: btn.textContent, power: parseInt(btn.dataset.power) })));
+        
+        battleModal.style.display = 'flex';
+        document.getElementById('pokedexModal').style.display = 'none';
+    }
+
+    function playerTurn(player, opponent, move) {
+        document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = true); 
+        const logEl = document.getElementById('battle-log');
+        const damage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8)); 
+        opponent.currentHp = Math.max(0, opponent.currentHp - damage);
+        logEl.innerHTML = `${player.nickname}의 ${move.name} 공격!<br>상대에게 ${damage}의 데미지를 입혔다!`; 
+        updateBattleUI(player, opponent);
+        if (opponent.currentHp <= 0) { 
+            setTimeout(() => { alert(`${player.nickname}의 승리!`); battleModal.style.display = 'none'; }, 1500); 
+            return; 
+        }
+        setTimeout(() => opponentTurn(player, opponent), 2000);
+    }
+
+    function opponentTurn(player, opponent) {
+        const logEl = document.getElementById('battle-log'); 
+        const usableMoves = opponent.moves.filter(m => m.power);
+        const move = usableMoves.length > 0 ? usableMoves[Math.floor(Math.random() * usableMoves.length)] : { name: '몸통박치기', power: 40 };
+        const damage = Math.floor((move.power || 20) * (Math.random() * 0.5 + 0.8)); 
+        player.currentHp = Math.max(0, player.currentHp - damage);
+        logEl.innerHTML = `상대 ${opponent.nickname}의 ${move.name} 공격!<br> ${damage}의 데미지를 받았다!`; 
+        updateBattleUI(player, opponent);
+        if (player.currentHp <= 0) { 
+            setTimeout(() => { alert(`${player.nickname}은(는) 쓰러졌다...`); battleModal.style.display = 'none'; }, 1500); 
+            return; 
+        }
+        setTimeout(() => { 
+            logEl.innerHTML = `어떻게 할까?`; 
+            document.getElementById('moves-grid').querySelectorAll('button').forEach(b => b.disabled = false); 
+        }, 2000);
+    }
+
+    function updateBattleUI(player, opponent) {
+        document.getElementById('player-name').textContent = player.nickname; 
+        document.getElementById('player-hp-text').textContent = `${player.currentHp} / ${player.hp}`;
+        document.getElementById('player-hp-bar').style.width = `${(player.currentHp / player.hp) * 100}%`;
+        document.getElementById('opponent-name').textContent = opponent.nickname; 
+        document.getElementById('opponent-hp-text').textContent = `${opponent.currentHp} / ${opponent.hp}`;
+        document.getElementById('opponent-hp-bar').style.width = `${(opponent.currentHp / opponent.hp) * 100}%`;
+    }
+    battleModal.querySelector('.close-button').addEventListener('click', () => battleModal.style.display = 'none');
+
+    /* ========== 기타 모달 및 이벤트 핸들러 (생략 없음) ========== */
+    document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
+    window.onclick = (event) => { 
+        if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
+    };
+    
+    // 캐릭터 이미지 (v2.2와 동일)
+    const characterImages = { 
+        male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
+        female: { lean: 'https://i.imgur.com/2bsZnpy.png', average: 'https://i.imgur.com/FhsJnOM.png', overweight: 'https://i.imgur.com/4QUIyGg.png', obese: 'https://i.imgur.com/abQJ2Me.png' } 
+    };
+    
+    // '내 정보' 모달 업데이트 (v2.2와 동일)
+    function updateAllInfo() {
+        const gender = document.getElementById('gender').value, 
+              age = parseFloat(document.getElementById('age').value), 
+              height = parseFloat(document.getElementById('height').value), 
+              weight = parseFloat(document.getElementById('weight').value), 
+              goalWeight = parseFloat(document.getElementById('goalWeight').value);
+        
+        if (!age || !height || !weight) { 
+            alert("성별, 나이, 키, 현재 체중은 필수 입력 항목입니다."); 
+            return; 
+        }
+        
+        // v2.3: 이 부분은 '목표 거리(km)' 기준이므로 v2.2와 동일하게 둡니다.
         document.getElementById('calculated-calories').textContent = `약 ${Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight)} kcal`;
         document.getElementById('weight-loss-result').textContent = `(약 ${(Math.round(parseFloat(document.getElementById('targetDistance').value || 0) * weight) / 7700).toFixed(2)}kg 감량)`;
         
-        const bmi = weight / ((height / 100) ** 2); document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
+        const bmi = weight / ((height / 100) ** 2); 
+        document.getElementById('bmi-result').textContent = `BMI: ${bmi.toFixed(2)}`;
+        
         const bmr = (gender === 'male') ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age) : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
         document.getElementById('bmr-result').textContent = `기초대사량(BMR): ${bmr.toFixed(0)} kcal`;
-        let bodyType; if (bmi < 18.5) bodyType = 'lean'; else if (bmi < 23) bodyType = 'average'; else if (bmi < 25) bodyType = 'overweight'; else bodyType = 'obese';
-        document.getElementById('characterImage').src = characterImages[gender][bodyType]; document.getElementById('character-display').style.display = 'flex';
+        
+        let bodyType; 
+        if (bmi < 18.5) bodyType = 'lean'; 
+        else if (bmi < 23) bodyType = 'average'; 
+        else if (bmi < 25) bodyType = 'overweight'; 
+        else bodyType = 'obese';
+        
+        document.getElementById('characterImage').src = characterImages[gender][bodyType]; 
+        document.getElementById('character-display').style.display = 'flex';
+        
         if (goalWeight) {
-            const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), achieved = Math.max(0, startWeight - weight), totalToGo = Math.max(0, startWeight - goalWeight);
-            let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; if (weight <= goalWeight) achievedPercent = 100;
+            const startWeight = Math.max(goalWeight * 1.2, weight, goalWeight), 
+                  achieved = Math.max(0, startWeight - weight), 
+                  totalToGo = Math.max(0, startWeight - goalWeight);
+            let achievedPercent = totalToGo > 0 ? (achieved / totalToGo) * 100 : 0; 
+            if (weight <= goalWeight) achievedPercent = 100;
+            
             document.getElementById('bar-achieved').style.width = `${achievedPercent}%`;
             document.getElementById('progress-text').textContent = `목표까지 ${Math.max(0, weight - goalWeight).toFixed(1)}kg 남음!`;
         }
     }
     document.getElementById('saveInfoBtn').addEventListener('click', updateAllInfo);
-
 
 </script>
 </body>
