@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v2.7)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v2.8)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
     html, body {
@@ -79,15 +79,19 @@
     .input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
     .input-wrapper { display: flex; flex-grow: 1; position: relative; min-width: 150px; }
     
-    /* v2.6: 입력창 스타일 (높이, 모서리 수정) */
+    /* v2.8: '내 위치' 버튼 넘침 문제 수정 (width: 100% -> flex-grow: 1) */
     #navPanel input[type="text"] { 
-        width: 100%; padding: 12px 16px; border: 1px solid #ccc; 
+        /* width: 100%; */ /* v2.8: 삭제 */
+        flex-grow: 1; /* v2.8: 추가 (남은 공간 모두 차지) */
+        min-width: 50px; /* v2.8: 추가 (최소 너비 보장) */
+        padding: 12px 16px; border: 1px solid #ccc; 
         border-radius: 8px 0 0 8px; 
         font-size: 1em; box-sizing: border-box; border-right: none;
         height: 48px; /* 버튼과 높이 통일 */
     }
     #navPanel .input-wrapper.end input[type="text"] { 
         border-radius: 8px; border-right: 1px solid #ccc; height: 48px;
+        /* v2.8: .end 클래스는 flex-grow가 이미 1이므로(input-wrapper에 있음) input 수정 불필요 */
     }
     #navPanel .input-wrapper.target { 
         border: 1px solid #ccc; border-radius: 8px; 
@@ -131,6 +135,7 @@
         background: #64748B;
         border-radius: 0 8px 8px 0;
         border: 1px solid #64748B; border-left: none;
+        flex-shrink: 0; /* v2.8: 추가 (버튼이 찌그러지지 않도록 고정) */
     }
     #myLocationBtn:disabled {
         background-color: #aaa;
@@ -262,7 +267,7 @@
     </div>
 
     <div id="navPanel" class="info-panel">
-        <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v2.7</span></h2>
+        <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v2.8</span></h2>
         <div class="input-group">
             <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
             <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
@@ -336,8 +341,8 @@
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v2.7) 전체 스크립트 (도형 코스 적용) ========== */
-    /* (v2.5의 모든 JS 기능이 동일하게 포함됩니다) */
+    /* ========== (v2.8) 전체 스크립트 (CSS 수정 적용) ========== */
+    /* (v2.7의 모든 JS 기능이 동일하게 포함됩니다) */
 
     /* ========== 공통 & 전역 변수 ========== */
     const REST_API_KEY = '71b46fcb7202af130ab7c6c18bf5163a';
@@ -409,6 +414,7 @@
     
     /**
      * v2.6: '내 위치' 버튼 클릭 시 실행될 메인 함수 (v2.5와 동일)
+     * (v2.8: 이 함수가 '가산중학교' 등을 출발지에 자동 입력하는 기능을 수행합니다)
      */
     function onMyLocationButtonClick() {
         navElements.myLocationBtn.disabled = true;
@@ -417,15 +423,19 @@
         requestUserLocation(
             (location) => {
                 const geocoder = new kakao.maps.services.Geocoder();
+                // 1. 위경도 -> 키워드(장소명) 검색
                 geocoder.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
                     let placeName = "내 위치 (장소명 없음)";
                     
                     if (status === kakao.maps.services.Status.OK && data.length > 0) {
+                        // 예: "가산중학교"
                         placeName = data[0].place_name;
                     } 
                     else {
+                        // 2. 키워드 검색 실패 시 -> 주소 검색
                         geocoder.coord2Address(location.getLng(), location.getLat(), (result, status) => {
                             if (status === kakao.maps.services.Status.OK) {
+                                // 예: "서울 금천구 가산로 90"
                                 placeName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
                             }
                             finalizeMyLocation(location, placeName);
@@ -445,9 +455,12 @@
 
     /**
      * v2.6: '내 위치' 버튼 작업 완료 후 (v2.5와 동일)
+     * (v2.8: 이 함수가 '출발지' input 값을 변경합니다)
      */
     function finalizeMyLocation(location, placeName) {
+        // v2.8: [요청사항 2] 바로 이 부분이 출발지 입력창에 값을 넣는 코드입니다.
         navElements.startInput.value = placeName;
+        
         startPointFromMyLocation = { x: location.getLng(), y: location.getLat(), place_name: placeName };
         updateMapCenter(location);
         navElements.myLocationBtn.disabled = false;
@@ -561,7 +574,8 @@
      */
     function setupAutocomplete(inputEl, listEl) { 
         const showSuggestions = debounce(query => { 
-            if (!query.trim() || query.includes("내 위치")) { 
+            // v2.8: '내 위치' 자동완성 시 제안 목록이 뜨지 않도록 수정
+            if (!query.trim() || (startPointFromMyLocation && query === startPointFromMyLocation.place_name)) { 
                 listEl.style.display = 'none'; 
                 return; 
             } 
@@ -639,30 +653,16 @@
     
     /**
      * v2.7: '왕복 코스' 생성 로직 (도형 기반 업그레이드)
-     * - 겹치지 않는 루프 대신, 목표 거리에 따라 삼각형, 사각형, 오각형의
-     * 경유지를 생성하여 기하학적 코스를 제안합니다. (사용자 요청)
-     * - 이 로직은 '근처 산책로'의 루프 생성 시에도 재사용됩니다.
+     * (v2.8: [요청사항 1] '왕복 코스'는 이 함수를 사용합니다)
      */
     async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
         
-        // v2.7: 목표 거리에 따라 꼭지점 수 결정 (v2.6의 단순 로직을 대체)
-        // 3.5km 이하: 삼각형(3), 6km 이하: 사각형(4), 그 이상: 오각형(5)
-        // let numVertices;
-        // if (targetDistanceMeters <= 3500) numVertices = 3; // 삼각형
-        // else if (targetDistanceMeters <= 6000) numVertices = 4; // 사각형
-        // else numVertices = 5; // 오각형
-        
         // v2.7: 재시도시 꼭지점 수를 변경하여(3, 4, 5 순환) 다양한 코스 제안
-        // (attempt % 3) -> 0, 1, 2...
-        // 3 + (0 % 3) = 3
-        // 3 + (1 % 3) = 4
-        // 3 + (2 % 3) = 5
-        // 3 + (3 % 3) = 3 (다시 순환)
-        // 이렇게 하면 '새로고침' 시 다른 도형을 시도합니다.
+        // (attempt % 3) -> 0, 1, 2... / 3 + 0 = 3 (삼각형)
+        // 3 + 1 = 4 (사각형) / 3 + 2 = 5 (오각형)
         let numVertices = 3 + (attempt % 3);
 
         // v2.7: 코스의 대략적인 반경 계산
-        // (둘레 / (2 * PI)) -> 코스를 원으로 근사
         const radius = targetDistanceMeters / (2 * Math.PI); 
         
         // v2.7: 재시도 시 도형을 30도씩 회전시켜 새로운 경로 탐색
@@ -673,10 +673,7 @@
         const startY = parseFloat(startPoint.y);
 
         // v2.7: (N-1)개의 중간 경유지 계산
-        // numVertices=3 (삼각형) -> 2개 경유지 (i=0, 1)
-        // numVertices=4 (사각형) -> 3개 경유지 (i=0, 1, 2)
         for (let i = 0; i < numVertices - 1; i++) {
-            // (i+1) / numVertices -> 1/N, 2/N, ... (N-1)/N 지점에 점을 찍음
             const angle = startAngleOffset + ((i + 1) * 2 * Math.PI) / numVertices;
 
             // v2.7: 위도에 따른 경도 거리 보정
@@ -712,7 +709,7 @@
     
     /**
      * v2.6: '근처 산책로' 추천 로직 (v2.5와 동일)
-     * (내부적으로 v2.7의 도형 코스 생성 함수를 호출하게 됨)
+     * (v2.8: [요청사항 1] '근처 산책로'는 이 함수를 사용합니다)
      */
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
         const keywords = ['공원', '산책로', '수목원', '호수공원', '강'];
@@ -730,15 +727,15 @@
 
                 if (validPlaces.length === 0) continue; 
 
-                const trailStartPoint = validPlaces[0];
+                const trailStartPoint = validPlaces[0]; // 제일 가까운 공원
                 
                 const routeToTrail = await getRoute([startPoint, trailStartPoint]);
                 const distanceToTrail = routeToTrail.summary.distance;
                 const loopDistance = targetDistanceMeters - (distanceToTrail * 2);
 
-                if (loopDistance < 1000) continue; 
+                if (loopDistance < 1000) continue; // 공원 내 산책 거리가 1km 미만이면 제외
                 
-                // v2.7: 여기서 업그레이드된 도형 코스 함수를 호출함!
+                // v2.8: [요청사항 1] 바로 여기서 v2.7의 업그레이드된 도형 코스 함수를 호출합니다!
                 const trailLoop = await generateNonOverlappingLoopCourse(trailStartPoint, loopDistance, attempt);
                 
                 if (trailLoop) {
