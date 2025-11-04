@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v3.4)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v3.5)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
     html, body {
@@ -477,7 +477,7 @@
             </div>
 
             <div id="navPanel" class="info-panel">
-                <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v3.4</span></h2>
+                <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v3.5</span></h2>
                 <div class="input-group">
                     <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
                     <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
@@ -612,7 +612,7 @@
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v3.4) 전체 스크립트 (4-Tab, History, Group, My Page) ========== */
+    /* ========== (v3.5) 전체 스크립트 (치명적 오류 수정) ========== */
 
     /* ========== 공통 & 전역 변수 ========== */
     // v3.4: 카카오 API 키 (지도 SDK용, 스태틱맵용)
@@ -643,6 +643,8 @@
         { rank: 7, name: '밤 마실', dist: '8.3km', img: 'https://i.pravatar.cc/150?img=16' },
         { rank: 8, name: '거북이', dist: '2.1km', img: 'https://i.pravatar.cc/150?img=17' }
     ];
+    // v3.5: [오류 수정] '나' 페이지 리스너 중복 방지 플래그
+    let myPageListenersSet = false;
 
     // DOM Elements
     const modeToggleBtn = document.getElementById('modeToggleBtn');
@@ -775,6 +777,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         // v3.4: KAKAO_JS_KEY 변수 사용
         if (typeof kakao !== "undefined" && kakao.maps) {
+            // v3.5: [오류 수정] SDK URL에 변수 대신 하드코딩된 키 사용 (이전 버전과 동일)
             kakao.maps.load(initApp);
         } else {
             document.getElementById('map-notice').innerHTML = '카카오맵 API 로딩 실패. 네트워크나 API 키를 확인해주세요.';
@@ -782,13 +785,16 @@
         
         // v3.4: 탭 전환 이벤트 리스너
         setupTabNavigation();
-        // v3.4: '나' 페이지 버튼 이벤트 리스너 (페이지 이동으로 인해 DOMContentLoaded에서 설정)
-        document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
-        document.getElementById('btnShowPokedex').onclick = () => { 
-            renderPokedex(); 
-            document.getElementById('pokedexModal').style.display = 'flex'; 
-        };
-        document.getElementById('btnCheckAttendance').onclick = checkAttendance;
+        
+        // v3.5: [FATAL ERROR FIX]
+        // '나' 페이지의 버튼들은 숨겨져 있어 지금 찾을 수 없으므로,
+        // DOMContentLoaded에서 리스너를 등록하면 안 됩니다.
+        // `renderMyPage()` 함수 내부로 이동시켰습니다.
+        /*
+        document.getElementById('openModalBtn').onclick = ...; // <-- ERROR
+        document.getElementById('btnShowPokedex').onclick = ...; // <-- ERROR
+        document.getElementById('btnCheckAttendance').onclick = ...; // <-- ERROR
+        */
     });
 
     /* ========== 모드 전환 로직 (생략 없음) ========== */
@@ -808,7 +814,7 @@
     }
     modeToggleBtn.addEventListener('click', toggleMode);
 
-    /* ========== 내비게이션 관련 함수들 (v3.4 수정) ========== */
+    /* ========== 내비게이션 관련 함수들 (v3.4 로직) ========== */
     
     /**
      * v2.6: 장소 검색 (v3.1과 동일)
@@ -1067,9 +1073,12 @@
         const loadingSpinner = card.querySelector('.card-loading'); const refreshBtn = card.querySelector('.card-refresh-btn');
         loadingSpinner.style.display = 'inline'; refreshBtn.style.display = 'none';
         try {
+            const startPlaces = await searchPlace(navElements.startInput.value);
+            if (startPlaces.length === 0) throw new Error("출발지를 찾을 수 없습니다.");
+            
             const startPoint = (navElements.startInput.value === startPointFromMyLocation?.place_name && startPointFromMyLocation) 
                                 ? startPointFromMyLocation 
-                                : (await searchPlace(navElements.startInput.value))[0];
+                                : startPlaces[0];
             
             let targetDistanceMeters = parseFloat(navElements.targetDistanceInput.value) * 1000;
             if (!targetDistanceMeters || targetDistanceMeters === 0) {
@@ -1319,7 +1328,7 @@
             startBattle(playerIndex); 
         }));
     }
-    // v3.4: '도감' 버튼 리스너는 DOMContentLoaded로 이동
+    // v3.5: '도감' 버튼 리스너는 `renderMyPage`로 이동
 
     const battleModal = document.getElementById('battleModal');
     function startBattle(playerIndex) {
@@ -1392,7 +1401,6 @@
     battleModal.querySelector('.close-button').addEventListener('click', () => battleModal.style.display = 'none');
 
     /* ========== 기타 모달 및 이벤트 핸들러 (생략 없음) ========== */
-    // v3.4: '내 정보' 버튼 리스너는 DOMContentLoaded로 이동
     window.onclick = (event) => { 
         if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
     };
@@ -1523,12 +1531,12 @@
 
         const staticMapUrl = getStaticMapUrl(route);
         const startName = navElements.startInput.value || "출발지";
-        const endName = navElements.endInput.value || "목적지";
+        const endName = navElements.endInput.value || (type === 'optimal' ? "목적지" : "출발지");
         
         courseHistory.push({
             type: type,
             title: `${startName} → ${endName}`,
-            distance: route.total_distance,
+            distance: route.total_distance, // v3.5: 버그 수정을 위해 .distance로 통일
             duration: route.total_duration,
             staticMapUrl: staticMapUrl,
             savedDate: new Date()
@@ -1579,8 +1587,8 @@
         const container = document.getElementById('page-group-content');
         container.innerHTML = ''; // 초기화
         
-        // v3.4: 내 순위 업데이트
-        const myTotalDist = (courseHistory.reduce((acc, c) => acc + c.total_distance, 0) / 1000).toFixed(1);
+        // v3.5: [버그 수정] c.total_distance -> c.distance
+        const myTotalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
         const myRankItem = fakeGroup.find(m => m.name === '나 (You)');
         if (myRankItem) myRankItem.dist = `${myTotalDist}km`;
         
@@ -1606,34 +1614,29 @@
         container.appendChild(list);
     }
     
-    /* ========== (v3.4) [요청 6] '나' 페이지 로직 ========== */
+    /* ========== (v3.5) [요청 6] '나' 페이지 로직 (오류 수정) ========== */
 
-    // v3.4: [요청 6] '나' 탭 페이지 렌더링 (통계, 달력)
+    // v3.5: [요청 6] '나' 탭 페이지 렌더링 (통계, 달력)
     function renderMyPage() {
-        // 총 걸은 거리
-        const totalDist = (courseHistory.reduce((acc, c) => acc + c.total_distance, 0) / 1000).toFixed(1);
+        // [v3.5 버그 수정] c.total_distance -> c.distance
+        const totalDist = (courseHistory.reduce((acc, c) => acc + c.distance, 0) / 1000).toFixed(1);
         document.getElementById('total-walked-dist').textContent = `${totalDist} km`;
         
-        // 총 출석일
+        // [v3.4] 총 출석일
         document.getElementById('total-attendance-days').textContent = `${attendanceLog.size} 일`;
         
-        // 출석 스탬프 달력
+        // [v3.4] 출석 스탬프 달력
         const calendarGrid = document.getElementById('calendar-grid');
         calendarGrid.innerHTML = '';
         const today = new Date();
         const todayStr = today.toDateString();
         const todayDate = today.getDate();
         
-        // 오늘 날짜가 며칠인지 확인 (예: 5일)
-        // v3.4: 30일 달력 생성
         for (let i = 1; i <= 30; i++) {
             const day = document.createElement('div');
             day.className = 'calendar-day';
             day.innerHTML = `<span>${i}</span>`;
             
-            // v3.4: 가상의 날짜 문자열 생성 (정확하진 않지만 데모용)
-            // 오늘이 5일이고, i가 5면 -> 오늘
-            // 오늘이 5일이고, i가 4면 -> 어제
             const dateOffset = i - todayDate;
             const pseudoDate = new Date();
             pseudoDate.setDate(today.getDate() + dateOffset);
@@ -1644,7 +1647,10 @@
             calendarGrid.appendChild(day);
         }
         
-        // 오늘 이미 출석했으면 버튼 비활성화
+        // v3.5: [FATAL ERROR FIX]
+        // '나' 탭이 표시될 때, 버튼 리스너를 등록합니다.
+        
+        // v3.5: 출석 버튼 상태 관리
         const checkinBtn = document.getElementById('btnCheckAttendance');
         if (attendanceLog.has(todayStr)) {
             checkinBtn.disabled = true;
@@ -1653,6 +1659,20 @@
             checkinBtn.disabled = false;
             checkinBtn.textContent = '오늘 출석체크';
         }
+
+        // v3.5: 리스너는 한 번만 등록
+        if (!myPageListenersSet) {
+            document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
+            document.getElementById('btnShowPokedex').onclick = () => { 
+                renderPokedex(); 
+                document.getElementById('pokedexModal').style.display = 'flex'; 
+            };
+            checkinBtn.onclick = checkAttendance; // 출석 버튼 리스너
+            myPageListenersSet = true;
+        }
+        
+        // v3.5: 출석 버튼 리스너는 상태가 변경될 수 있으므로 매번 재등록 (안전장치)
+        checkinBtn.onclick = checkAttendance;
     }
     
     // v3.4: [요청 6] 출석체크 버튼 클릭
@@ -1666,7 +1686,6 @@
     }
     
     /* ========== 기타 모달 및 이벤트 핸들러 (v3.2 로직) ========== */
-    // v3.4: '내 정보' 버튼 리스너는 DOMContentLoaded로 이동
     
     const characterImages = { 
         male: { lean: 'https://i.imgur.com/91TKFuE.png', average: 'https://i.imgur.com/ecc7NYi.png', overweight: 'https://i.imgur.com/QJZsUvT.png', obese: 'https://i.imgur.com/qGxG0QR.png' }, 
