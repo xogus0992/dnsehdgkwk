@@ -2,11 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<!-- v2.6: 구글 폰트(Noto Sans KR) 로드 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<title>다이어트 내비게이션 & 포켓몬 월드 (v2.6)</title>
+<title>다이어트 내비게이션 & 포켓몬 월드 (v2.7)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
     html, body {
@@ -263,21 +262,18 @@
     </div>
 
     <div id="navPanel" class="info-panel">
-        <!-- v2.6: 버전 업그레이드 및 제목 변경 -->
-        <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v2.6</span></h2>
+        <h2><span class="icon-gradient">👟</span>오늘의 걷기 미션 <span class="version-tag">v2.7</span></h2>
         <div class="input-group">
             <div class="input-wrapper"><input type="text" id="start" placeholder="출발지 (예: 부천역)" autocomplete="off"><button id="myLocationBtn">내 위치</button><div class="suggestions-list" id="start-suggestions"></div></div>
             <div class="input-wrapper end"><input type="text" id="end" placeholder="도착지 (선택사항)" autocomplete="off"><div class="suggestions-list" id="end-suggestions"></div></div>
             <div class="input-wrapper target"><span class="icon">👟</span><input type="number" id="targetDistance" placeholder="목표 거리"><span class="unit">km</span></div>
             <span id="calculated-calories">약 0 kcal</span><span id="weight-loss-result">(약 0.00kg 감량)</span>
-            <!-- v2.6: 버튼 순서 변경 및 스타일 적용 (HTML은 동일) -->
             <button id="openModalBtn">내 정보</button>
             <button id="searchBtn">코스 생성</button>
         </div>
         <div id="result-area"><p>장소와 목표 거리를 입력하고 맞춤형 코스를 추천받으세요.</p></div>
     </div>
     
-    <!-- 포켓몬 패널 HTML (생략 없음) -->
     <div id="pokemonPanel" class="info-panel" style="display: none;">
         <h2><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" style="vertical-align: middle; height: 30px;"> 포켓몬 월드</h2>
         <p>지도에 나타난 포켓몬을 클릭해서 잡아보세요! (내 위치 50m 반경)</p>
@@ -285,7 +281,6 @@
     </div>
 </div>
 
-<!-- 모달 HTML (생략 없음) -->
 <div id="dietInfoModal" class="modal">
     <div class="modal-content">
         <span class="close-button" onclick="this.parentElement.parentElement.style.display='none'">&times;</span>
@@ -341,7 +336,7 @@
 
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services&autoload=false"></script>
 <script>
-    /* ========== (v2.6) 전체 스크립트 (생략 없음) ========== */
+    /* ========== (v2.7) 전체 스크립트 (도형 코스 적용) ========== */
     /* (v2.5의 모든 JS 기능이 동일하게 포함됩니다) */
 
     /* ========== 공통 & 전역 변수 ========== */
@@ -643,28 +638,81 @@
     }
     
     /**
-     * v2.6: '왕복 코스' 생성 로직 (v2.5와 동일)
+     * v2.7: '왕복 코스' 생성 로직 (도형 기반 업그레이드)
+     * - 겹치지 않는 루프 대신, 목표 거리에 따라 삼각형, 사각형, 오각형의
+     * 경유지를 생성하여 기하학적 코스를 제안합니다. (사용자 요청)
+     * - 이 로직은 '근처 산책로'의 루프 생성 시에도 재사용됩니다.
      */
     async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt = 0) {
-        const angleStep = 30; const radiusVariations = [1, 0.8, 1.2]; const startAngleOffset = attempt * 10;
-        for (const radiusFactor of radiusVariations) {
-            const searchRadius = (targetDistanceMeters / 4) * radiusFactor; 
-            for (let i = 0; i < 360 / angleStep; i++) {
-                const angle = (i * angleStep + startAngleOffset) * (Math.PI / 180);
-                const midX = parseFloat(startPoint.x) + (searchRadius * Math.cos(angle)) / (111000 * Math.cos(parseFloat(startPoint.y) * Math.PI / 180));
-                const midY = parseFloat(startPoint.y) + (searchRadius * Math.sin(angle)) / 111000;
-                try {
-                    const route = await getRoute([startPoint, {x: midX, y: midY, place_name: "mid"}, startPoint]);
-                    if (Math.abs(route.summary.distance - targetDistanceMeters) <= 300) {
-                        route.total_distance = route.summary.distance; route.total_duration = route.summary.duration; return route;
-                    }
-                } catch (e) {}
+        
+        // v2.7: 목표 거리에 따라 꼭지점 수 결정 (v2.6의 단순 로직을 대체)
+        // 3.5km 이하: 삼각형(3), 6km 이하: 사각형(4), 그 이상: 오각형(5)
+        // let numVertices;
+        // if (targetDistanceMeters <= 3500) numVertices = 3; // 삼각형
+        // else if (targetDistanceMeters <= 6000) numVertices = 4; // 사각형
+        // else numVertices = 5; // 오각형
+        
+        // v2.7: 재시도시 꼭지점 수를 변경하여(3, 4, 5 순환) 다양한 코스 제안
+        // (attempt % 3) -> 0, 1, 2...
+        // 3 + (0 % 3) = 3
+        // 3 + (1 % 3) = 4
+        // 3 + (2 % 3) = 5
+        // 3 + (3 % 3) = 3 (다시 순환)
+        // 이렇게 하면 '새로고침' 시 다른 도형을 시도합니다.
+        let numVertices = 3 + (attempt % 3);
+
+        // v2.7: 코스의 대략적인 반경 계산
+        // (둘레 / (2 * PI)) -> 코스를 원으로 근사
+        const radius = targetDistanceMeters / (2 * Math.PI); 
+        
+        // v2.7: 재시도 시 도형을 30도씩 회전시켜 새로운 경로 탐색
+        const startAngleOffset = (attempt * 30) * (Math.PI / 180); 
+
+        const waypoints = [startPoint];
+        const startX = parseFloat(startPoint.x);
+        const startY = parseFloat(startPoint.y);
+
+        // v2.7: (N-1)개의 중간 경유지 계산
+        // numVertices=3 (삼각형) -> 2개 경유지 (i=0, 1)
+        // numVertices=4 (사각형) -> 3개 경유지 (i=0, 1, 2)
+        for (let i = 0; i < numVertices - 1; i++) {
+            // (i+1) / numVertices -> 1/N, 2/N, ... (N-1)/N 지점에 점을 찍음
+            const angle = startAngleOffset + ((i + 1) * 2 * Math.PI) / numVertices;
+
+            // v2.7: 위도에 따른 경도 거리 보정
+            const wpX = startX + (radius * Math.cos(angle)) / (111000 * Math.cos(startY * Math.PI / 180));
+            const wpY = startY + (radius * Math.sin(angle)) / 111000;
+            
+            waypoints.push({ x: wpX, y: wpY, place_name: `point${i + 1}` });
+        }
+
+        waypoints.push(startPoint); // v2.7: 다시 출발지로 돌아옴
+
+        try {
+            // v2.7: [출발지, P1, P2, ..., 출발지] 경로 요청
+            const route = await getRoute(waypoints);
+            
+            // v2.7: 오차 범위를 700m로 완화 (도형 코스는 정확히 맞추기 어려움)
+            if (Math.abs(route.summary.distance - targetDistanceMeters) <= 700) { 
+                route.total_distance = route.summary.distance;
+                route.total_duration = route.summary.duration;
+                return route;
             }
-        } return null;
+        } catch (e) {
+            console.warn(`Geometric loop generation failed (N=${numVertices}, attempt=${attempt}):`, e);
+        }
+        
+        // v2.7: 최대 3번(N=3, 4, 5) 시도 후 실패하면 null 반환
+        if (attempt < 3) {
+            return await generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt + 1);
+        }
+
+        return null; // v2.7: 최종 실패
     }
     
     /**
      * v2.6: '근처 산책로' 추천 로직 (v2.5와 동일)
+     * (내부적으로 v2.7의 도형 코스 생성 함수를 호출하게 됨)
      */
     async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt = 0) {
         const keywords = ['공원', '산책로', '수목원', '호수공원', '강'];
@@ -690,6 +738,7 @@
 
                 if (loopDistance < 1000) continue; 
                 
+                // v2.7: 여기서 업그레이드된 도형 코스 함수를 호출함!
                 const trailLoop = await generateNonOverlappingLoopCourse(trailStartPoint, loopDistance, attempt);
                 
                 if (trailLoop) {
@@ -1040,4 +1089,3 @@
 </script>
 </body>
 </html>
-
