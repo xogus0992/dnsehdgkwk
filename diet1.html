@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 <title>다이어트 내비게이션 & 포켓몬 월드 (v3.5)</title>
 <style>
     /* v2.6: 디자인 대대적 개편 (활기찬 걷기 앱 테마) */
@@ -847,7 +847,9 @@
                 try {
                     const response = await fetch(url, {
                         method: "GET",
-                        headers: { "Authorization": "KakaoAK YOUR_KAKAO_REST_API_KEY" } // 중요: 이 부분은 서버에서 처리해야 함
+                        // ▼▼▼ [수정] Kakao REST API 키 적용 완료 ▼▼▼
+                        headers: { "Authorization": "KakaoAK 71b46fcb7202af130ab7c6c18bf5163a" } 
+                        // ▲▲▲ [수정] Kakao REST API 키 적용 완료 ▲▲▲
                     });
                     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     const data = await response.json();
