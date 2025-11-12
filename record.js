@@ -26,14 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
         prCelebrationModal: document.getElementById('pr-celebration-modal'),
         prList: document.getElementById('pr-list'),
         closePrModal: document.getElementById('close-pr-modal'),
+
         dailyLogModalTitle: document.getElementById('daily-log-modal-title'),
         dailyLogModalList: document.getElementById('daily-log-modal-list'),
+        
         statsPartSelector: document.getElementById('stats-part-selector'),
         statsExerciseSelect: document.getElementById('stats-exercise-select'),
         statsChartCanvas: document.getElementById('stats-chart-canvas'),
         statsStartDate: document.getElementById('stats-start-date'),
         statsEndDate: document.getElementById('stats-end-date'),
         statsResetBtn: document.getElementById('stats-reset-btn'),
+
         templateModalTitle: document.getElementById('template-modal-title'),
         templateTitleInput: document.getElementById('template-title-input'),
         templateExerciseList: document.getElementById('template-exercise-list'),
@@ -44,8 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         templateSetsInput: document.getElementById('template-sets-input'),
         addUpdateExerciseBtn: document.getElementById('add-update-exercise-btn'),
         saveTemplateBtn: document.getElementById('save-template-btn'),
+        deleteTemplateBtn: document.getElementById('delete-template-btn'),
+        closeTemplateModalBtn: document.getElementById('close-template-modal-btn'),
+
         workoutSessionTitle: document.getElementById('workout-session-title'),
         timerInput: document.getElementById('timer-input'),
+        timerStartBtn: document.getElementById('timer-start-btn'),
+        timerPauseBtn: document.getElementById('timer-pause-btn'),
+        timerResetBtn: document.getElementById('timer-reset-btn'),
         timerMinus10Btn: document.getElementById('timer-minus-10'), 
         timerPlus10Btn: document.getElementById('timer-plus-10'),  
         timerMinus30Btn: document.getElementById('timer-minus-30'), 
@@ -54,1001 +63,998 @@ document.addEventListener('DOMContentLoaded', () => {
         timerDigitalDisplay: document.getElementById('timer-digital-display'),
         clockSecondHand: document.getElementById('clock-second-hand'),
         workoutSessionList: document.getElementById('workout-session-list'),
-        hideSessionBtn: document.getElementById('hide-session-btn'),
         addExerciseToSessionBtn: document.getElementById('add-exercise-to-session-btn'),
         saveSessionBtn: document.getElementById('save-session-btn'),
+        hideSessionBtn: document.getElementById('hide-session-btn'),
+
+        addExModalCategory: document.getElementById('add-ex-modal-category'),
+        addExModalList: document.getElementById('add-ex-modal-list'),
+        confirmAddExerciseBtn: document.getElementById('confirm-add-exercise-btn'),
+        openAddExerciseModalBtn: document.getElementById('open-add-exercise-modal-btn'),
+        cancelAddExerciseBtn: document.getElementById('cancel-add-exercise-btn'),
+        newExercisePart: document.getElementById('new-exercise-part'),
+        newExerciseName: document.getElementById('new-exercise-name'),
+        saveNewExerciseBtn: document.getElementById('save-new-exercise-btn'),
+        
+        summaryModalTitle: document.getElementById('summary-modal-title'),
+        summaryTotalTime: document.getElementById('summary-total-time'),
+        summaryTotalVolume: document.getElementById('summary-total-volume'),
+        summaryExercises: document.getElementById('summary-exercises'),
+        closeSummaryBtn: document.getElementById('close-summary-btn'),
+        
         addToSessionModalTitle: document.getElementById('add-to-session-modal-title'),
-        sessionExCategorySelect: document.getElementById('session-ex-category-select'),
-        sessionExListSelect: document.getElementById('session-ex-list-select'),
         sessionWeightInput: document.getElementById('session-weight-input'),
         sessionRepsInput: document.getElementById('session-reps-input'),
         sessionSetsInput: document.getElementById('session-sets-input'),
         saveToSessionBtn: document.getElementById('save-to-session-btn'),
-        openAddExerciseModalBtn: document.getElementById('open-add-exercise-modal-btn'),
-        newExercisePart: document.getElementById('new-exercise-part'),
-        newExerciseName: document.getElementById('new-exercise-name'),
-        saveNewExerciseBtn: document.getElementById('save-new-exercise-btn'),
-        cancelAddExerciseBtn: document.getElementById('cancel-add-exercise-btn'),
-        summaryContent: document.getElementById('summary-content'),
-        closeSummaryBtn: document.getElementById('close-summary-btn'),
-        confirmMessage: document.getElementById('confirm-message'),
-        confirmOkBtn: document.getElementById('confirm-ok-btn'),
-        confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+        cancelAddToSessionBtn: document.getElementById('cancel-add-to-session-btn'),
+
+        confirmModalText: document.getElementById('confirm-modal-text'),
+        confirmModalYes: document.getElementById('confirm-modal-yes'),
+        confirmModalNo: document.getElementById('confirm-modal-no'),
+
+        floatingTimerProgressCircle: document.querySelector('#floating-timer-progress .progress-ring__circle')
     };
-    const adjustTimerInput = (seconds) => {
-            const currentValue = parseInt(elements.timerInput.value, 10) || 0;
-            let newValue = currentValue + seconds;
-            if (newValue < 0) newValue = 0; // 0초 미만으로 내려가지 않도록
-            elements.timerInput.value = newValue;
-        };
 
-        if (elements.timerMinus10Btn) elements.timerMinus10Btn.addEventListener('click', () => adjustTimerInput(-10));
-        if (elements.timerPlus10Btn) elements.timerPlus10Btn.addEventListener('click', () => adjustTimerInput(10));
-        if (elements.timerMinus30Btn) elements.timerMinus30Btn.addEventListener('click', () => adjustTimerInput(-30));
-        if (elements.timerPlus30Btn) elements.timerPlus30Btn.addEventListener('click', () => adjustTimerInput(30));
-    const ROUTINE_TEMPLATE_KEY = 'my_fitness_templates_v15';
-    const LOG_KEY = 'my_fitness_logs_v18_warmup'; // Key updated for new structure
-    const CUSTOM_EXERCISES_KEY = 'my_fitness_custom_exercises_v9';
-    const PR_KEY = 'my_fitness_prs_v10_1rm';
+    const circumference = elements.floatingTimerProgressCircle ? elements.floatingTimerProgressCircle.r.baseVal.value * 2 * Math.PI : 0;
 
-    let routineTemplates = [], workoutLogs = {}, customExercises = {}, personalRecords = {}, combinedExercises = {};
-    let calendarDate = new Date();
-    let selectedDate = new Date().toLocaleDateString('en-CA');
-    let statsChart = null, currentEditingTemplate = { id: null, exercises: [] };
-    let currentWorkoutSession = { log: null, originalLogIndex: null, originalTemplateExercises: null };
-    let currentlyEditingExerciseIndex = null, sessionEditingExIndex = null; 
-    let timerInterval = null, clickTimer = null, confirmCallback = null;
-    const floatingTimerProgressCircle = elements.floatingTimerProgress;
-    const circumference = floatingTimerProgressCircle ? 2 * Math.PI * floatingTimerProgressCircle.r.baseVal.value : 0;
-
+    const WORKOUT_LOG_KEY = 'workoutLogs_v18';
+    const ROUTINE_TEMPLATE_KEY = 'routineTemplates_v18';
+    const EXERCISE_LIST_KEY = 'customExercises_v18';
     const BODY_PART_COLORS = {
-        "가슴": 'rgba(239, 68, 68, 0.8)',      // red-500
-        "등": 'rgba(59, 130, 246, 0.8)',     // blue-500
-        "어깨": 'rgba(245, 158, 11, 0.8)',   // amber-500
-        "하체": 'rgba(16, 185, 129, 0.8)',   // green-500
-        "팔": 'rgba(139, 92, 246, 0.8)',    // violet-500
-        "복근/코어": 'rgba(249, 115, 22, 0.8)', // orange-500
-        "전체": 'rgba(107, 114, 128, 0.8)'   // gray-500
+        "가슴": 'rgba(59, 130, 246, 0.8)',
+        "등": 'rgba(34, 197, 94, 0.8)',
+        "하체": 'rgba(239, 68, 68, 0.8)',
+        "어깨": 'rgba(168, 85, 247, 0.8)',
+        "팔": 'rgba(249, 115, 22, 0.8)',
+        "복근/코어": 'rgba(234, 179, 8, 0.8)',
+        "기타": 'rgba(107, 114, 128, 0.8)',
+        "전체": 'rgba(20, 184, 166, 0.8)'
     };
-    Chart.register(ChartDataLabels);
 
-    const saveToLocalStorage = (key, data) => localStorage.setItem(key, JSON.stringify(data));
-    const loadFromLocalStorage = (key, defaultValue) => { try { return JSON.parse(localStorage.getItem(key)) || defaultValue; } catch { return defaultValue; } };
-
-    const mergeExercises = () => {
-        if (typeof exercisesData === 'undefined' || typeof bodyPartImages === 'undefined') return;
-        combinedExercises = {};
-        Object.keys(exercisesData).forEach(part => {
-            combinedExercises[part] = exercisesData[part].map(e => ({ name: e.name, image: e.image || bodyPartImages[part] || '', part }));
-        });
-        Object.keys(customExercises).forEach(part => {
-            if (!combinedExercises[part]) combinedExercises[part] = [];
-            combinedExercises[part].push(...customExercises[part].map(e => ({ name: e.name, image: bodyPartImages[part] || '', custom: true, part })));
-        });
+    let currentWorkoutSession = {
+        date: null,
+        log: { startTime: null, endTime: null, sets: [], note: "" },
+        timerInterval: null,
+        timerSeconds: 0,
+        timerPaused: false,
+        editingSetIndex: null
     };
     
+    let currentFloatingTimer = null;
+    let floatingTimerSeconds = 0;
+    
+    let currentChart = null;
+    let editingTemplateId = null;
+    let editingTemplateExerciseIndex = null;
+    
+    // [수정됨] today 변수의 시간을 0시 0분 0초로 초기화
+    let today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    
+    let currentYear = today.getFullYear();
+    let currentMonth = today.getMonth();
+    let workoutLogs = {};
+    let routineTemplates = {};
+    let customExercises = {};
+    let combinedExercises = {};
+
+    const loadFromLocalStorage = (key, defaultValue) => {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+    };
+
+    const saveToLocalStorage = (key, data) => {
+        localStorage.setItem(key, JSON.stringify(data));
+    };
+
+    const mergeExercises = () => {
+        combinedExercises = JSON.parse(JSON.stringify(exercisesData));
+        Object.keys(customExercises).forEach(part => {
+            if (!combinedExercises[part]) {
+                combinedExercises[part] = [];
+            }
+            combinedExercises[part] = combinedExercises[part].concat(customExercises[part]);
+        });
+    };
+
     const getPartForExercise = (exerciseName) => {
         for (const part in combinedExercises) {
-            if (combinedExercises[part].some(e => e.name === exerciseName)) {
+            if (combinedExercises[part].some(ex => ex.name === exerciseName)) {
                 return part;
             }
         }
-        return "전체";
-    }
-
-    const formatDate = (d) => new Date(d).toLocaleDateString('en-CA');
-    const openModal = (el) => el?.classList.add('open');
-    const closeModal = (el) => el?.classList.remove('open');
-    
-    const showConfirm = (message, onConfirm) => {
-        elements.confirmMessage.textContent = message;
-        confirmCallback = onConfirm;
-        openModal(elements.customConfirmModal);
+        return "기타";
     };
 
-    const calculate1RM = (weight, reps) => {
-        if (reps <= 0) return 0;
-        if (reps === 1) return weight;
-        return weight * (1 + reps / 30);
-    };
+    const openModal = (modal) => modal.style.display = 'flex';
+    const closeModal = (modal) => modal.style.display = 'none';
 
-    const checkAndUpdatePRs = (sessionLog) => {
-        let newPRs = [];
-        sessionLog.sets.forEach(set => {
-            if (set.completed && set.reps > 0 && !set.isWarmup) {
-                const estimated1RM = calculate1RM(set.weight, set.reps);
-                if (!personalRecords[set.name] || estimated1RM > personalRecords[set.name].max1RM) {
-                    personalRecords[set.name] = { max1RM: estimated1RM };
-                    newPRs.push({ name: set.name, value: estimated1RM });
-                }
-            }
-        });
-
-        if (newPRs.length > 0) {
-            saveToLocalStorage(PR_KEY, personalRecords);
-            elements.prList.innerHTML = newPRs.map(pr => 
-                `<div class="flex justify-between items-center text-lg">
-                    <span class="font-bold">${pr.name}</span>
-                    <span class="text-blue-500 font-semibold">${pr.value.toFixed(1)}kg (1RM)</span>
-                </div>`
-            ).join('');
-            openModal(elements.prCelebrationModal);
-        }
-    };
-
-    const updateStatsView = () => {
-        const activePartBtn = document.querySelector('#stats-part-selector .active');
-        const selectedExercise = elements.statsExerciseSelect.value;
-        
-        let type = '전체';
-        let value = '전체';
-
-        if (selectedExercise) {
-            type = 'exercise';
-            value = selectedExercise;
-        } else if (activePartBtn) {
-            type = 'part';
-            value = activePartBtn.dataset.part;
-        }
-        
-        renderStatsGraph({
-            type: type,
-            value: value,
-            startDate: elements.statsStartDate.value,
-            endDate: elements.statsEndDate.value,
-        });
-    };
-
-    const renderStatsGraph = ({ type, value, startDate = null, endDate = null }) => {
-        if (statsChart) statsChart.destroy();
-
-        let relevantDates = Object.keys(workoutLogs).filter(date => {
-            return (workoutLogs[date] || []).some(log =>
-                (log.sets || []).some(set => {
-                    if (!set.completed || set.isWarmup) return false;
-                    const part = getPartForExercise(set.name);
-                    if (type === '전체') return true;
-                    if (type === 'part') return part === value;
-                    if (type === 'exercise') return set.name === value;
-                    return false;
-                })
-            );
-        }).sort();
-
-        let datesToProcess;
-        if (startDate && endDate) {
-            datesToProcess = relevantDates.filter(date => date >= startDate && date <= endDate);
-        } else {
-            datesToProcess = relevantDates.slice(-10);
-        }
-
-        const datasets = [];
-        const labels = datesToProcess.map(d => d.substring(5));
-
-        if (type === '전체') {
-            const partVolumes = {};
-            datesToProcess.forEach((date, dateIndex) => {
-                (workoutLogs[date] || []).forEach(log => {
-                    (log.sets || []).forEach(set => {
-                        if (set.completed && !set.isWarmup) {
-                            const part = getPartForExercise(set.name);
-                            if (!partVolumes[part]) {
-                                partVolumes[part] = Array(datesToProcess.length).fill(0);
-                            }
-                            partVolumes[part][dateIndex] += set.weight * set.reps;
-                        }
-                    });
-                });
-            });
-
-            Object.keys(partVolumes).forEach(part => {
-                if (partVolumes[part].reduce((a, b) => a + b, 0) > 0) {
-                    datasets.push({
-                        label: part,
-                        data: partVolumes[part],
-                        backgroundColor: BODY_PART_COLORS[part] || BODY_PART_COLORS['전체'],
-                    });
-                }
-            });
-        } else if (type === 'part') {
-            const exercisesInPart = combinedExercises[value].map(e => e.name);
-            const exerciseVolumes = {};
-            datesToProcess.forEach((date, dateIndex) => {
-                (workoutLogs[date] || []).forEach(log => {
-                    (log.sets || []).forEach(set => {
-                        if (set.completed && !set.isWarmup && exercisesInPart.includes(set.name)) {
-                            if (!exerciseVolumes[set.name]) {
-                                exerciseVolumes[set.name] = Array(datesToProcess.length).fill(0);
-                            }
-                            exerciseVolumes[set.name][dateIndex] += set.weight * set.reps;
-                        }
-                    });
-                });
-            });
-            const baseColor = BODY_PART_COLORS[value] || BODY_PART_COLORS['전체'];
-            const shades = generateShades(baseColor, Object.keys(exerciseVolumes).length);
-            let i = 0;
-            Object.keys(exerciseVolumes).forEach(exerciseName => {
-                if (exerciseVolumes[exerciseName].reduce((a, b) => a + b, 0) > 0) {
-                    datasets.push({
-                        label: exerciseName,
-                        data: exerciseVolumes[exerciseName],
-                        backgroundColor: shades[i++] || baseColor,
-                    });
-                }
-            });
-        } else { // 'exercise'
-            const data = datesToProcess.map(date => {
-                let dailyVol = 0;
-                (workoutLogs[date] || []).forEach(log => {
-                    (log.sets || []).forEach(set => {
-                        if (set.completed && !set.isWarmup && set.name === value) {
-                            dailyVol += set.weight * set.reps;
-                        }
-                    });
-                });
-                return dailyVol;
-            });
-            datasets.push({
-                label: value,
-                data: data,
-                backgroundColor: BODY_PART_COLORS[getPartForExercise(value)] || BODY_PART_COLORS['전체'],
-            });
-        }
-        
-        statsChart = new Chart(elements.statsChartCanvas, {
-            type: 'bar',
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: (value, context) => {
-                             const datasetArray = [];
-                             context.chart.data.datasets.forEach((dataset) => {
-                                 const val = dataset.data[context.dataIndex];
-                                 if(val > 0) datasetArray.push(val);
-                             });
-                             const total = datasetArray.reduce((a, b) => a + b, 0);
-                             if (value === datasetArray[datasetArray.length - 1] && total > 0) { 
-                                return `${Math.round(total)}kg`;
-                             } else {
-                                return '';
-                             }
-                        },
-                        color: '#4a5568',
-                        font: { weight: 'bold' }
-                    },
-                    legend: {
-                        display: (type === '전체' || type === 'part') && datasets.length > 1,
-                    }
-                },
-                scales: {
-                    x: { stacked: true },
-                    y: { 
-                        stacked: true, 
-                        beginAtZero: true,
-                        grace: '20%'
-                    }
-                }
-            }
-        });
-    };
-    
-     const initializeStatsView = () => {
-        elements.statsPartSelector.innerHTML = Object.keys(BODY_PART_COLORS).filter(p => p !== '전체').map(part => `<button class="stats-selector-btn" data-part="${part}">${part}</button>`).join('');
-        elements.statsExerciseSelect.innerHTML = '<option value="">-- 부위 먼저 선택 --</option>';
-        elements.statsStartDate.value = '';
-        elements.statsEndDate.value = '';
-        renderStatsGraph({ type: '전체', value: '전체' });
-    };
-
-    const renderCalendar = () => {
-        const year = calendarDate.getFullYear(), month = calendarDate.getMonth();
+    // [수정됨] renderCalendar 함수에 미래 날짜 비활성화 로직 추가
+    const renderCalendar = (year, month) => {
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
         elements.calendarTitle.textContent = `${year}년 ${month + 1}월`;
         elements.calendarBody.innerHTML = '';
-        const firstDay = new Date(year, month, 1).getDay(), lastDate = new Date(year, month + 1, 0).getDate();
-        const todayStr = formatDate(new Date());
 
-        for (let i = 0; i < firstDay; i++) elements.calendarBody.appendChild(document.createElement('div'));
-        for (let d = 1; d <= lastDate; d++) {
-            const dateStr = formatDate(new Date(year, month, d));
-            const dayEl = document.createElement('div');
-            let totalVolume = 0;
-            if (workoutLogs[dateStr]?.length > 0) {
-                workoutLogs[dateStr].forEach(log => (log.sets || []).forEach(s => { if(s.completed && !s.isWarmup) totalVolume += (s.weight || 0) * (s.reps || 0)}));
-            }
+        ['일', '월', '화', '수', '목', '금', '토'].forEach(day => {
+            elements.calendarBody.innerHTML += `<div class="calendar-header">${day}</div>`;
+        });
+
+        for (let i = 0; i < firstDay; i++) {
+            elements.calendarBody.innerHTML += `<div class="calendar-day empty"></div>`;
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayElement = document.createElement('div');
+            dayElement.classList.add('calendar-day');
+
+            dayElement.innerHTML = `<span class="day-number">${day}</span>`; // 모든 날짜에 숫자 우선 표시
             
-            let dayClasses = 'calendar-day';
-            if(workoutLogs[dateStr]?.length > 0) dayClasses += ' has-log';
-            if(dateStr === todayStr) dayClasses += ' today';
-            if(dateStr === selectedDate) dayClasses += ' selected';
-            if(dateStr > todayStr) dayClasses += ' future';
+            const isFuture = date > today; // 'today' 변수는 0시 0분 0초이므로 정확히 비교됨
+            
+            if (isFuture) {
+                dayElement.classList.add('future-day');
+                // 미래 날짜에는 클릭 이벤트 리스너를 추가하지 않음
+            } else {
+                // 오늘이거나 과거 날짜
+                if (date.getTime() === today.getTime()) {
+                    dayElement.classList.add('today');
+                }
 
-            dayEl.className = dayClasses;
-            dayEl.dataset.date = dateStr;
-            dayEl.innerHTML = `<div class="day-number">${d}</div>` + (totalVolume > 0 ? `<div class="day-volume">${totalVolume.toLocaleString()}kg</div>` : '');
-            elements.calendarBody.appendChild(dayEl);
+                const dayLogs = workoutLogs[dateStr] || [];
+                const parts = new Set(dayLogs.flatMap(log => log.sets.map(set => getPartForExercise(set.name))));
+                
+                if (parts.size > 0) {
+                    const partsIndicator = document.createElement('div');
+                    partsIndicator.classList.add('parts-indicator');
+                    parts.forEach(part => {
+                        const partDot = document.createElement('div');
+                        partDot.classList.add('part-dot');
+                        partDot.style.backgroundColor = BODY_PART_COLORS[part] || BODY_PART_COLORS["기타"];
+                        partsIndicator.appendChild(partDot);
+                    });
+                    dayElement.appendChild(partsIndicator);
+                }
+
+                dayElement.dataset.date = dateStr;
+                dayElement.addEventListener('click', () => showDailyLogModal(dateStr));
+            }
+            elements.calendarBody.appendChild(dayElement);
         }
     };
 
-    const renderRoutineTemplates = () => {
-        elements.routineTemplateList.innerHTML = !routineTemplates?.length ? '<p class="text-gray-500 text-sm">템플릿이 없습니다.</p>' :
-            routineTemplates.map(t => `
-                <div class="p-4 border rounded-lg mb-2" data-id="${t.id}">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-lg">${t.title}</span>
-                        <div class="flex items-center gap-2">
-                            <button class="start-routine-btn text-green-500 font-bold hover:text-green-600 transition" data-id="${t.id}">▶ 시작</button>
-                            <button class="edit-template-btn text-btn hover:text-blue-500 transition" data-id="${t.id}">편집</button>
-                            <button class="delete-template-btn text-btn text-red-500 hover:text-red-600 transition" data-id="${t.id}">삭제</button>
-                        </div>
-                    </div>
-                    <div class="mt-2 space-y-1 text-gray-600">${t.exercises.map(ex => `<div class="flex justify-between"><span>${ex.name}</span><span>${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트</span></div>`).join('')}</div>
-                </div>
-            `).join('');
-    };
-    
-    const openDailyLogModal = (date) => {
-        elements.dailyLogModalTitle.textContent = `${date} 운동 기록`;
-        const logs = workoutLogs[date] || [];
-        elements.dailyLogModalList.innerHTML = logs.length === 0 ? '<p class="text-gray-500">기록이 없습니다.</p>' :
-            logs.map((log, logIdx) => {
-                const exercisesHtml = (log.exercises || []).map((ex, exIdx) => {
-                    const setsForExercise = (log.sets || []).filter(s => s.exerciseIndex === exIdx);
-                    const setsHtml = setsForExercise.map(s => `
-                        <li class="flex justify-between items-center ${s.isWarmup ? 'warmup-set-text' : ''}">
-                            <span>
-                                <span class="font-bold inline-block w-12">${s.isWarmup ? '웜업' : s.setNumber + '세트'}</span>
-                                ${s.weight}kg × ${s.reps}회
-                            </span>
-                            <span class="font-bold text-lg ${s.completed ? 'text-green-500' : 'text-gray-300'}">✓</span>
-                        </li>
-                    `).join('');
-                    
-                    const warmupsDone = setsForExercise.filter(s => s.isWarmup && s.completed).length;
-                    
-                    return `
-                        <div class="mb-3">
-                            <h5 class="font-bold text-lg">${ex.name} ${warmupsDone > 0 ? `<span class="text-sm font-normal text-blue-500">(웜업 ${warmupsDone}세트)</span>` : ''}</h5>
-                            <ul class="space-y-1 mt-1 pl-2">${setsHtml}</ul>
-                        </div>`;
-                }).join('');
-
-                return `
-                    <div class="mb-3 pb-3 border-b">
-                        <div class="flex justify-between items-start">
-                            <h4 class="font-bold text-xl">${log.title}</h4>
-                            <div class="flex gap-2">
-                                <button class="text-btn text-red-500 delete-log-btn" data-log-index="${logIdx}">삭제</button>
-                            </div>
-                        </div>
-                        <div class="mt-2">${exercisesHtml}</div>
-                    </div>`;
-            }).join('');
+    const showDailyLogModal = (dateStr) => {
+        const date = new Date(dateStr);
+        elements.dailyLogModalTitle.textContent = `${date.getMonth() + 1}월 ${date.getDate()}일 (${['일', '월', '화', '수', '목', '금', '토'][date.getDay()]})`;
+        elements.dailyLogDate.value = dateStr;
+        renderDailyLogModal(dateStr);
         openModal(elements.dailyLogModal);
     };
 
+    const calculateVolume = (sets) => {
+        const volume = sets.filter(set => set.weight > 0).reduce((acc, set) => acc + (set.weight * set.reps), 0);
+        return volume > 0 ? `${Math.round(volume)}kg` : '';
+    };
 
-    const createLogFromTemplate = (template) => {
-        const newLog = {
-            id: template.id, title: template.title,
-            exercises: JSON.parse(JSON.stringify(template.exercises)),
-            sets: []
-        };
-        newLog.exercises.forEach((ex, exIndex) => {
-            for (let i = 0; i < ex.sets; i++) {
-                newLog.sets.push({
-                    name: ex.name, exerciseIndex: exIndex, setNumber: i + 1,
-                    weight: ex.weight, reps: ex.reps, completed: false, isWarmup: false
-                });
-            }
+    const renderDailyLogModal = (dateStr) => {
+        const logs = workoutLogs[dateStr] || [];
+        elements.dailyLogModalList.innerHTML = '';
+        
+        if (logs.length === 0) {
+            elements.dailyLogModalList.innerHTML = '<li class="text-gray-500">운동 기록이 없습니다.</li>';
+        }
+
+        logs.forEach((log, logIndex) => {
+            const logElement = document.createElement('li');
+            logElement.className = 'daily-log-item card mb-4';
+            
+            const uniqueExercises = [...new Set(log.sets.map(s => s.name))];
+            const exercisesHtml = uniqueExercises.map((exName, exIdx) => {
+                const setsForExercise = (log.sets || []).filter(s => s.exerciseIndex === exIdx);
+                const setsHtml = setsForExercise.map(s => 
+                    `<li class="flex justify-between items-center p-2">
+                        <div><span class="font-semibold">${s.weight}</span>kg x <span class="font-semibold">${s.reps}</span>회</div>
+                        ${s.pr ? '<span class="pr-badge">PR</span>' : ''}
+                    </li>`
+                ).join('');
+                
+                return `<div class="mt-3">
+                            <h5 class="font-semibold text-lg text-gray-800">${exName}</h5>
+                            <ul class="list-disc list-inside mt-1 space-y-1">${setsHtml}</ul>
+                        </div>`;
+            }).join('');
+
+            const startTime = new Date(log.startTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            const endTime = new Date(log.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            const duration = Math.round((log.endTime - log.startTime) / 60000);
+            const totalVolume = calculateVolume(log.sets);
+
+            logElement.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-xl font-bold text-blue-600">운동 기록 #${logIndex + 1}</h4>
+                    <div class="flex gap-2">
+                        <button class="edit-log-btn small-btn" data-date="${dateStr}" data-log-index="${logIndex}">수정</button>
+                        <button class="delete-log-btn small-btn delete-btn" data-date="${dateStr}" data-log-index="${logIndex}">삭제</button>
+                    </div>
+                </div>
+                <div class="text-gray-600 space-y-1">
+                    <p><strong>시간:</strong> ${startTime} ~ ${endTime} (${duration}분)</p>
+                    ${totalVolume ? `<p><strong>총 볼륨:</strong> ${totalVolume}</p>` : ''}
+                </div>
+                <div class="mt-4">${exercisesHtml}</div>
+            `;
+            elements.dailyLogModalList.appendChild(logElement);
         });
-        return newLog;
-    }
 
-    const openWorkoutSessionModal = (logTemplate, originalLogIndex = null) => {
-        if (currentWorkoutSession.log) {
-            showConfirm("진행 중인 운동이 있습니다. 이어서 하시겠습니까?", () => {
-                reOpenWorkoutSessionModal();
-            });
+        const startRoutineBtn = document.createElement('button');
+        startRoutineBtn.id = 'start-routine-btn';
+        startRoutineBtn.className = 'w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition';
+        startRoutineBtn.textContent = '운동 시작하기 (루틴 선택)';
+        startRoutineBtn.dataset.date = dateStr;
+        elements.dailyLogModalList.appendChild(startRoutineBtn);
+    };
+
+    const renderRoutineTemplateList = () => {
+        elements.routineTemplateList.innerHTML = '';
+        const templateIds = Object.keys(routineTemplates);
+        if (templateIds.length === 0) {
+            elements.routineTemplateList.innerHTML = '<p class="text-gray-500 text-center">저장된 루틴 템플릿이 없습니다. 새로 만들어주세요.</p>';
             return;
         }
-        const log = createLogFromTemplate(logTemplate);
-        currentWorkoutSession = { 
-            log: log, 
-            originalLogIndex,
-            originalTemplateExercises: JSON.stringify(log.exercises),
-        };
-        renderWorkoutSession();
-        openModal(elements.workoutSessionModal);
-    };
-
-    const reOpenWorkoutSessionModal = () => {
-        if (currentWorkoutSession.log) {
-            elements.floatingTimer.classList.add('hidden');
-            openModal(elements.workoutSessionModal);
-        }
-    };
-
-    const hideWorkoutSessionModal = () => {
-        closeModal(elements.workoutSessionModal);
-        if (currentWorkoutSession.log) {
-            elements.floatingTimer.classList.remove('hidden');
-        }
-    };
-
-    const cancelWorkoutSession = () => {
-        clearInterval(timerInterval);
-        currentWorkoutSession = { log: null, originalLogIndex: null, originalTemplateExercises: null };
-        elements.floatingTimer.classList.add('hidden');
-        elements.timerDigitalDisplay.textContent = '00:00';
-        if (elements.clockSecondHand) elements.clockSecondHand.style.transform = 'rotate(0deg)';
-        if (floatingTimerProgressCircle) floatingTimerProgressCircle.style.strokeDashoffset = circumference;
-    };
-    
-    const renderWorkoutSession = () => {
-        elements.workoutSessionTitle.textContent = currentWorkoutSession.log.title || '루틴';
-        elements.workoutSessionList.innerHTML = '';
-        currentWorkoutSession.log.exercises.forEach((ex, exIndex) => {
-            const container = document.createElement('div');
-            container.className = 'border-b border-gray-200 pb-4 mb-4';
-            container.innerHTML = `<div class="flex justify-between items-center mb-3">
-                <p class="text-2xl font-bold text-gray-800">${ex.name}</p>
-                <div class="flex items-center gap-2">
-                    <button class="complete-all-sets-btn bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded-md font-semibold transition" data-exercise-index="${exIndex}">전체 완료</button>
-                    <button class="icon-btn edit-session-ex-btn" data-exercise-index="${exIndex}">✏️</button>
-                    <button class="icon-btn delete-session-ex-btn text-red-500 font-bold" data-exercise-index="${exIndex}">×</button>
+        
+        templateIds.forEach(id => {
+            const template = routineTemplates[id];
+            const templateEl = document.createElement('div');
+            templateEl.className = 'template-item card p-4 flex justify-between items-center';
+            templateEl.innerHTML = `
+                <span class="font-semibold text-lg">${template.title}</span>
+                <div class="flex gap-2">
+                    <button class="start-template-btn small-btn" data-id="${id}">시작</button>
+                    <button class="edit-template-btn small-btn" data-id="${id}">수정</button>
                 </div>
-            </div>`;
-
-            const setsForExercise = currentWorkoutSession.log.sets.filter(s => s.exerciseIndex === exIndex);
-            
-            // Render warm-up sets first
-            setsForExercise.filter(s => s.isWarmup).forEach(set => {
-                const setDiv = createSetElement(set, true);
-                container.appendChild(setDiv);
-            });
-
-            // Render main sets
-            const mainSets = setsForExercise.filter(s => !s.isWarmup);
-            mainSets.forEach((set, mainSetIndex) => {
-                const setDiv = createSetElement(set, false, mainSetIndex === 0, exIndex);
-                container.appendChild(setDiv);
-            });
-            
-            elements.workoutSessionList.appendChild(container);
+            `;
+            elements.routineTemplateList.appendChild(templateEl);
         });
     };
 
-    const createSetElement = (set, isWarmup, isFirstMainSet = false, exerciseIndex = -1) => {
-        const setDiv = document.createElement('div');
-        setDiv.className = `flex items-center justify-between mb-2 p-2 rounded-lg transition-colors duration-300 ${isWarmup ? 'warmup-set-text' : ''}`;
-        const setIndex = currentWorkoutSession.log.sets.indexOf(set);
-        
-        let actionButtonHtml = '';
-        if (isWarmup) {
-            actionButtonHtml = `<button class="session-action-btn delete-warmup-btn" data-set-index="${setIndex}">×</button>`;
+    const openTemplateEditor = (id = null) => {
+        if (id) {
+            editingTemplateId = id;
+            const template = routineTemplates[id];
+            elements.templateModalTitle.textContent = '루틴 수정';
+            elements.templateTitleInput.value = template.title;
+            renderTemplateExerciseList(template.exercises);
+            elements.deleteTemplateBtn.style.display = 'block';
         } else {
-             const warmupBtnHtml = isFirstMainSet 
-                ? `<button class="session-action-btn add-warmup-btn" data-exercise-index="${exerciseIndex}">웜업</button>` 
-                : `<div class="w-20"></div>`; // Placeholder to align buttons
-            
-            actionButtonHtml = `
-                ${warmupBtnHtml}
-                <button class="session-action-btn ${set.completed ? 'bg-blue-500 text-white' : 'bg-gray-300 hover:bg-gray-400'} set-complete-btn" data-set-index="${setIndex}">✓</button>
-            `;
+            editingTemplateId = null;
+            elements.templateModalTitle.textContent = '새 루틴 만들기';
+            elements.templateTitleInput.value = '';
+            renderTemplateExerciseList([]);
+            elements.deleteTemplateBtn.style.display = 'none';
         }
-
-        setDiv.innerHTML = `
-            <div class="flex items-center gap-3">
-                <span class="font-bold text-lg w-12 text-center ${isWarmup ? '' : 'text-gray-500'}">${isWarmup ? '웜업' : `${set.setNumber}`}</span>
-                <input type="number" class="session-set-input weight-input" value="${set.weight}" data-set-index="${setIndex}"> <span class="text-gray-600">kg</span>
-                <input type="number" class="session-set-input reps-input" value="${set.reps}" data-set-index="${setIndex}"> <span class="text-gray-600">회</span>
-            </div>
-            <div class="flex items-center gap-2">
-                ${actionButtonHtml}
-            </div>
-        `;
-        return setDiv;
-    };
-    
-    const openWorkoutSummaryModal = (log) => {
-        let totalVolume = 0;
-        const allExercisesFlat = Object.values(combinedExercises).flat();
-        let html = (log.exercises || []).map(ex => {
-            let exerciseVolume = 0;
-            const completedSets = (log.sets || []).filter(s => s.name === ex.name && s.completed && !s.isWarmup);
-            completedSets.forEach(s => exerciseVolume += (s.weight || 0) * (s.reps || 0));
-            totalVolume += exerciseVolume;
-            const exerciseInfo = allExercisesFlat.find(e => e.name === ex.name);
-            return `<div class="summary-item p-2 border-b"><img src="${exerciseInfo?.image || ''}" alt="${ex.name}" onerror="this.style.display='none'">
-                <div><p class="font-bold text-lg">${ex.name}</p><p class="text-gray-600">${completedSets.length} / ${ex.sets} 세트 (볼륨: ${exerciseVolume.toLocaleString()}kg)</p></div></div>`;
-        }).join('');
-        elements.summaryContent.innerHTML = `<div class="text-center mb-3"><h4 class="font-bold">총 볼륨</h4><p class="text-3xl font-bold text-blue-600">${totalVolume.toLocaleString()} kg</p></div>` + html;
-        openModal(elements.summaryModal);
-    };
-    
-    const openTemplateEditorModal = (templateId) => {
-        currentEditingTemplate.id = templateId;
-        if (templateId) {
-            const template = routineTemplates.find(t => t.id === templateId);
-            elements.templateModalTitle.textContent = "루틴 편집";
-            elements.templateTitleInput.value = template?.title || '';
-            currentEditingTemplate.exercises = JSON.parse(JSON.stringify(template?.exercises || []));
-        } else {
-            elements.templateModalTitle.textContent = "새 루틴 만들기";
-            elements.templateTitleInput.value = "";
-            currentEditingTemplate.exercises = [];
-            currentEditingTemplate.id = null;
-        }
+        editingTemplateExerciseIndex = null;
+        elements.addUpdateExerciseBtn.textContent = '운동 추가';
         populateExerciseSelectors(elements.exerciseCategorySelect, elements.exerciseListSelect);
-        renderTemplateExerciseList();
-        resetExerciseInputs(elements.templateWeightInput, elements.templateRepsInput, elements.templateSetsInput, elements.addUpdateExerciseBtn);
+        resetTemplateForm();
         openModal(elements.templateEditorModal);
     };
 
-    const openAddToSessionModal = (exIndex = null) => {
-        sessionEditingExIndex = exIndex;
-        populateExerciseSelectors(elements.sessionExCategorySelect, elements.sessionExListSelect);
-        if (exIndex !== null) {
-            const ex = currentWorkoutSession.log.exercises[exIndex];
-            elements.addToSessionModalTitle.textContent = "운동 편집";
-            elements.sessionWeightInput.value = ex.weight;
-            elements.sessionRepsInput.value = ex.reps;
-            elements.sessionSetsInput.value = ex.sets;
-            elements.saveToSessionBtn.textContent = "수정";
-        } else {
-            elements.addToSessionModalTitle.textContent = "세션에 운동 추가";
-            elements.sessionWeightInput.value = '';
-            elements.sessionRepsInput.value = '';
-            elements.sessionSetsInput.value = '';
-            elements.saveToSessionBtn.textContent = "추가";
+    const resetTemplateForm = () => {
+        elements.exerciseCategorySelect.value = '';
+        elements.exerciseListSelect.innerHTML = '<option value="">-- 운동 선택 --</option>';
+        elements.templateWeightInput.value = '';
+        elements.templateRepsInput.value = '';
+        elements.templateSetsInput.value = '';
+        editingTemplateExerciseIndex = null;
+        elements.addUpdateExerciseBtn.textContent = '운동 추가';
+    };
+
+    const renderTemplateExerciseList = (exercises) => {
+        elements.templateExerciseList.innerHTML = '';
+        if (!exercises || exercises.length === 0) {
+            elements.templateExerciseList.innerHTML = '<p class="text-gray-500 text-center col-span-full">추가된 운동이 없습니다.</p>';
+            return;
         }
-        openModal(elements.addToSessionModal);
-    };
 
-    const populateExerciseSelectors = (categorySelect, listSelect) => {
-        const parts = Object.keys(combinedExercises);
-        categorySelect.innerHTML = parts.map(p => `<option value="${p}">${p}</option>`).join('');
-        const updateList = () => {
-            const selectedPart = categorySelect.value;
-            listSelect.innerHTML = (combinedExercises[selectedPart] || []).map(e => `<option value="${e.name}">${e.name}</option>`).join('');
-        };
-        categorySelect.onchange = updateList;
-        updateList();
-    };
-
-    const resetExerciseInputs = (weightInput, repsInput, setsInput, button) => {
-        weightInput.value = ''; repsInput.value = ''; setsInput.value = '';
-        if(button) button.textContent = '운동 추가';
-        currentlyEditingExerciseIndex = null;
-    };
-
-    const renderTemplateExerciseList = () => {
-        elements.templateExerciseList.innerHTML = !currentEditingTemplate.exercises?.length ? '<p class="text-gray-500">운동을 추가해주세요.</p>' :
-            currentEditingTemplate.exercises.map((ex, idx) => `
-                <div class="flex justify-between items-center p-2 border-b">
-                    <span>${ex.name} (${ex.weight}kg x ${ex.reps}회 x ${ex.sets}세트)</span>
-                    <div>
-                        <button class="edit-exercise-btn text-btn hover:text-blue-500 transition" data-index="${idx}">편집</button>
-                        <button class="delete-template-ex-btn text-red-500 font-bold" data-index="${idx}">×</button>
-                    </div>
+        exercises.forEach((ex, index) => {
+            const exEl = document.createElement('div');
+            exEl.className = 'template-exercise-item card p-3 flex justify-between items-center';
+            exEl.dataset.index = index;
+            exEl.innerHTML = `
+                <div class="flex-grow">
+                    <span class="font-bold text-lg">${ex.name}</span>
+                    <span class="text-gray-600 ml-2">${ex.weight}kg / ${ex.reps}회 / ${ex.sets}세트</span>
                 </div>
-            `).join('');
+                <div class="flex gap-2">
+                    <button class="edit-ex-btn small-btn" data-index="${index}">수정</button>
+                    <button class="delete-ex-btn small-btn delete-btn" data-index="${index}">삭제</button>
+                </div>
+            `;
+            elements.templateExerciseList.appendChild(exEl);
+        });
+        
+        makeSortable();
     };
     
-     const bindEventListeners = () => {
-        elements.backBtn.addEventListener('click', () => history.back());
-        elements.prevMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); });
-        elements.nextMonthBtn.addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); });
-        elements.todayBtn.addEventListener('click', () => { calendarDate = new Date(); selectedDate = formatDate(new Date()); renderCalendar(); });
-        elements.dateSearchBtn.addEventListener('click', () => elements.dateSearchInput.showPicker?.());
-        elements.dateSearchInput.addEventListener('change', (e) => { const d = new Date(e.target.value); if (!isNaN(d)) { calendarDate = d; selectedDate = e.target.value; renderCalendar(); } });
-        elements.calendarBody.addEventListener('click', (e) => {
-            const dayEl = e.target.closest('.calendar-day');
-            if (!dayEl?.dataset.date || dayEl.classList.contains('future')) return;
-            clearTimeout(clickTimer);
-            if (e.detail === 1) clickTimer = setTimeout(() => { selectedDate = dayEl.dataset.date; renderCalendar(); }, 220);
-            else if (e.detail === 2) { selectedDate = dayEl.dataset.date; renderCalendar(); openDailyLogModal(selectedDate); }
+    const makeSortable = () => {
+        if (elements.templateExerciseList.sortable) {
+            elements.templateExerciseList.sortable.destroy();
+        }
+        elements.templateExerciseList.sortable = new Sortable(elements.templateExerciseList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                if (!editingTemplateId) return;
+                const template = routineTemplates[editingTemplateId];
+                if (!template) return;
+                
+                const [movedItem] = template.exercises.splice(evt.oldIndex, 1);
+                template.exercises.splice(evt.newIndex, 0, movedItem);
+                
+                saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
+                renderTemplateExerciseList(template.exercises);
+            }
+        });
+    };
+
+    const populateExerciseSelectors = (categoryEl, listEl, defaultPart = null) => {
+        categoryEl.innerHTML = '<option value="">-- 부위 선택 --</option>';
+        Object.keys(combinedExercises).forEach(part => {
+            categoryEl.innerHTML += `<option value="${part}" ${part === defaultPart ? 'selected' : ''}>${part}</option>`;
+        });
+        
+        const populateList = (part) => {
+            listEl.innerHTML = '<option value="">-- 운동 선택 --</option>';
+            if (part && combinedExercises[part]) {
+                combinedExercises[part].forEach(ex => {
+                    listEl.innerHTML += `<option value="${ex.name}">${ex.name}</option>`;
+                });
+            }
+        };
+
+        categoryEl.onchange = () => populateList(categoryEl.value);
+        if (defaultPart) {
+            populateList(defaultPart);
+        }
+    };
+
+    const saveTemplate = () => {
+        const title = elements.templateTitleInput.value.trim();
+        if (!title) {
+            showCustomConfirm("루틴 이름을 입력하세요.", () => {}, false);
+            return;
+        }
+
+        const exercisesFromDOM = Array.from(elements.templateExerciseList.querySelectorAll('.template-exercise-item'))
+            .map(el => {
+                const name = el.querySelector('.font-bold').textContent;
+                const detailsText = el.querySelector('.text-gray-600').textContent;
+                const details = detailsText.match(/(\S+)kg \/ (\S+)회 \/ (\S+)세트/);
+                return {
+                    name: name,
+                    weight: details[1],
+                    reps: details[2],
+                    sets: details[3]
+                };
+            });
+
+        if (editingTemplateId) {
+            const template = routineTemplates[editingTemplateId];
+            
+            if (!template) {
+                console.error("Save Error: Cannot find template with ID:", editingTemplateId);
+                showCustomConfirm("템플릿 저장 중 오류가 발생했습니다. 다시 시도해 주세요.", () => {}, false);
+                return;
+            }
+            
+            template.title = title;
+            template.exercises = exercisesFromDOM;
+
+        } else {
+            const newId = `template_${new Date().getTime()}`;
+            routineTemplates[newId] = { title, exercises: exercisesFromDOM };
+        }
+
+        saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
+        renderRoutineTemplateList();
+        closeModal(elements.templateEditorModal);
+    };
+
+    const startWorkoutSession = (dateStr, templateId = null) => {
+        currentWorkoutSession = {
+            date: dateStr,
+            log: { 
+                startTime: new Date().getTime(), 
+                endTime: null, 
+                sets: [],
+                note: "" 
+            },
+            timerInterval: null,
+            timerSeconds: 0,
+            timerPaused: false,
+            editingSetIndex: null
+        };
+
+        if (templateId) {
+            const template = routineTemplates[templateId];
+            elements.workoutSessionTitle.textContent = template.title;
+            
+            let exerciseIndex = 0;
+            template.exercises.forEach((ex) => {
+                const exName = ex.name;
+                const part = getPartForExercise(exName);
+                const weight = parseFloat(ex.weight) || 0;
+                const reps = parseInt(ex.reps) || 0;
+                const sets = parseInt(ex.sets) || 1;
+
+                for (let i = 0; i < sets; i++) {
+                    addSetToSession(exName, exerciseIndex, weight, reps);
+                }
+                exerciseIndex++;
+            });
+
+        } else {
+            elements.workoutSessionTitle.textContent = "새 운동";
+        }
+        
+        elements.timerInput.value = "2:30";
+        updateTimerDisplay(150);
+        
+        renderWorkoutSession();
+        openModal(elements.workoutSessionModal);
+        closeModal(elements.dailyLogModal);
+    };
+
+    const renderWorkoutSession = () => {
+        elements.workoutSessionList.innerHTML = '';
+        const exercises = {};
+
+        currentWorkoutSession.log.sets.forEach((set) => {
+            if (!exercises[set.exerciseIndex]) {
+                exercises[set.exerciseIndex] = { name: set.name, sets: [] };
+            }
+            exercises[set.exerciseIndex].sets.push(set);
         });
 
-        document.querySelectorAll('.modal-overlay').forEach(m => {
-            m.addEventListener('click', (e) => {
-                if (e.target !== m) return;
-                if (m.id === 'workout-session-modal' && currentWorkoutSession.log) {
-                    hideWorkoutSessionModal();
-                } else if (m.id !== 'workout-session-modal') {
-                    closeModal(m);
+        Object.keys(exercises).sort((a, b) => a - b).forEach(exIdx => {
+            const exercise = exercises[exIdx];
+            const exerciseElement = document.createElement('div');
+            exerciseElement.className = 'mb-6 exercise-group';
+            exerciseElement.dataset.exerciseIndex = exIdx;
+
+            const part = getPartForExercise(exercise.name);
+            const color = BODY_PART_COLORS[part] || BODY_PART_COLORS['기타'];
+
+            exerciseElement.innerHTML = `
+                <div class="flex justify-between items-center mb-3 p-2 rounded-t-lg" style="background-color: ${color.replace('0.8', '0.2')};">
+                    <h4 class="text-xl font-bold" style="color: ${color.replace('0.8', '1')};">${exercise.name}</h4>
+                    <div class="flex gap-2">
+                        <button class="add-set-btn small-btn" data-exercise-index="${exIdx}" data-exercise-name="${exercise.name}">세트 추가</button>
+                        <button class="delete-exercise-btn small-btn delete-btn" data-exercise-index="${exIdx}">운동 삭제</button>
+                    </div>
+                </div>
+            `;
+            
+            const setsList = document.createElement('ul');
+            setsList.className = 'space-y-2';
+            
+            const setsForExercise = exercise.sets;
+
+            const mainSets = setsForExercise;
+            mainSets.forEach((set, mainSetIndex) => {
+                const setDiv = createSetElement(set, mainSetIndex);
+                setsList.appendChild(setDiv);
+            });
+
+            exerciseElement.appendChild(setsList);
+            elements.workoutSessionList.appendChild(exerciseElement);
+        });
+    };
+
+    const createSetElement = (set, mainSetIndex) => {
+        const setElement = document.createElement('li');
+        setElement.dataset.setIndex = set.index;
+        
+        const isCompleted = set.completed;
+        const baseClasses = 'flex justify-between items-center p-3 rounded-lg shadow-sm transition-all';
+        const stateClasses = isCompleted ? 'bg-gray-100 opacity-70' : 'bg-white';
+        
+        setElement.className = `${baseClasses} ${stateClasses}`;
+
+        const setText = document.createElement('div');
+        setText.className = 'flex-grow flex items-center gap-4';
+        setText.innerHTML = `
+            <span class="font-semibold text-lg text-gray-700 w-10 text-center">${mainSetIndex + 1}</span>
+            <div class="flex gap-3 items-center">
+                <span class="font-bold text-xl">${set.weight}</span><span class="text-gray-500 -ml-2">kg</span>
+                <span class="font-bold text-xl">${set.reps}</span><span class="text-gray-500 -ml-2">회</span>
+            </div>
+            ${set.pr ? '<span class="pr-badge ml-3">PR</span>' : ''}
+        `;
+
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'flex gap-2 items-center';
+
+        const completeBtn = document.createElement('button');
+        completeBtn.innerHTML = isCompleted ? '✓' : '완료';
+        completeBtn.className = `complete-set-btn small-btn ${isCompleted ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`;
+        completeBtn.dataset.setIndex = set.index;
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '수정';
+        editBtn.className = 'edit-set-btn small-btn bg-gray-200 hover:bg-gray-300';
+        editBtn.dataset.setIndex = set.index;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '삭제';
+        deleteBtn.className = 'delete-set-btn small-btn delete-btn';
+        deleteBtn.dataset.setIndex = set.index;
+
+        buttonsDiv.appendChild(completeBtn);
+        buttonsDiv.appendChild(editBtn);
+        buttonsDiv.appendChild(deleteBtn);
+
+        setElement.appendChild(setText);
+        setElement.appendChild(buttonsDiv);
+        
+        return setElement;
+    };
+
+    const addSetToSession = (exerciseName, exerciseIndex, weight, reps) => {
+        const newIndex = currentWorkoutSession.log.sets.length;
+        
+        const lastSetOfSameExercise = [...currentWorkoutSession.log.sets]
+            .reverse()
+            .find(s => s.exerciseIndex === exerciseIndex);
+
+        const newSet = {
+            index: newIndex,
+            exerciseIndex: exerciseIndex,
+            name: exerciseName,
+            weight: weight !== undefined ? weight : (lastSetOfSameExercise ? lastSetOfSameExercise.weight : 0),
+            reps: reps !== undefined ? reps : (lastSetOfSameExercise ? lastSetOfSameExercise.reps : 0),
+            completed: false,
+            pr: false
+        };
+        currentWorkoutSession.log.sets.push(newSet);
+        return newIndex;
+    };
+
+    const completeSet = (setIndex) => {
+        const set = currentWorkoutSession.log.sets[setIndex];
+        if (!set) return;
+
+        set.completed = !set.completed;
+
+        if (set.completed) {
+            set.pr = checkPR(set.name, set.weight, set.reps);
+        } else {
+            set.pr = false;
+        }
+
+        renderWorkoutSession();
+        
+        if (set.completed && !currentFloatingTimer) {
+            const seconds = parseTimerInput(elements.timerInput.value);
+            if (seconds > 0) {
+                startFloatingTimer(seconds);
+            }
+        }
+    };
+    
+    const checkPR = (exerciseName, weight, reps) => {
+        if (weight <= 0 || reps <= 0) return false;
+        
+        const estimated1RM = calculate1RM(weight, reps);
+        let isPR = false;
+        let bestSet = { weight: 0, reps: 0, rm: 0 };
+
+        Object.values(workoutLogs).flat().forEach(log => {
+            log.sets.forEach(set => {
+                if (set.name === exerciseName && set.weight > 0 && set.reps > 0) {
+                    const setRM = calculate1RM(set.weight, set.reps);
+                    if (setRM > bestSet.rm) {
+                        bestSet = { weight: set.weight, reps: set.reps, rm: setRM };
+                    }
                 }
             });
         });
-        document.querySelectorAll('.close-modal-btn').forEach(b => b.addEventListener('click', (e) => closeModal(e.target.closest('.modal-overlay'))));
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.querySelector('.modal-overlay.open:not(#workout-session-modal)')) { document.querySelector('.modal-overlay.open:not(#workout-session-modal)').classList.remove('open'); }});
         
-        elements.closeSummaryBtn.addEventListener('click', () => closeModal(elements.summaryModal));
-        elements.openStatsModalBtn.addEventListener('click', () => { initializeStatsView(); openModal(elements.statsModal); });
-        elements.closePrModal.addEventListener('click', () => closeModal(elements.prCelebrationModal));
-
-
-        [elements.statsStartDate, elements.statsEndDate].forEach(el => el.addEventListener('change', updateStatsView));
-        elements.statsResetBtn.addEventListener('click', () => {
-            elements.statsStartDate.value = '';
-            elements.statsEndDate.value = '';
-            updateStatsView();
-        });
-
-        elements.statsPartSelector.addEventListener('click', e => {
-            const target = e.target.closest('.stats-selector-btn');
-            if (!target) return;
-            
-            if(target.classList.contains('active')) {
-                target.classList.remove('active');
-                 elements.statsExerciseSelect.innerHTML = '<option value="">-- 부위 먼저 선택 --</option>';
-            } else {
-                document.querySelectorAll('#stats-part-selector .stats-selector-btn').forEach(b => b.classList.remove('active'));
-                target.classList.add('active');
-                const part = target.dataset.part;
-                elements.statsExerciseSelect.innerHTML = `<option value="">-- 전체 부위 --</option>` + (combinedExercises[part] || []).map(ex => `<option value="${ex.name}">${ex.name}</option>`).join('');
-            }
-            updateStatsView();
-        });
-        elements.statsExerciseSelect.addEventListener('change', updateStatsView);
-
-        elements.routineTemplateList.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            const templateId = btn?.closest('[data-id]')?.dataset.id;
-            if (!templateId) return;
-            if (btn.classList.contains('edit-template-btn')) openTemplateEditorModal(templateId);
-            else if (btn.classList.contains('start-routine-btn')) {
-                const templ = routineTemplates.find(t => t.id === templateId);
-                if (templ) openWorkoutSessionModal(templ);
-            } else if (btn.classList.contains('delete-template-btn')) {
-                 showConfirm("이 루틴을 삭제하시겠습니까?", () => {
-                    routineTemplates = routineTemplates.filter(t => t.id !== templateId);
-                    saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
-                    renderRoutineTemplates();
-                });
-            }
-        });
-        elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditorModal(null));
-
-        const setupEnterKeyFlow = (weightId, repsId, setsId, buttonId) => {
-            const weightInput = document.getElementById(weightId);
-            const repsInput = document.getElementById(repsId);
-            const setsInput = document.getElementById(setsId);
-            const button = document.getElementById(buttonId);
-
-            weightInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); repsInput.focus(); } });
-            repsInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); setsInput.focus(); } });
-            setsInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); button.click(); } });
-        };
-        setupEnterKeyFlow('template-weight-input', 'template-reps-input', 'template-sets-input', 'add-update-exercise-btn');
-        setupEnterKeyFlow('session-weight-input', 'session-reps-input', 'session-sets-input', 'save-to-session-btn');
-
-
-        elements.addUpdateExerciseBtn.addEventListener('click', () => {
-            const name = elements.exerciseListSelect.value;
-            const weight = Number(elements.templateWeightInput.value) || 0;
-            const reps = Number(elements.templateRepsInput.value) || 0;
-            const sets = Number(elements.templateSetsInput.value) || 0;
-            if (!name || sets <= 0) return alert('운동을 선택하고 세트 수를 입력해주세요.');
-            const exObj = { name, weight, reps, sets };
-            if (currentlyEditingExerciseIndex !== null) currentEditingTemplate.exercises[currentlyEditingExerciseIndex] = exObj;
-            else currentEditingTemplate.exercises.push(exObj);
-            renderTemplateExerciseList();
-            resetExerciseInputs(elements.templateWeightInput, elements.templateRepsInput, elements.templateSetsInput, elements.addUpdateExerciseBtn);
-        });
-        elements.templateExerciseList.addEventListener('click', (e) => {
-            const editBtn = e.target.closest('.edit-exercise-btn');
-            const delBtn = e.target.closest('.delete-template-ex-btn');
-            if (editBtn) {
-                const idx = Number(editBtn.dataset.index);
-                const ex = currentEditingTemplate.exercises[idx];
-                elements.templateWeightInput.value = ex.weight;
-                elements.templateRepsInput.value = ex.reps;
-                elements.templateSetsInput.value = ex.sets;
-                elements.addUpdateExerciseBtn.textContent = '운동 수정';
-                currentlyEditingExerciseIndex = idx;
-            } else if (delBtn) {
-                const idx = Number(delBtn.dataset.index);
-                showConfirm("이 운동을 루틴에서 삭제하시겠습니까?", () => {
-                    currentEditingTemplate.exercises.splice(idx, 1);
-                    renderTemplateExerciseList();
-                });
-            }
-        });
-        elements.saveTemplateBtn.addEventListener('click', () => {
-            let title = elements.templateTitleInput.value.trim();
-            if (!title) {
-                const partsInRoutine = new Set();
-                currentEditingTemplate.exercises.forEach(ex => {
-                    for (const part in combinedExercises) {
-                        if (combinedExercises[part].some(e => e.name === ex.name)) {
-                            partsInRoutine.add(part); break;
-                        }
-                    }
-                });
-                title = [...partsInRoutine].join(', ') || '나의 루틴';
-            }
-            if (currentEditingTemplate.id) {
-                const index = routineTemplates.findIndex(t => t.id === currentEditingTemplate.id);
-                if (index > -1) routineTemplates[index] = { ...routineTemplates[index], title, exercises: currentEditingTemplate.exercises };
-            } else {
-                routineTemplates.push({ id: Date.now().toString(), title, exercises: currentEditingTemplate.exercises });
-            }
-            saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
-            renderRoutineTemplates();
-            closeModal(elements.templateEditorModal);
-        });
-        
-        elements.openAddExerciseModalBtn.addEventListener('click', () => {
-             populateExerciseSelectors(elements.newExercisePart, elements.newExerciseName);
-             openModal(elements.addExerciseModal);
-        });
-        elements.cancelAddExerciseBtn.addEventListener('click', () => closeModal(elements.addExerciseModal));
-        elements.saveNewExerciseBtn.addEventListener('click', () => {
-            const part = elements.newExercisePart.value, name = elements.newExerciseName.value.trim();
-            if (!name) return alert('운동 이름을 입력하세요.');
-            if (Object.values(combinedExercises).flat().some(e => e.name === name)) return alert('이미 존재하는 운동명입니다.');
-            if (!customExercises[part]) customExercises[part] = [];
-            customExercises[part].push({ name });
-            saveToLocalStorage(CUSTOM_EXERCISES_KEY, customExercises);
-            mergeExercises();
-            closeModal(elements.addExerciseModal);
-        });
-        
-        elements.addExerciseToSessionBtn.addEventListener('click', () => openAddToSessionModal(null));
-        elements.saveToSessionBtn.addEventListener('click', () => {
-            const name = elements.sessionExListSelect.value;
-            const weight = Number(elements.sessionWeightInput.value) || 0;
-            const reps = Number(elements.sessionRepsInput.value) || 0;
-            const setsCount = Number(elements.sessionSetsInput.value) || 0;
-            if (!name || setsCount <= 0) return alert('운동과 세트 수를 올바르게 입력해주세요.');
-
-            const exIndexToModify = (sessionEditingExIndex !== null) ? sessionEditingExIndex : currentWorkoutSession.log.exercises.length;
-            
-            if (sessionEditingExIndex !== null) {
-                 currentWorkoutSession.log.sets = currentWorkoutSession.log.sets.filter(s => s.exerciseIndex !== sessionEditingExIndex);
-                 currentWorkoutSession.log.exercises[sessionEditingExIndex] = { name, weight, reps, sets: setsCount };
-            } else {
-                 currentWorkoutSession.log.exercises.push({ name, weight, reps, sets: setsCount });
-            }
-
-            for (let i = 0; i < setsCount; i++) {
-                currentWorkoutSession.log.sets.push({ name, exerciseIndex: exIndexToModify, setNumber: i + 1, weight, reps, completed: false, isWarmup: false });
-            }
-            renderWorkoutSession();
-            closeModal(elements.addToSessionModal);
-        });
-
-        elements.workoutSessionList.addEventListener('click', e => {
-            const completeBtn = e.target.closest('.set-complete-btn');
-            const completeAllBtn = e.target.closest('.complete-all-sets-btn');
-            const editBtn = e.target.closest('.edit-session-ex-btn');
-            const deleteBtn = e.target.closest('.delete-session-ex-btn');
-            const addWarmupBtn = e.target.closest('.add-warmup-btn');
-            const deleteWarmupBtn = e.target.closest('.delete-warmup-btn');
-
-            if (addWarmupBtn) {
-                const exIndex = Number(addWarmupBtn.dataset.exerciseIndex);
-                
-                // 이 운동의 첫 번째 '본 세트'를 찾습니다.
-                const firstMainSet = currentWorkoutSession.log.sets.find(s => s.exerciseIndex === exIndex && !s.isWarmup);
-
-                // 웜업 세트에 복사할 기본 데이터를 준비합니다.
-                // (본 세트가 있으면 그걸 쓰고, 없으면 운동 정보에서 가져옵니다)
-                const baseSetData = firstMainSet || currentWorkoutSession.log.exercises[exIndex];
-
-                const newWarmupSet = {
-                    name: baseSetData.name, // 'name'이 누락되지 않도록
-                    exerciseIndex: exIndex,
-                    weight: baseSetData.weight || 0,
-                    reps: baseSetData.reps || 10,
-                    isWarmup: true,
-                    completed: false,
-                    setNumber: 0 // 웜업 세트는 0번
-                };
-
-                if (firstMainSet) {
-                    // 본 세트가 있으면, 그 앞에 끼워넣습니다.
-                    const firstSetIndex = currentWorkoutSession.log.sets.indexOf(firstMainSet);
-                    currentWorkoutSession.log.sets.splice(firstSetIndex, 0, newWarmupSet);
-                } else {
-                    // 본 세트가 아예 없으면, 그냥 이 운동의 세트 중 맨 앞에 추가합니다.
-                    // (이미 웜업 세트만 있는 경우, 그 맨 앞에 추가됩니다)
-                    const firstSetOfThisExercise = currentWorkoutSession.log.sets.findIndex(s => s.exerciseIndex === exIndex);
-                    if (firstSetOfThisExercise > -1) {
-                        currentWorkoutSession.log.sets.splice(firstSetOfThisExercise, 0, newWarmupSet);
-                    } else {
-                        // 이 운동의 세트가 아예 0개면, 그냥 push 합니다.
-                        currentWorkoutSession.log.sets.push(newWarmupSet);
-                    }
-                }
-                
-                renderWorkoutSession();
-            }
-            else if (deleteWarmupBtn) {
-                const setIndex = Number(deleteWarmupBtn.dataset.setIndex);
-                currentWorkoutSession.log.sets.splice(setIndex, 1);
-                renderWorkoutSession();
-            }
-            else if (completeBtn) {
-                const setIndex = Number(completeBtn.dataset.setIndex);
-                const set = currentWorkoutSession.log.sets[setIndex];
-                set.completed = !set.completed;
-                if(set.completed && !set.isWarmup) { startTimer(); }
-                renderWorkoutSession();
-            } else if (completeAllBtn) {
-                const exIndex = Number(completeAllBtn.dataset.exerciseIndex);
-                currentWorkoutSession.log.sets.forEach(set => {
-                    if(set.exerciseIndex === exIndex && !set.isWarmup) set.completed = true;
-                });
-                renderWorkoutSession();
-            } else if (editBtn) {
-                openAddToSessionModal(Number(editBtn.dataset.exerciseIndex));
-            } else if (deleteBtn) {
-                const exIndex = Number(deleteBtn.dataset.exerciseIndex);
-                 showConfirm("이 운동을 세션에서 삭제하시겠습니까?", () => {
-                    const exercises = currentWorkoutSession.log.exercises;
-                    let sets = currentWorkoutSession.log.sets;
-                    exercises.splice(exIndex, 1);
-                    currentWorkoutSession.log.sets = sets.filter(s => s.exerciseIndex !== exIndex);
-                    // Re-index sets
-                    currentWorkoutSession.log.sets.forEach(s => {
-                        if (s.exerciseIndex > exIndex) {
-                            s.exerciseIndex--;
-                        }
-                    });
-                    renderWorkoutSession();
-                });
-            }
-        });
-        
-        elements.workoutSessionList.addEventListener('input', e => {
-            const target = e.target;
-            const setIndex = Number(target.dataset.setIndex);
-            if(isNaN(setIndex)) return;
-            const set = currentWorkoutSession.log.sets[setIndex];
-            if (target.classList.contains('weight-input')) set.weight = Number(target.value);
-            if (target.classList.contains('reps-input')) set.reps = Number(target.value);
-        });
-
-        elements.hideSessionBtn.addEventListener('click', () => {
-             showConfirm("진행중인 운동을 종료하시겠습니까?", () => {
-                closeModal(elements.workoutSessionModal);
-                cancelWorkoutSession();
-             });
-        });
-        
-        elements.timerMinus30Btn.addEventListener('click', () => {
-            let currentVal = parseInt(elements.timerInput.value);
-            elements.timerInput.value = Math.max(0, currentVal - 30);
-        });
-
-        elements.timerPlus30Btn.addEventListener('click', () => {
-            let currentVal = parseInt(elements.timerInput.value);
-            elements.timerInput.value = currentVal + 30;
-        });
-
-        elements.floatingTimer.addEventListener('click', reOpenWorkoutSessionModal);
-        elements.closeFloatingTimer.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showConfirm("진행중인 운동을 종료하시겠습니까?", cancelWorkoutSession);
-        });
-
-        elements.confirmCancelBtn.addEventListener('click', () => closeModal(elements.customConfirmModal));
-        elements.confirmOkBtn.addEventListener('click', () => {
-            if(confirmCallback) confirmCallback();
-            closeModal(elements.customConfirmModal);
-        });
-
-        elements.saveSessionBtn.addEventListener('click', () => {
-            const { log, originalLogIndex } = currentWorkoutSession;
-            checkAndUpdatePRs(log);
-
-            const isModified = JSON.stringify(log.exercises) !== currentWorkoutSession.originalTemplateExercises;
-
-            if (isModified && log.id) {
-                showConfirm("루틴이 변경되었습니다. 원본 루틴에 이 변경사항을 저장하시겠습니까?", () => {
-                    const templateIndex = routineTemplates.findIndex(t => t.id === log.id);
-                    if (templateIndex > -1) {
-                        routineTemplates[templateIndex].exercises = log.exercises;
-                        saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
-                        renderRoutineTemplates();
-                    }
-                });
-            }
-
-            if (originalLogIndex !== null && workoutLogs[selectedDate]?.[originalLogIndex]) workoutLogs[selectedDate][originalLogIndex] = log;
-            else {
-                if (!workoutLogs[selectedDate]) workoutLogs[selectedDate] = [];
-                workoutLogs[selectedDate].push(log);
-            }
-            saveToLocalStorage(LOG_KEY, workoutLogs);
-            renderCalendar();
-            closeModal(elements.workoutSessionModal);
-            openWorkoutSummaryModal(log);
-            cancelWorkoutSession();
-        });
-        
-        elements.dailyLogModalList.addEventListener('click', e => {
-             const delBtn = e.target.closest('.delete-log-btn');
-             if (delBtn) {
-                 const idx = Number(delBtn.dataset.logIndex);
-                 showConfirm('이 기록을 삭제하시겠습니까?', () => {
-                     workoutLogs[selectedDate].splice(idx, 1);
-                     if (workoutLogs[selectedDate].length === 0) delete workoutLogs[selectedDate];
-                     saveToLocalStorage(LOG_KEY, workoutLogs);
-                     renderCalendar();
-                     closeModal(elements.dailyLogModal);
-                 });
+        currentWorkoutSession.log.sets.forEach(set => {
+             if (set.name === exerciseName && set.completed && (set.weight > 0 && set.reps > 0)) {
+                 const setRM = calculate1RM(set.weight, set.reps);
+                 if (setRM > bestSet.rm) {
+                     bestSet = { weight: set.weight, reps: set.reps, rm: setRM };
+                 }
              }
         });
 
-        let isDragging = false, offsetX, offsetY;
-        elements.floatingTimer.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            offsetX = e.clientX - elements.floatingTimer.offsetLeft;
-            offsetY = e.clientY - elements.floatingTimer.offsetTop;
-            elements.floatingTimer.classList.add('dragging');
-            elements.floatingTimer.style.cursor = 'grabbing';
+        if (estimated1RM > bestSet.rm) {
+            isPR = true;
+        }
+        
+        return isPR;
+    };
+    
+    const calculate1RM = (weight, reps) => {
+        if (reps == 1) return weight;
+        if (reps < 1) return 0;
+        return weight * (1 + reps / 30);
+    };
+
+    const showPRCelebration = (prs) => {
+        elements.prList.innerHTML = prs.map(pr => 
+            `<li class="text-xl font-semibold p-2 bg-yellow-100 rounded-md text-yellow-800">
+                ${pr.name}: ${pr.weight}kg x ${pr.reps}회
+            </li>`
+        ).join('');
+        openModal(elements.prCelebrationModal);
+    };
+
+    const saveWorkoutSession = () => {
+        currentWorkoutSession.log.endTime = new Date().getTime();
+        
+        currentWorkoutSession.log.sets = currentWorkoutSession.log.sets.filter(set => set.completed);
+        
+        if (currentWorkoutSession.log.sets.length === 0) {
+            showCustomConfirm("완료된 세트가 없습니다. 저장을 취소합니다.", () => {}, false);
+            closeModal(elements.workoutSessionModal);
+            return;
+        }
+
+        const prs = currentWorkoutSession.log.sets.filter(set => set.pr);
+        if (prs.length > 0) {
+            showPRCelebration(prs);
+        }
+
+        const dateStr = currentWorkoutSession.date;
+        if (!workoutLogs[dateStr]) {
+            workoutLogs[dateStr] = [];
+        }
+        workoutLogs[dateStr].push(currentWorkoutSession.log);
+        saveToLocalStorage(WORKOUT_LOG_KEY, workoutLogs);
+
+        showSummary();
+        renderCalendar(currentYear, currentMonth);
+        closeModal(elements.workoutSessionModal);
+    };
+
+    const showSummary = () => {
+        const log = currentWorkoutSession.log;
+        const duration = Math.round((log.endTime - log.startTime) / 60000);
+        const totalVolume = calculateVolume(log.sets);
+
+        elements.summaryModalTitle.textContent = `${new Date(log.startTime).toLocaleDateString()} 운동 요약`;
+        elements.summaryTotalTime.textContent = `${duration}분`;
+        elements.summaryTotalVolume.textContent = totalVolume || '0kg';
+        
+        const exercises = {};
+        log.sets.forEach(set => {
+            if (!exercises[set.name]) {
+                exercises[set.name] = { sets: 0, totalWeight: 0, bestSet: { weight: 0, reps: 0 } };
+            }
+            exercises[set.name].sets++;
+            exercises[set.name].totalWeight += set.weight * set.reps;
+            if (set.weight > exercises[set.name].bestSet.weight || (set.weight === exercises[set.name].bestSet.weight && set.reps > exercises[set.name].bestSet.reps)) {
+                exercises[set.name].bestSet = { weight: set.weight, reps: set.reps };
+            }
         });
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            elements.floatingTimer.style.left = `${e.clientX - offsetX}px`;
-            elements.floatingTimer.style.top = `${e.clientY - offsetY}px`;
+
+        elements.summaryExercises.innerHTML = Object.keys(exercises).map(name => `
+            <li class="p-3 bg-gray-50 rounded-md">
+                <h4 class="font-bold text-lg">${name}</h4>
+                <p>총 볼륨: ${Math.round(exercises[name].totalWeight)}kg / ${exercises[name].sets}세트</p>
+                <p>최고 세트: ${exercises[name].bestSet.weight}kg x ${exercises[name].bestSet.reps}회</p>
+            </li>
+        `).join('');
+
+        openModal(elements.summaryModal);
+    };
+    
+    const updateTimerDisplay = (totalSeconds) => {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        elements.timerInput.value = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        
+        if(elements.clockSecondHand) {
+            const angle = (totalSeconds % 60) * 6;
+            elements.clockSecondHand.style.transform = `rotate(${angle}deg)`;
+        }
+        if(elements.timerDigitalDisplay) {
+            elements.timerDigitalDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+    };
+
+    const parseTimerInput = (input) => {
+        const parts = input.split(':').map(Number);
+        if (parts.length === 2) {
+            return (parts[0] * 60) + parts[1];
+        } else if (parts.length === 1) {
+            return parts[0];
+        }
+        return 0;
+    };
+    
+    const adjustTimer = (seconds) => {
+        let currentSeconds = parseTimerInput(elements.timerInput.value);
+        currentSeconds = Math.max(0, currentSeconds + seconds);
+        updateTimerDisplay(currentSeconds);
+    };
+
+    const startSessionTimer = () => {
+        if (currentWorkoutSession.timerInterval) return;
+
+        if (currentWorkoutSession.timerSeconds === 0) {
+             currentWorkoutSession.timerSeconds = parseTimerInput(elements.timerInput.value);
+        }
+        
+        if (currentWorkoutSession.timerSeconds <= 0) return;
+
+        currentWorkoutSession.timerPaused = false;
+        elements.timerStartBtn.disabled = true;
+        elements.timerPauseBtn.disabled = false;
+
+        currentWorkoutSession.timerInterval = setInterval(() => {
+            currentWorkoutSession.timerSeconds--;
+            updateTimerDisplay(currentWorkoutSession.timerSeconds);
+
+            if (currentWorkoutSession.timerSeconds <= 0) {
+                clearInterval(currentWorkoutSession.timerInterval);
+                currentWorkoutSession.timerInterval = null;
+                elements.timerStartBtn.disabled = false;
+                elements.timerPauseBtn.disabled = true;
+                playTimerEndSound();
+            }
+        }, 1000);
+    };
+
+    const pauseSessionTimer = () => {
+        clearInterval(currentWorkoutSession.timerInterval);
+        currentWorkoutSession.timerInterval = null;
+        currentWorkoutSession.timerPaused = true;
+        elements.timerStartBtn.disabled = false;
+        elements.timerPauseBtn.disabled = true;
+    };
+
+    const resetSessionTimer = () => {
+        clearInterval(currentWorkoutSession.timerInterval);
+        currentWorkoutSession.timerInterval = null;
+        currentWorkoutSession.timerPaused = false;
+        currentWorkoutSession.timerSeconds = parseTimerInput(elements.timerInput.value);
+        updateTimerDisplay(currentWorkoutSession.timerSeconds);
+        elements.timerStartBtn.disabled = false;
+        elements.timerPauseBtn.disabled = true;
+    };
+    
+    const playTimerEndSound = () => {
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, context.currentTime);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.5);
+        } catch (e) {
+            console.warn("Timer sound failed to play.", e);
+        }
+    };
+    
+    const startFloatingTimer = (seconds) => {
+        if (currentFloatingTimer) {
+            clearInterval(currentFloatingTimer);
+        }
+        
+        floatingTimerSeconds = seconds;
+        const totalSeconds = seconds;
+        
+        elements.floatingTimer.style.display = 'flex';
+        
+        const update = () => {
+            const minutes = Math.floor(floatingTimerSeconds / 60);
+            const secs = floatingTimerSeconds % 60;
+            elements.floatingTimerDisplay.textContent = `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            
+            const progress = (totalSeconds - floatingTimerSeconds) / totalSeconds;
+            if(elements.floatingTimerProgressCircle) {
+                elements.floatingTimerProgressCircle.style.strokeDashoffset = circumference - progress * circumference;
+            }
+
+            if (floatingTimerSeconds <= 0) {
+                clearInterval(currentFloatingTimer);
+                currentFloatingTimer = null;
+                playTimerEndSound();
+                setTimeout(() => {
+                    elements.floatingTimer.style.display = 'none';
+                }, 2000);
+            }
+            floatingTimerSeconds--;
+        };
+
+        update();
+        currentFloatingTimer = setInterval(update, 1000);
+    };
+
+    const openStatsModal = () => {
+        populateExerciseSelectors(elements.statsPartSelector, elements.statsExerciseSelect, "가슴");
+        elements.statsPartSelector.value = "가슴";
+        elements.statsPartSelector.dispatchEvent(new Event('change'));
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        elements.statsStartDate.value = thirtyDaysAgo;
+        elements.statsEndDate.value = todayStr;
+        
+        renderStatsChart();
+        openModal(elements.statsModal);
+    };
+
+    const calculateStatsByPart = (part, startDate, endDate) => {
+        const stats = { volume: 0, days: 0 };
+        const logs = getLogsBetweenDates(startDate, endDate);
+        
+        logs.forEach(log => {
+            const partSets = log.sets.filter(set => {
+                if (set.weight <= 0) return false;
+                const setPart = getPartForExercise(set.name);
+                return setPart === part;
+            });
+            
+            if (partSets.length > 0) {
+                stats.days++;
+                stats.volume += partSets.reduce((acc, set) => acc + (set.weight * set.reps), 0);
+            }
         });
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            elements.floatingTimer.classList.remove('dragging');
-            elements.floatingTimer.style.cursor = 'pointer';
+        return stats;
+    };
+    
+    const getLogsBetweenDates = (startDate, endDate) => {
+        return Object.keys(workoutLogs)
+            .filter(date => date >= startDate && date <= endDate)
+            .flatMap(date => workoutLogs[date]);
+    };
+
+    const renderStatsChart = () => {
+        const part = elements.statsPartSelector.value;
+        const exercise = elements.statsExerciseSelect.value;
+        const startDate = elements.statsStartDate.value;
+        const endDate = elements.statsEndDate.value;
+        
+        const logs = getLogsBetweenDates(startDate, endDate);
+        const data = {
+            labels: [],
+            datasets: [
+                {
+                    label: '볼륨 (kg)',
+                    data: [],
+                    borderColor: BODY_PART_COLORS[part] || BODY_PART_COLORS['기타'],
+                    backgroundColor: BODY_PART_COLORS[part] || BODY_PART_COLORS['기타'],
+                    yAxisID: 'yVolume',
+                },
+                {
+                    label: '최대 1RM (kg)',
+                    data: [],
+                    borderColor: '#4a5568',
+                    backgroundColor: '#4a5568',
+                    type: 'line',
+                    yAxisID: 'y1RM',
+                }
+            ]
+        };
+
+        const dailyData = {};
+        
+        logs.forEach(log => {
+            const date = new Date(log.startTime).toISOString().split('T')[0];
+            if (!dailyData[date]) {
+                dailyData[date] = { volume: 0, max1RM: 0 };
+            }
+            
+            log.sets.forEach(set => {
+                if (set.weight <= 0 || set.reps <= 0) return;
+                
+                const setPart = getPartForExercise(set.name);
+                const exerciseMatches = (exercise === "") ? (setPart === part) : (set.name === exercise);
+
+                if (exerciseMatches) {
+                    dailyData[date].volume += set.weight * set.reps;
+                    const set1RM = calculate1RM(set.weight, set.reps);
+                    if (set1RM > dailyData[date].max1RM) {
+                        dailyData[date].max1RM = set1RM;
+                    }
+                }
+            });
+        });
+
+        const sortedDates = Object.keys(dailyData).sort();
+        sortedDates.forEach(date => {
+            if (dailyData[date].volume > 0 || dailyData[date].max1RM > 0) {
+                data.labels.push(date);
+                data.datasets[0].data.push(dailyData[date].volume);
+                data.datasets[1].data.push(dailyData[date].max1RM > 0 ? dailyData[date].max1RM.toFixed(1) : null);
+            }
+        });
+        
+        if (currentChart) {
+            currentChart.destroy();
+        }
+        
+        if (data.labels.length === 0) {
+            elements.statsChartCanvas.getContext('2d').clearRect(0, 0, elements.statsChartCanvas.width, elements.statsChartCanvas.height);
+            return;
+        }
+
+        currentChart = new Chart(elements.statsChartCanvas, {
+            type: 'bar',
+            data: data,
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                plugins: {
+                    datalabels: {
+                        display: (context) => {
+                            return context.datasetIndex === 1 || context.dataset.data[context.dataIndex] > 0;
+                        },
+                        align: 'top',
+                        anchor: 'end',
+                        formatter: (value, context) => {
+                            if (context.datasetIndex === 1) return `${value}kg`;
+                            if (context.datasetIndex === 0) {
+                                const total = parseFloat(value);
+                                if (total > 0) {
+                                    return `${Math.round(total)}kg`;
+                                } else {
+                                    return '';
+                                }
+                            }
+                            return '';
+                        },
+                        color: '#4a5568',
+                        font: { weight: 'bold' }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: '날짜' }
+                    },
+                    yVolume: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: '볼륨 (kg)' },
+                        beginAtZero: true
+                    },
+                    y1RM: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: '추정 1RM (kg)' },
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
         });
     };
     
-    const startTimer = () => {
-        clearInterval(timerInterval);
-        const totalSeconds = Number(elements.timerInput.value) || 60;
-        let remaining = totalSeconds;
-        const hand = elements.clockSecondHand;
+    const showCustomConfirm = (message, callback, showCancel = true) => {
+        elements.confirmModalText.textContent = message;
+        elements.confirmModalNo.style.display = showCancel ? 'inline-block' : 'none';
+        elements.confirmModalYes.textContent = showCancel ? '예' : '확인';
         
-        if (floatingTimerProgressCircle) floatingTimerProgressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        openModal(elements.customConfirmModal);
 
-        const updateDisplay = () => {
-            if (remaining < 0) return;
-            const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
-            const seconds = String(remaining % 60).padStart(2, '0');
-            const timeString = `${minutes}:${seconds}`;
-            elements.timerDigitalDisplay.textContent = timeString;
-            elements.floatingTimerDisplay.textContent = timeString;
-
-            const degrees = ((totalSeconds - remaining) / totalSeconds) * 360;
-            if (hand) hand.style.transform = `rotate(${degrees}deg)`;
-
-            if (floatingTimerProgressCircle) {
-                const offset = circumference - (remaining / totalSeconds) * circumference;
-                floatingTimerProgressCircle.style.strokeDashoffset = offset;
-            }
+        elements.confirmModalYes.onclick = () => {
+            closeModal(elements.customConfirmModal);
+            callback(true);
         };
-        updateDisplay();
-        timerInterval = setInterval(() => {
-            remaining--;
-            updateDisplay();
-            if (remaining < 0) {
-                clearInterval(timerInterval);
-                elements.timerDigitalDisplay.classList.add('text-red-500');
-                elements.floatingTimerDisplay.parentElement.classList.add('animate-pulse');
-                setTimeout(() => {
-                    elements.timerDigitalDisplay.classList.remove('text-red-500');
-                    elements.floatingTimerDisplay.parentElement.classList.remove('animate-pulse');
-                    if (hand) hand.style.transform = 'rotate(0deg)';
-                }, 2000);
-            }
-        }, 1000);
+        elements.confirmModalNo.onclick = () => {
+            closeModal(elements.customConfirmModal);
+            callback(false);
+        };
     };
 
     const generateShades = (baseColorRgba, count) => {
@@ -1069,16 +1075,430 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     const init = () => {
-        if (floatingTimerProgressCircle) floatingTimerProgressCircle.style.strokeDashoffset = circumference;
-        Object.assign(routineTemplates, loadFromLocalStorage(ROUTINE_TEMPLATE_KEY, []));
-        Object.assign(workoutLogs, loadFromLocalStorage(LOG_KEY, {}));
-        Object.assign(customExercises, loadFromLocalStorage(CUSTOM_EXERCISES_KEY, {}));
-        Object.assign(personalRecords, loadFromLocalStorage(PR_KEY, {}));
+        if (elements.floatingTimerProgressCircle) elements.floatingTimerProgressCircle.style.strokeDashoffset = circumference;
+        
+        Object.assign(routineTemplates, loadFromLocalStorage(ROUTINE_TEMPLATE_KEY, {}));
+        Object.assign(workoutLogs, loadFromLocalStorage(WORKOUT_LOG_KEY, {}));
+        Object.assign(customExercises, loadFromLocalStorage(EXERCISE_LIST_KEY, {}));
         mergeExercises();
-        renderCalendar();
-        renderRoutineTemplates();
-        bindEventListeners();
-        populateExerciseSelectors(elements.newExercisePart, elements.newExerciseName);
+        
+        renderCalendar(currentYear, currentMonth);
+        renderRoutineTemplateList();
+
+        elements.prevMonthBtn.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar(currentYear, currentMonth);
+        });
+
+        elements.nextMonthBtn.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar(currentYear, currentMonth);
+        });
+        
+        // [수정됨] todayBtn 클릭 시에도 today 변수의 시간을 초기화
+        elements.todayBtn.addEventListener('click', () => {
+            today = new Date();
+            today.setHours(0, 0, 0, 0); // 시간 초기화
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth();
+            renderCalendar(currentYear, currentMonth);
+        });
+
+        elements.dateSearchBtn.addEventListener('click', () => {
+            const dateStr = elements.dateSearchInput.value;
+            if (dateStr) {
+                const date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
+                    currentYear = date.getFullYear();
+                    currentMonth = date.getMonth();
+                    renderCalendar(currentYear, currentMonth);
+                    setTimeout(() => {
+                        const targetDay = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+                        if(targetDay) {
+                            targetDay.classList.add('searched');
+                            setTimeout(()=> targetDay.classList.remove('searched'), 1500);
+                        }
+                    }, 100);
+                }
+            }
+        });
+
+        elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditor());
+        elements.openStatsModalBtn.addEventListener('click', openStatsModal);
+        elements.backBtn.addEventListener('click', () => {
+            console.log("Back to main page");
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        elements.dailyLogModalList.addEventListener('click', (e) => {
+            const date = elements.dailyLogDate.value;
+            
+            if (e.target.id === 'start-routine-btn') {
+                const templateId = prompt("시작할 루틴 템플릿 ID를 선택하세요 (임시):\n" + 
+                    Object.keys(routineTemplates).map(id => `${id}: ${routineTemplates[id].title}`).join('\n') + 
+                    "\n\n(템플릿 목록에서 '시작' 버튼을 누르는 것이 좋습니다.)");
+                if (templateId && routineTemplates[templateId]) {
+                    startWorkoutSession(date, templateId);
+                } else if (templateId) {
+                    alert("유효한 템플릿 ID가 아닙니다.");
+                } else {
+                    startWorkoutSession(date, null);
+                }
+            } else if (e.target.classList.contains('edit-log-btn')) {
+                alert('로그 수정 기능은 준비 중입니다.');
+            } else if (e.target.classList.contains('delete-log-btn')) {
+                const logIndex = parseInt(e.target.dataset.logIndex);
+                showCustomConfirm("이 운동 기록을 삭제하시겠습니까?", (confirm) => {
+                    if (confirm) {
+                        workoutLogs[date].splice(logIndex, 1);
+                        if (workoutLogs[date].length === 0) {
+                            delete workoutLogs[date];
+                        }
+                        saveToLocalStorage(WORKOUT_LOG_KEY, workoutLogs);
+                        renderDailyLogModal(date);
+                        renderCalendar(currentYear, currentMonth);
+                    }
+                });
+            }
+        });
+        
+        elements.routineTemplateList.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (!id) return;
+            
+            if (e.target.classList.contains('start-template-btn')) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                showDailyLogModal(todayStr);
+                startWorkoutSession(todayStr, id); 
+            } else if (e.target.classList.contains('edit-template-btn')) {
+                openTemplateEditor(id);
+            }
+        });
+
+        elements.saveTemplateBtn.addEventListener('click', saveTemplate);
+        elements.deleteTemplateBtn.addEventListener('click', () => {
+            if (editingTemplateId) {
+                showCustomConfirm("이 루틴 템플릿을 삭제하시겠습니까?", (confirm) => {
+                    if (confirm) {
+                        delete routineTemplates[editingTemplateId];
+                        saveToLocalStorage(ROUTINE_TEMPLATE_KEY, routineTemplates);
+                        renderRoutineTemplateList();
+                        closeModal(elements.templateEditorModal);
+                    }
+                });
+            }
+        });
+
+        elements.addUpdateExerciseBtn.addEventListener('click', () => {
+            const name = elements.exerciseListSelect.value;
+            const weight = elements.templateWeightInput.value || 0;
+            const reps = elements.templateRepsInput.value || 0;
+            const sets = elements.templateSetsInput.value || 1;
+
+            if (!name) {
+                showCustomConfirm("운동을 선택하세요.", () => {}, false);
+                return;
+            }
+
+            const exerciseData = { name, weight, reps, sets };
+            
+            let currentExercises = [];
+            if (editingTemplateId) {
+                currentExercises = routineTemplates[editingTemplateId].exercises;
+            } else {
+                 currentExercises = Array.from(elements.templateExerciseList.querySelectorAll('.template-exercise-item'))
+                    .map(el => {
+                        const name = el.querySelector('.font-bold').textContent;
+                        const detailsText = el.querySelector('.text-gray-600').textContent;
+                        const details = detailsText.match(/(\S+)kg \/ (\S+)회 \/ (\S+)세트/);
+                        return { name: name, weight: details[1], reps: details[2], sets: details[3] };
+                    });
+            }
+
+            if (editingTemplateExerciseIndex !== null) {
+                currentExercises[editingTemplateExerciseIndex] = exerciseData;
+            } else {
+                currentExercises.push(exerciseData);
+            }
+            
+            if (!editingTemplateId) {
+                renderTemplateExerciseList(currentExercises);
+            } else {
+                renderTemplateExerciseList(currentExercises);
+            }
+
+            resetTemplateForm();
+        });
+
+        elements.templateExerciseList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-ex-btn')) {
+                const index = parseInt(e.target.dataset.index);
+                const template = editingTemplateId ? routineTemplates[editingTemplateId] : null;
+                
+                let exercise;
+                if(template) {
+                    exercise = template.exercises[index];
+                } else {
+                    const itemEl = e.target.closest('.template-exercise-item');
+                    const name = itemEl.querySelector('.font-bold').textContent;
+                    const details = itemEl.querySelector('.text-gray-600').textContent.match(/(\S+)kg \/ (\S+)회 \/ (\S+)세트/);
+                    exercise = { name, weight: details[1], reps: details[2], sets: details[3] };
+                }
+
+                const part = getPartForExercise(exercise.name);
+                
+                populateExerciseSelectors(elements.exerciseCategorySelect, elements.exerciseListSelect, part);
+                elements.exerciseCategorySelect.value = part;
+                elements.exerciseListSelect.value = exercise.name;
+                elements.templateWeightInput.value = exercise.weight;
+                elements.templateRepsInput.value = exercise.reps;
+                elements.templateSetsInput.value = exercise.sets;
+                
+                editingTemplateExerciseIndex = index;
+                elements.addUpdateExerciseBtn.textContent = '운동 수정';
+            } else if (e.target.classList.contains('delete-ex-btn')) {
+                const index = parseInt(e.target.dataset.index);
+                showCustomConfirm("이 운동을 루틴에서 삭제하시겠습니까?", (confirm) => {
+                    if (confirm) {
+                         const template = editingTemplateId ? routineTemplates[editingTemplateId] : null;
+                         if (template) {
+                             template.exercises.splice(index, 1);
+                             renderTemplateExerciseList(template.exercises);
+                         } else {
+                             e.target.closest('.template-exercise-item').remove();
+                         }
+                    }
+                });
+            }
+        });
+
+        elements.hideSessionBtn.addEventListener('click', () => {
+             showCustomConfirm("운동을 완료하지 않고 창을 닫으시겠습니까?\n(진행 내용이 사라집니다)", (confirm) => {
+                 if(confirm) {
+                    clearInterval(currentWorkoutSession.timerInterval);
+                    closeModal(elements.workoutSessionModal);
+                 }
+             });
+        });
+        
+        elements.saveSessionBtn.addEventListener('click', () => {
+             showCustomConfirm("운동을 완료하고 저장하시겠습니까?", (confirm) => {
+                 if(confirm) {
+                    saveWorkoutSession();
+                 }
+             });
+        });
+
+        elements.workoutSessionList.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            const setIndex = target.dataset.setIndex;
+            const exerciseIndex = target.dataset.exerciseIndex;
+
+            if (target.classList.contains('complete-set-btn')) {
+                completeSet(Number(setIndex));
+            } else if (target.classList.contains('edit-set-btn')) {
+                currentWorkoutSession.editingSetIndex = Number(setIndex);
+                const set = currentWorkoutSession.log.sets[currentWorkoutSession.editingSetIndex];
+                
+                elements.addToSessionModalTitle.textContent = "세트 수정";
+                elements.sessionWeightInput.value = set.weight;
+                elements.sessionRepsInput.value = set.reps;
+                elements.sessionSetsInput.value = 1;
+                elements.sessionSetsInput.disabled = true;
+                elements.saveToSessionBtn.textContent = "수정 완료";
+                openModal(elements.addToSessionModal);
+                
+            } else if (target.classList.contains('delete-set-btn')) {
+                 showCustomConfirm("이 세트를 삭제하시겠습니까?", (confirm) => {
+                    if (confirm) {
+                        currentWorkoutSession.log.sets.splice(Number(setIndex), 1);
+                        currentWorkoutSession.log.sets.forEach((set, i) => set.index = i);
+                        renderWorkoutSession();
+                    }
+                 });
+            } else if (target.classList.contains('add-set-btn')) {
+                const exName = target.dataset.exerciseName;
+                addSetToSession(exName, Number(exerciseIndex));
+                renderWorkoutSession();
+            } else if (target.classList.contains('delete-exercise-btn')) {
+                 showCustomConfirm("이 운동의 모든 세트를 삭제하시겠습니까?", (confirm) => {
+                    if (confirm) {
+                        const exIdx = Number(exerciseIndex);
+                        currentWorkoutSession.log.sets = currentWorkoutSession.log.sets
+                            .filter(set => set.exerciseIndex !== exIdx)
+                            .map((set, i) => {
+                                if (set.exerciseIndex > exIdx) {
+                                    set.exerciseIndex--;
+                                }
+                                set.index = i;
+                                return set;
+                            });
+                        renderWorkoutSession();
+                    }
+                 });
+            }
+        });
+        
+        elements.addExerciseToSessionBtn.addEventListener('click', () => {
+            populateExerciseSelectors(elements.addExModalCategory, elements.addExModalList);
+            openModal(elements.addExerciseModal);
+        });
+
+        elements.confirmAddExerciseBtn.addEventListener('click', () => {
+            const exerciseName = elements.addExModalList.value;
+            if (exerciseName) {
+                const maxIndex = currentWorkoutSession.log.sets.length > 0 ?
+                    Math.max(...currentWorkoutSession.log.sets.map(s => s.exerciseIndex)) : -1;
+                
+                currentWorkoutSession.editingSetIndex = null;
+                elements.addToSessionModalTitle.textContent = "세션에 운동 추가";
+                elements.sessionWeightInput.value = '';
+                elements.sessionRepsInput.value = '';
+                elements.sessionSetsInput.value = '3';
+                elements.sessionSetsInput.disabled = false;
+                elements.saveToSessionBtn.textContent = "추가";
+                
+                elements.saveToSessionBtn.dataset.exerciseName = exerciseName;
+                elements.saveToSessionBtn.dataset.exerciseIndex = maxIndex + 1;
+                
+                openModal(elements.addToSessionModal);
+                closeModal(elements.addExerciseModal);
+            }
+        });
+        
+        elements.saveToSessionBtn.addEventListener('click', () => {
+            const weight = parseFloat(elements.sessionWeightInput.value) || 0;
+            const reps = parseInt(elements.sessionRepsInput.value) || 0;
+            const sets = parseInt(elements.sessionSetsInput.value) || 1;
+
+            if (currentWorkoutSession.editingSetIndex !== null) {
+                const set = currentWorkoutSession.log.sets[currentWorkoutSession.editingSetIndex];
+                set.weight = weight;
+                set.reps = reps;
+                set.pr = checkPR(set.name, set.weight, set.reps);
+            } else {
+                const exerciseName = elements.saveToSessionBtn.dataset.exerciseName;
+                const exerciseIndex = parseInt(elements.saveToSessionBtn.dataset.exerciseIndex);
+                for(let i=0; i<sets; i++) {
+                    addSetToSession(exerciseName, exerciseIndex, weight, reps);
+                }
+            }
+            
+            currentWorkoutSession.editingSetIndex = null;
+            renderWorkoutSession();
+            closeModal(elements.addToSessionModal);
+        });
+
+        elements.openAddExerciseModalBtn.addEventListener('click', () => {
+            populateExerciseSelectors(elements.newExercisePart, elements.newExerciseName);
+            openModal(elements.addExerciseModal);
+        });
+        elements.cancelAddExerciseBtn.addEventListener('click', () => closeModal(elements.addExerciseModal));
+        elements.saveNewExerciseBtn.addEventListener('click', () => {
+            const part = elements.newExercisePart.value;
+            const name = elements.newExerciseName.value.trim();
+            if (part && name) {
+                if (!customExercises[part]) {
+                    customExercises[part] = [];
+                }
+                if (customExercises[part].some(ex => ex.name === name) || exercisesData[part]?.some(ex => ex.name === name)) {
+                    showCustomConfirm("이미 존재하는 운동입니다.", () => {}, false);
+                    return;
+                }
+                customExercises[part].push({ name: name, image: null });
+                saveToLocalStorage(EXERCISE_LIST_KEY, customExercises);
+                mergeExercises();
+                populateExerciseSelectors(elements.addExModalCategory, elements.addExModalList);
+                populateExerciseSelectors(elements.exerciseCategorySelect, elements.exerciseListSelect);
+                populateExerciseSelectors(elements.statsPartSelector, elements.statsExerciseSelect);
+                
+                closeModal(elements.addExerciseModal);
+            } else {
+                showCustomConfirm("부위와 운동 이름을 모두 입력하세요.", () => {}, false);
+            }
+        });
+
+        [elements.statsPartSelector, elements.statsExerciseSelect, elements.statsStartDate, elements.statsEndDate].forEach(el => {
+            el.addEventListener('change', renderStatsChart);
+        });
+        elements.statsResetBtn.addEventListener('click', () => {
+            const todayStr = today.toISOString().split('T')[0];
+            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            elements.statsStartDate.value = thirtyDaysAgo;
+            elements.statsEndDate.value = todayStr;
+            renderStatsChart();
+        });
+        
+        elements.timerStartBtn.addEventListener('click', startSessionTimer);
+        elements.timerPauseBtn.addEventListener('click', pauseSessionTimer);
+        elements.timerResetBtn.addEventListener('click', resetSessionTimer);
+        elements.timerMinus10Btn.addEventListener('click', () => adjustTimer(-10));
+        elements.timerPlus10Btn.addEventListener('click', () => adjustTimer(10));
+        elements.timerMinus30Btn.addEventListener('click', () => adjustTimer(-30));
+        elements.timerPlus30Btn.addEventListener('click', () => adjustTimer(30));
+        
+        elements.closeFloatingTimer.addEventListener('click', () => {
+             clearInterval(currentFloatingTimer);
+             currentFloatingTimer = null;
+             elements.floatingTimer.style.display = 'none';
+        });
+
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal');
+                if (modal) {
+                    if (modal.id === 'workout-session-modal') {
+                        elements.hideSessionBtn.click();
+                    } else if (modal.id === 'template-editor-modal') {
+                        closeModal(modal);
+                    } else {
+                        closeModal(modal);
+                    }
+                }
+            });
+        });
+        
+        elements.closePrModal.addEventListener('click', () => closeModal(elements.prCelebrationModal));
+
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                const modal = e.target;
+                 if (modal.id === 'workout-session-modal') {
+                    elements.hideSessionBtn.click();
+                 } else if (modal.id !== 'custom-confirm-modal') {
+                    closeModal(modal);
+                 }
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(closeModal);
+            }
+        });
+        
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', e => e.preventDefault());
+        });
+        
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+            el.style.fontSize = '16px';
+        });
+
     };
 
     init();
