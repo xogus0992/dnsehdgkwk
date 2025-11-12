@@ -3,509 +3,638 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>포켓몬 러닝 앱 V5</title>
+    <title>포켓몬 러닝 앱 V12 (디자인 개선)</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
+        /* (V12 신규) 색상 팔레트 및 기본 스타일 정의 */
+        :root {
+            --primary-blue: #0075BE;  /* 포켓몬 블루 */
+            --accent-yellow: #FFDE00; /* 포켓몬 옐로 */
+            --point-red: #E63946;    /* 포인트 레드 (기존 사용) */
+            --point-green: #4caf50;   /* 퀘스트 완료 */
+            --bg-light-gray: #f4f4f9; /* 앱 전체 배경 */
+            --text-primary: #1a1a1a;   /* 기본 텍스트 */
+            --text-secondary: #555;  /* 보조 텍스트 */
+            --card-bg: #ffffff;      /* 카드 배경 (흰색) */
+            --border-color: #e0e0e0;   /* 연한 테두리 */
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
+            /* (V12) 폰트 및 기본 배경색 적용 */
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-light-gray);
+            color: var(--text-primary);
             margin: 0;
             padding: 0;
         }
 
-        /* === 1. 스플래시 스크린 (V5 수정) === */
-        #splashScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #007aff, #00c6ff);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        #splashScreen img {
-            width: 300px; /* 이미지 크기 조정 */
-            max-width: 80%;
-            /* animation: bounce 1.5s infinite; (V5: 제거) */
-        }
-        #splashScreen h1 {
-            color: white;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            margin-top: 20px;
-        }
-        #enterAppButton {
-            margin-top: 30px;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            background-color: #ffd700;
-            color: #3b5998;
-            border: none;
-            border-radius: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: transform 0.2s ease, background-color 0.2s;
-        }
-        #enterAppButton:hover {
-            transform: scale(1.05);
-            background-color: #ffec8b;
-        }
-
-        /* === 2. 메인 앱 컨테이너 === */
+        /* === 1. 메인 앱 컨테이너 === */
         #appContainer {
-            display: none;
+            display: block;
             max-width: 900px;
             margin: 20px auto;
-            background: #fff;
+            background: var(--card-bg);
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 16px; /* (V12) 부드러운 곡률 */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05); /* (V12) 그림자 강화 */
+            padding-bottom: 90px;
         }
 
-        h1, h2 {
+        h1, h2, h3 {
             text-align: center;
-            color: #1a1a1a;
-            border-bottom: 2px solid #eee;
+            color: var(--text-primary);
+            font-weight: 700; /* (V12) 폰트 굵기 */
+        }
+        h2 {
+            border-bottom: 2px solid var(--bg-light-gray);
             padding-bottom: 10px;
         }
+        h3 {
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 8px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: 500; /* (V12) 폰트 굵기 */
+        }
 
+        /* === 2. 페이지 전환 시스템 === */
+        .page {
+            display: none;
+            margin-top: 20px;
+            min-height: 450px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 12px;
+            position: relative;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* === 3. 하단 네비게이션 (V12 디자인) === */
+        #bottomNav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: var(--card-bg);
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08); /* (V12) 그림자 */
+            z-index: 100;
+            max-width: 900px;
+            margin: 0 auto;
+            border-top-left-radius: 20px; /* (V12) 곡률 */
+            border-top-right-radius: 20px;
+            overflow: hidden;
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 12px 5px; /* (V12) 패딩 조정 */
+            font-size: 1.0em;
+            background: transparent; /* (V12) 기본 배경 없음 */
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease; /* (V12) 트랜지션 */
+        }
+        .nav-btn:hover {
+            background-color: #f0f2f5; /* (V12) 호버 효과 */
+        }
+        .nav-btn:active {
+            transform: scale(0.95); /* (V12) 클릭 효과 */
+        }
+        .nav-btn.active {
+            /* (V12) 활성 탭 색상 */
+            background: var(--primary-blue);
+            color: white;
+            font-weight: 700;
+        }
+
+        /* === 4. 페이지별 스타일링 (V12) === */
+
+        /* 4-1. 홈 페이지 (로비) */
+        #page-home {
+            background-image: url('https://i.imgur.com/hUjQz3j.png');
+            padding: 15px;
+        }
+        /* (V12) 허브 아이템 (카드 디자인 적용) */
+        .hub-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .hub-item {
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100px;
+            padding: 10px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* (V12) 카드 그림자 */
+        }
+        .hub-item:hover {
+            transform: translateY(-5px); /* (V12) 호버 시 떠오름 */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        .hub-item:active {
+            transform: translateY(-2px);
+        }
+        .hub-item img {
+            width: 70px; /* (V12) 크기 조정 */
+            height: 70px;
+            object-fit: contain;
+            background: var(--bg-light-gray);
+            border-radius: 15px;
+            padding: 10px;
+        }
+        .hub-item h3 { margin: 8px 0 0 0; font-size: 1em; color: var(--text-primary); text-align: center; border: none; padding: 0; font-weight: 500; }
+        
+        #page-home > div {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        #page-home > div:last-child { margin-bottom: 0; }
+        #page-home > .hub-container { margin-bottom: 15px; }
+
+        /* 4-2. 출석 페이지 (작은 창) */
+        #page-attendance { background-color: #e9ecef; padding: 20px; display: flex; justify-content: center; align-items: center; }
+        #calendarContainer {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1); /* (V12) 그림자 강화 */
+            max-width: 450px;
+            width: 100%;
+        }
+        /* 4-3. 도감 페이지 (마법책) */
+        #page-pokedex { background-image: url('https://i.pinimg.com/originals/8a/a5/c8/8aa5c8c5c7f1f0a5f71e83ed73b57f00.jpg'); padding: 0; }
+        #pokedex-overlay { background: rgba(255, 255, 255, 0.85); padding: 20px; margin: 20px; border-radius: 10px; min-height: 410px; }
+        #pokedex { margin-top: 0; }
+        
+        /* 4-4. 상점 페이지 (V12 디자인) */
+        #page-shop { background-image: url('https://i.pinimg.com/originals/cf/2a/3b/cf2a3b090f77d463b267576b509f6e69.png'); background-repeat: repeat; background-size: 100px; padding: 15px; }
+        #page-shop > h2, #page-shop > p { background: var(--card-bg); padding: 8px 12px; border-radius: 8px; display: inline-block; color: var(--text-primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .shop-grid {
+            /* (V12) 가독성 배경 제거 (개별 카드가 이쁨) */
+            /* background: rgba(255, 255, 255, 0.9); */
+            padding: 0; /* (V12) */
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        /* === 5. (V12 신규) 퀘스트 페이지 스타일 === */
+        #page-quest {
+            padding: 15px;
+            background-color: var(--bg-light-gray); /* (V12) 페이지 배경색 */
+        }
+        .quest-category { margin-bottom: 20px; }
+        
+        /* (V12) 카드 디자인 적용 */
+        .quest-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; /* (V12) 곡률 */
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* (V12) 카드 그림자 */
+            transition: all 0.2s ease;
+        }
+        .quest-item.complete {
+            background-color: #f0fff4; /* (V12) 완료된 퀘스트 */
+            border-color: var(--point-green);
+        }
+        .quest-item.disabled {
+            background-color: #f5f5f5;
+            border-color: #e0e0e0;
+            opacity: 0.7;
+        }
+        .quest-text { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 1.1em; margin-bottom: 8px; }
+        .quest-text .quest-reward {
+            font-size: 0.9em;
+            color: var(--accent-yellow); /* (V12) 강조색 */
+            background: #444;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+        .quest-progress-text { text-align: right; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 5px; }
+        .progress-bar { width: 100%; height: 12px; background-color: var(--border-color); border-radius: 6px; overflow: hidden; }
+        .progress-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, var(--point-green), #81c784);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+        .quest-item.complete .progress-bar-inner { background: var(--point-green); }
+        
+        /* (V12) 시뮬레이션 버튼 */
+        .quest-simulation { display: flex; gap: 10px; margin-top: 10px; }
+        .quest-sim-btn {
+            flex: 1;
+            background-color: var(--primary-blue); /* (V12) 메인 컬러 */
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .quest-sim-btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .quest-sim-btn:active { transform: scale(0.98); }
+
+        #questLogContainer { background: #2a2a2a; color: #fafafa; padding: 15px; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 0.9em; font-family: 'Courier New', Courier, monospace; }
+        #questLogContainer div { padding: 3px 0; border-bottom: 1px dashed #555; }
+
+        /* === 6. 모달 (V12 디자인) === */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px; /* (V12) 곡률 */
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        .modal-content img { width: 150px; height: 150px; background: var(--bg-light-gray); border-radius: 50%; margin: 15px 0; image-rendering: pixelated; }
+        .modal-content p { font-size: 1.5em; font-weight: 700; margin: 10px 0 20px 0; }
+        .modal-content .buy-btn { width: 100%; } /* (V12) 버튼 스타일은 아래 .buy-btn에서 공통 적용 */
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+
+        /* === 7. 기타 스타일 (V12 디자인) === */
+        /* (V12) 상태창 디자인 */
         .status {
             display: flex;
             justify-content: space-around;
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 10px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
             margin-bottom: 20px;
-            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .status-item strong {
-            font-size: 2em;
-            color: #007aff;
-            display: block;
-        }
-
-        /* === 3. 출석 캘린더 (V5 수정) === */
-        #calendarContainer {
-            margin: 30px 0;
-            padding: 15px;
-            background-color: #fafafa;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
-        }
-        #calendarHeader {
-            text-align: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 15px;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-        }
-        .calendar-day-name {
-            font-weight: bold;
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
-            padding-bottom: 5px;
-        }
-        .calendar-day {
-            height: 60px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            text-align: center;
-            padding: 5px;
-            font-size: 1.1em;
-            position: relative;
-            background-color: #fff;
-            color: #555;
-            transition: background-color 0.2s;
-        }
-        .calendar-day.empty { background-color: transparent; border: none; }
+        .status-item { text-align: center; }
+        .status-item span { font-size: 0.9em; color: var(--text-secondary); display: block; margin-bottom: 5px; font-weight: 500; }
+        .status-item strong { font-size: 1.8em; color: var(--primary-blue); font-weight: 700; }
         
-        /* (V5 수정) 관리자용: 출석 안한 날은 모두 클릭 가능 */
-        .calendar-day.clickable {
-            cursor: pointer;
-        }
-        .calendar-day.clickable:hover {
-            background-color: #e6f2ff;
-        }
-        .calendar-day.today { /* '오늘'은 시각적으로만 강조 */
-            border: 2px solid #007aff;
-            font-weight: bold;
-            color: #007aff;
-        }
-
-        .calendar-day.stamped { /* 출석 완료 */
-            background-color: #4cd964;
-            color: white;
-            font-weight: bold;
-            cursor: not-allowed;
-            border-color: #34a853;
-        }
-        .calendar-day.stamped::after {
-            content: '출석';
-            font-size: 0.8em;
-            display: block;
-            margin-top: 5px;
-        }
-        .calendar-day .points-toast {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #e63946;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-size: 0.8em;
-            font-weight: bold;
-            animation: fadeOutUp 1.5s ease-out;
-            z-index: 10;
-        }
-
-        /* === 4. 몬스터볼 뽑기 버튼 (V5 수정) === */
-        #shopSection {
-            text-align: center;
-            margin: 30px 0;
-        }
-        #shopButton { /* 이제 상점 모달을 여는 버튼 */
-            width: 120px;
-            height: 120px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        #shopButton:hover {
-            transform: scale(1.1);
-        }
-        #shopMessage {
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-top: 10px;
-        }
-
-        /* === 5. 상점 모달 (V5 신규) === */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 25px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 700px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .close-button {
-            color: #aaa;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-        }
-        .shop-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
+        #calendarHeader { font-size: 1.5em; font-weight: 700; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day-name { font-weight: 700; text-align: center; color: var(--text-secondary); font-size: 0.9em; padding-bottom: 5px; }
+        .calendar-day { height: 60px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; padding: 5px; font-size: 1.1em; position: relative; background-color: var(--card-bg); color: var(--text-secondary); transition: background-color 0.2s; }
+        .calendar-day.empty { background-color: transparent; border: none; }
+        .calendar-day.clickable { cursor: pointer; }
+        .calendar-day.clickable:hover { background-color: #e6f2ff; }
+        .calendar-day.today { border: 2px solid var(--primary-blue); font-weight: 700; color: var(--primary-blue); }
+        .calendar-day.stamped { background-color: var(--point-green); color: white; font-weight: 700; cursor: not-allowed; border-color: #34a853; }
+        .calendar-day.stamped::after { content: '출석'; font-size: 0.8em; display: block; margin-top: 5px; }
+        .calendar-day .points-toast { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: var(--point-red); color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; animation: fadeOutUp 1.5s ease-out; z-index: 10; }
+        
+        /* (V12) 상점/도감 카드 디자인 */
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-top: 20px; }
         .shop-item {
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
             padding: 15px;
             text-align: center;
-            background: #f9f9f9;
+            background: var(--card-bg);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
         }
-        .shop-item img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-        .shop-item h3 { margin: 10px 0 5px 0; }
-        .shop-item p { font-size: 0.9em; color: #555; }
-        .shop-item .buy-btn {
-            background-color: #007aff;
+        .shop-item:hover { transform: translateY(-5px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+        .shop-item h3 { margin: 10px 0 5px 0; border: none; padding: 0; text-align: center; font-weight: 700; }
+        .shop-item p { font-size: 0.9em; color: var(--text-secondary); }
+        
+        /* (V12) 공용 버튼 스타일 (구매/진화) */
+        .buy-btn, .evolve-btn {
+            background-color: var(--primary-blue);
             color: white;
             border: none;
             padding: 10px 15px;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 1em;
             width: 100%;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
+            font-family: 'Noto Sans KR', sans-serif;
         }
-        .shop-item .buy-btn:hover { background-color: #0056b3; }
-        .shop-item.disabled {
-            background: #e0e0e0;
-            opacity: 0.7;
-        }
-        .shop-item .buy-btn:disabled {
+        .buy-btn:hover, .evolve-btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .buy-btn:active, .evolve-btn:active { transform: scale(0.98); }
+        .evolve-btn { background-color: var(--point-green); } /* 진화 버튼 */
+        .evolve-btn:hover { background-color: #34a853; }
+        .buy-btn:disabled, .evolve-btn:disabled {
             background-color: #aaa;
             cursor: not-allowed;
+            transform: none;
         }
-        .placeholder-img {
-            font-size: 50px;
-            background: #ccc;
-            width: 80px;
-            height: 80px;
-            line-height: 80px;
-            border-radius: 50%;
-            margin: 0 auto;
-            color: #888;
-        }
+        .shop-item.disabled { background: #f5f5f5; opacity: 0.7; }
 
-        /* Pokedex Grid (V4와 동일) */
-        #pokedexGrid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
+        /* (V12) 도감 카드 */
+        #pokedexGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; }
         .pokemon-grid-item {
-            background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 10px;
-            padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease; position: relative;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+            position: relative;
         }
         .pokemon-grid-item:hover { transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .pokemon-grid-item img {
-            width: 90px; height: 90px; object-fit: contain;
-            background-color: #e8e8e8; border-radius: 50%; margin-bottom: 10px;
-        }
-        .pokemon-grid-item .pokemon-id { font-size: 0.8em; color: #888; margin-bottom: 5px; }
-        .pokemon-grid-item .pokemon-name { font-weight: bold; font-size: 1.1em; color: #333; }
-        .pokemon-grid-item .pokemon-count {
-            position: absolute; top: 5px; right: 5px; background: #e63946;
-            color: white; font-weight: bold; border-radius: 50%;
-            width: 28px; height: 28px; line-height: 28px; font-size: 0.9em;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .evolve-btn {
-            background-color: #4cd964; width: calc(100% - 20px);
-            margin-top: 10px; padding: 8px; font-size: 0.9em;
-            border: none; border-radius: 5px; color: white; cursor: pointer;
-        }
-        .evolve-btn:hover { background-color: #34a853; }
-        .evolve-btn.disabled { background-color: #aaa; cursor: not-allowed; }
-
-        /* Admin & Log (V4와 동일) */
-        #adminPanel {
-            background: #fff8e1; border: 1px solid #ffecb3; border-radius: 10px;
-            padding: 15px; margin-top: 30px;
-        }
-        #adminPanel h3 { margin-top: 0; text-align: center; color: #f57f17; }
+        .pokemon-grid-item img { width: 90px; height: 90px; object-fit: contain; background-color: var(--bg-light-gray); border-radius: 50%; margin-bottom: 10px; }
+        .pokemon-grid-item .pokemon-id { font-size: 0.8em; color: var(--text-secondary); margin-bottom: 5px; }
+        .pokemon-grid-item .pokemon-name { font-weight: 700; font-size: 1.1em; color: var(--text-primary); }
+        .pokemon-grid-item .pokemon-count { position: absolute; top: 5px; right: 5px; background: var(--point-red); color: white; font-weight: 700; border-radius: 50%; width: 28px; height: 28px; line-height: 28px; font-size: 0.9em; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        
+        #adminPanel { background: #fff8e1; border: 1px solid #ffecb3; border-radius: 12px; padding: 15px; }
+        #adminPanel h3 { margin-top: 0; text-align: center; color: #f57f17; border: none; padding: 0; font-weight: 700; }
         .admin-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-        .admin-actions button {
-            background-color: #f57f17; font-size: 0.9em; padding: 8px 12px;
-            border: none; border-radius: 5px; color: white; cursor: pointer;
-        }
-        .admin-actions button:hover { background-color: #e65100; }
-        #log {
-            margin-top: 30px; background: #2a2a2a; color: #00ff00;
-            padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace;
-            height: 150px; overflow-y: auto; font-size: 0.9em;
-        }
-
-        /* 애니메이션 */
-        @keyframes fadeOutUp {
-            0% { opacity: 1; transform: translate(-50%, 0); }
-            100% { opacity: 0; transform: translate(-50%, -30px); }
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) rotate(-5deg); }
-            20%, 40%, 60%, 80% { transform: translateX(5px) rotate(5deg); }
-        }
+        .admin-actions button { background-color: #f57f17; font-size: 0.9em; padding: 8px 12px; border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s ease; }
+        .admin-actions button:hover { background-color: #e65100; transform: translateY(-2px); }
+        
+        #log { background: #2a2a2a; color: #00ff00; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; height: 150px; overflow-y: auto; font-size: 0.9em; }
+        @keyframes fadeOutUp { 0% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -30px); } }
     </style>
 </head>
 <body>
 
-    <div id="splashScreen">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2SY_RrCezD8jz5_ZYsqv8iNndHEefsHqQpA&s" alt="Pokemon Trainer">
-        <h1>포켓몬 러닝</h1>
-        <button id="enterAppButton">앱 시작하기</button>
-    </div>
-
     <div id="appContainer">
-        <h1>🏃‍♂️ 포켓몬 러닝 앱 V5</h1>
+        <h1>🏃‍♂️ 포켓몬 러닝 앱 V12</h1>
 
-        <div class="status">
-            <div class="status-item">
-                <span>내 포인트</span>
-                <strong id="pointsDisplay">0</strong>
-            </div>
-            <div class="status-item">
-                <span>출석 진행도 (다음 포켓몬까지)</span>
-                <strong id="attendanceProgress">0 / 3</strong>
-            </div>
-        </div>
-
-        <div id="calendarContainer">
-            <h2 id="calendarHeader">11월 2025</h2>
-            <div class="calendar-grid" id="calendarWeekdays">
+        <div id="page-home" class="page active">
+            <div class="hub-container">
+                <div class="hub-item" onclick="showPage('page-shop')">
+                    <img src="https://static.wikia.nocookie.net/pokemon/images/c/c5/Pok%C3%A9_Mart_building_RSE.png/revision/latest/scale-to-width-down/1000?cb=20130310023024" alt="상점">
+                    <h3>상점</h3>
                 </div>
-            <div class="calendar-grid" id="calendarGrid">
+                <div class="hub-item" onclick="showPage('page-pokedex')">
+                    <img src="https://www.pngkit.com/png/full/15-152011_pokedex-icon-pixel-pokedex-icon.png" alt="도감">
+                    <h3>도감</h3>
                 </div>
+                <div class="hub-item" onclick="showPage('page-attendance')">
+                    <img src="https://i.pinimg.com/originals/1a/0c/32/1a0c32b55f847471ad83a0ad051c518d.png" alt="출석">
+                    <h3>출석</h3>
+                </div>
+            </div>
+            <div class="status">
+                <div class="status-item">
+                    <span>내 포인트</span>
+                    <strong id="pointsDisplay">0</strong>
+                </div>
+                <div class="status-item">
+                    <span>출석 진행도 (다음 포켓몬)</span>
+                    <strong id="attendanceProgress">0 / 3</strong>
+                </div>
+                <div class="status-item">
+                    <span>총 접속일</span>
+                    <strong id="totalLoginsDisplay">0</strong>
+                </div>
+            </div>
+            <div id="adminPanel">
+                <h3>🔑 관리자 테스트 패널</h3>
+                <div class="admin-actions">
+                    <button id="adminAddPoints">100 포인트 추가</button>
+                    <button id="adminAddBasic">기본 포켓몬 1마리 획득</button>
+                    <button id="adminAddRandom">중급 포켓몬 1마리 획득</button>
+                    <button id="adminClearData">!! 모든 데이터 초기화 !!</button>
+                </div>
+            </div>
+            <div id="log">시스템 로그...</div>
         </div>
-
-        <div id="shopSection">
-            <h2>🛒 상점 바로가기</h2>
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrh9SpQTEsdhlKv_gKbo2wbd3eWZoxkWVTXQ&s" 
-                 alt="상점 가기" 
-                 id="shopButton"> <p id="shopMessage">클릭하여 상점 열기</p>
-        </div>
-
-        <div id="pokedex">
-            <h2>📜 나의 포켓몬 도감 (Grid View)</h2>
-            <div id="pokedexGrid"></div>
-        </div>
-
-        <div id="adminPanel">
-            <h3>🔑 관리자 테스트 패널</h3>
-            <div class="admin-actions">
-                <button id="adminAddPoints">100 포인트 추가</button>
-                <button id="adminAddBasic">기본 포켓몬 1마리 획득</button>
-                <button id="adminAddRandom">랜덤 포켓몬 1마리 획득</button>
-                <button id="adminClearData">!! 모든 데이터 초기화 !!</button>
+        
+        <div id="page-attendance" class="page">
+            <div id="calendarContainer">
+                <h2 id="calendarHeader">11월 2025</h2>
+                <div class="calendar-grid" id="calendarWeekdays"></div>
+                <div class="calendar-grid" id="calendarGrid"></div>
             </div>
         </div>
 
-        <div id="log">시스템 로그...</div>
-    </div>
+        <div id="page-pokedex" class="page">
+            <div id="pokedex-overlay">
+                <div id="pokedex">
+                    <h2>📜 나의 포켓몬 도감</h2>
+                    <div id="pokedexGrid"></div>
+                </div>
+            </div>
+        </div>
 
-    <div id="shopModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeShopModal">&times;</span>
+        <div id="page-shop" class="page">
             <h2>🛒 포켓몬 상점 🛒</h2>
             <p>포인트를 사용하여 아이템을 구매하세요!</p>
-            
             <div class="shop-grid">
-                <div class="shop-item" id="buyPokeballItem">
+                <div class="shop-item" id="buy-10p">
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrh9SpQTEsdhlKv_gKbo2wbd3eWZoxkWVTXQ&s" alt="몬스터볼">
                     <h3>몬스터볼 뽑기</h3>
-                    <p>랜덤 포켓몬 1마리 획득</p>
+                    <p>기본 포켓몬 1마리 획득</p>
                     <button class="buy-btn">구매 (10P)</button>
                 </div>
-                
-                <div class="shop-item disabled">
-                    <div class="placeholder-img">🥚</div>
-                    <h3>행복의 알</h3>
-                    <p>30분간 경험치 2배 (준비중)</p>
-                    <button class="buy-btn" disabled>50P</button>
+                <div class="shop-item" id="buy-50p">
+                    <img src="https://static.wikia.nocookie.net/pokemon/images/a/a2/Great_Ball_Sprite.png" alt="슈퍼볼">
+                    <h3>슈퍼볼 뽑기</h3>
+                    <p>기본 혹은 중급 포켓몬 획득</p>
+                    <button class="buy-btn">구매 (50P)</button>
                 </div>
-
-                <div class="shop-item disabled">
-                    <div class="placeholder-img">🌸</div>
-                    <h3>향로</h3>
-                    <p>30분간 포켓몬 유인 (준비중)</p>
-                    <button class="buy-btn" disabled>80P</button>
+                <div class="shop-item" id="buy-100p">
+                    <img src="https://static.wikia.nocookie.net/pokemon/images/a/a5/Ultra_Ball_Sprite.png" alt="하이퍼볼">
+                    <h3>하이퍼볼 뽑기</h3>
+                    <p>중급 혹은 전설 포켓몬 획득</p>
+                    <button class="buy-btn">구매 (100P)</button>
                 </div>
             </div>
         </div>
+
+        <div id="page-quest" class="page">
+            <h2>🏆 퀘스트 및 업적</h2>
+            <div class="quest-category">
+                <h3>🗓️ 접속 퀘스트</h3>
+                <div id="quest-container-login"></div>
+            </div>
+            <div class="quest-category">
+                <h3>🎁 출석 퀘스트</h3>
+                <div id="quest-container-attendance"></div>
+            </div>
+            <div class="quest-category">
+                <h3>🏃‍♂️ 런닝 퀘스트 (시뮬레이션)</h3>
+                <p style="text-align: center; font-size: 0.9em; color: var(--text-secondary);">(실제 운동을 감지할 수 없으므로, 버튼으로 진행도를 테스트합니다.)</p>
+                <div class="quest-simulation">
+                    <button id="simRun1" class="quest-sim-btn">런닝 1km 기록</button>
+                    <button id="simRun5" class="quest-sim-btn">런닝 5km 기록</button>
+                </div>
+                <div id="quest-container-run"></div>
+            </div>
+            <div class="quest-category">
+                <h3>🏋️‍♀️ 웨이트 퀘스트 (시뮬레이션)</h3>
+                <div class="quest-simulation">
+                    <button id="simWeight1" class="quest-sim-btn">웨이트 1회 기록</button>
+                </div>
+                <div id="quest-container-weight"></div>
+            </div>
+            <div class="quest-category">
+                <h3>⚔️ 대전 퀘스트</h3>
+                <p style="text-align: center; font-weight: bold; color: var(--point-red);">(대전 기능은 친구 목록과 서버가 필요하므로, 현재 HTML 파일 내에서는 구현할 수 없습니다.)</p>
+                <div id="quest-container-pvp"></div>
+            </div>
+            <div class="quest-category">
+                <h3>📜 완료 기록 (기록창)</h3>
+                <div id="questLogContainer"></div>
+            </div>
+        </div>
+        
+        <nav id="bottomNav">
+            <button class="nav-btn active" data-page="page-home">🏠 홈</button>
+            <button class="nav-btn" data-page="page-attendance">🗓️ 출석</button>
+            <button class="nav-btn" data-page="page-pokedex">📜 도감</button>
+            <button class="nav-btn" data-page="page-shop">🛒 상점</button>
+            <button class="nav-btn" data-page="page-quest">🏆 퀘스트</button>
+        </nav>
+
     </div>
 
+    <div id="gotchaModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>새로운 포켓몬 획득!</h2>
+            <img id="gotchaPokemonImage" src="" alt="획득한 포켓몬" />
+            <p id="gotchaPokemonName">포켓몬 이름</p>
+            <button id="gotchaConfirmButton" class="buy-btn">도감에서 확인</button>
+        </div>
+    </div>
+
+
     <script>
-        // --- 설정 값 ---
+        // === (V11) 코드 (V11과 동일, 버그 수정됨) ===
+        
+        // === (V11) 설정 값 ===
         const ATTENDANCE_REWARD_POINTS = 3;
-        const ATTENDANCE_GOAL = 3;
-        const SHOP_COST = 10;
+        const ATTENDANCE_GOAL = 3; 
         const EVOLVE_COST = 10;
         const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2/';
-
-        const BASIC_POKEMON_IDS = [1, 4, 7, 25, 133];
-        const RANDOM_POKEMON_IDS = [10, 13, 16, 19, 25, 54, 63, 79, 133, 147];
-
-        // --- DOM 요소 ---
-        const splashScreen = document.getElementById('splashScreen');
-        const appContainer = document.getElementById('appContainer');
-        const enterAppButton = document.getElementById('enterAppButton');
+        const SHOP_COST_10P = 10;
+        const SHOP_COST_50P = 50;
+        const SHOP_COST_100P = 100;
+        const ATTENDANCE_POOL = [1, 4, 7, 25, 133];
+        const POOL_10P = [1, 4, 7, 10, 13, 16, 19, 25, 133];
+        const POOL_50P_MID = [56, 58, 66, 74, 95, 123, 127, 128, 143, 147];
+        const POOL_100P_LEGEND = [144, 145, 146, 150];
+        const ADMIN_BASIC_POOL = [1, 4, 7, 25, 133];
+        const ADMIN_RANDOM_POOL = [56, 58, 66, 74, 95, 123, 127, 128, 143, 147];
         
+        // === (V10) 퀘스트 "데이터베이스" ===
+        const MASTER_QUEST_LIST = {
+            'login_1': { category: 'login', title: '1일 접속', goal: 1, reward: 10 },
+            'login_3': { category: 'login', title: '3일 접속', goal: 3, reward: 30 },
+            'login_5': { category: 'login', title: '5일 접속', goal: 5, reward: 50 },
+            'login_7': { category: 'login', title: '7일 접속', goal: 7, reward: 100 },
+            'login_15': { category: 'login', title: '15일 접속', goal: 15, reward: 150 },
+            'login_30': { category: 'login', title: '30일 접속', goal: 30, reward: 300 },
+            'attend_1': { category: 'attendance', title: '첫 포켓몬 획득하기 (출석)', goal: 1, reward: 10 },
+            'attend_3': { category: 'attendance', title: '포켓몬 3마리 획득 (출석)', goal: 3, reward: 50 },
+            'run_1': { category: 'run', title: '1km 달리기', goal: 1, reward: 5 },
+            'run_10': { category: 'run', title: '10km 달리기', goal: 10, reward: 50 },
+            'run_50': { category: 'run', title: '50km 달리기', goal: 50, reward: 100 },
+            'run_100': { category: 'run', title: '100km 달리기', goal: 100, reward: 200 },
+            'weight_1': { category: 'weight', title: '웨이트 1회', goal: 1, reward: 5 },
+            'weight_10': { category: 'weight', title: '웨이트 10회', goal: 10, reward: 50 },
+            'weight_50': { category: 'weight', title: '웨이트 50회', goal: 50, reward: 100 },
+            'weight_100': { category: 'weight', title: '웨이트 100회', goal: 100, reward: 200 },
+            'pvp_1': { category: 'pvp', title: '친구와 1번 대전', goal: 1, reward: 20 },
+            'pvp_5': { category: 'pvp', title: '친구와 5번 대전', goal: 5, reward: 50 },
+            'pvp_win_1': { category: 'pvp', title: '대전 1번 이기기', goal: 1, reward: 30 },
+            'pvp_win_10': { category: 'pvp', title: '대전 10번 이기기', goal: 10, reward: 100 },
+        };
+        
+        // === DOM 요소 (V11) ===
         const pointsDisplay = document.getElementById('pointsDisplay');
-        const attendanceProgress = document.getElementById('attendanceProgress');
+        const attendanceProgress = document.getElementById('attendanceProgress'); 
+        const totalLoginsDisplay = document.getElementById('totalLoginsDisplay'); 
         const calendarHeader = document.getElementById('calendarHeader');
         const calendarWeekdays = document.getElementById('calendarWeekdays');
         const calendarGrid = document.getElementById('calendarGrid');
-        
-        const shopButton = document.getElementById('shopButton'); // 메인 화면의 상점 버튼
         const pokedexGrid = document.getElementById('pokedexGrid');
         const log = document.getElementById('log');
+        const gotchaModal = document.getElementById('gotchaModal');
+        const gotchaPokemonImage = document.getElementById('gotchaPokemonImage');
+        const gotchaPokemonName = document.getElementById('gotchaPokemonName');
+        const gotchaConfirmButton = document.getElementById('gotchaConfirmButton');
+        const questContainers = {
+            login: document.getElementById('quest-container-login'),
+            attendance: document.getElementById('quest-container-attendance'),
+            run: document.getElementById('quest-container-run'),
+            weight: document.getElementById('quest-container-weight'),
+            pvp: document.getElementById('quest-container-pvp'),
+            log: document.getElementById('questLogContainer')
+        };
 
-        // (V5 신규) 상점 모달 DOM
-        const shopModal = document.getElementById('shopModal');
-        const closeShopModal = document.getElementById('closeShopModal');
-        const buyPokeballButton = document.getElementById('buyPokeballItem').querySelector('.buy-btn');
-
-        // --- 게임 데이터 (V5: lastAttendanceDate 제거) ---
+        // === 게임 데이터 (V11) ===
         let userPoints = 0;
-        let attendanceCount = 0;
+        let attendanceCount = 0; // 3회 출석용 임시 카운터
         let pokedex = {};
-        let monthlyStamps = []; // [1, 5, 12] (출석한 날짜)
+        let monthlyStamps = []; 
         let currentCalendarMonth = -1;
+        let questData = {}; // 퀘스트 누적 진행도 (예: questData.attendance = 포켓몬 획득 횟수)
+        let completedQuests = [];
+        let lastLoginDate = '';
 
-        // --- 초기화 ---
+        // === 초기화 ===
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. 스플래시 스크린
-            enterAppButton.addEventListener('click', () => {
-                splashScreen.style.display = 'none';
-                appContainer.style.display = 'block';
-                initializeGameData();
-                updateUI();
-                setupAdminButtons();
-            });
-
-            // 2. (V5 수정) 상점 모달 이벤트
-            shopButton.addEventListener('click', () => {
-                shopModal.style.display = 'flex'; // 모달 열기
-            });
-            closeShopModal.addEventListener('click', () => {
-                shopModal.style.display = 'none'; // 모달 닫기
-            });
-            window.addEventListener('click', (event) => { // 모달 바깥 클릭 시 닫기
-                if (event.target == shopModal) {
-                    shopModal.style.display = 'none';
-                }
-            });
-
-            // 3. (V5 수정) 실제 구매 버튼
-            buyPokeballButton.addEventListener('click', handleShopBuy);
+            initializeGameData(); 
+            updateUI();
+            setupAdminButtons();
+            setupNavigation();
+            setupQuestPage(); 
+            
+            document.getElementById('buy-10p').querySelector('.buy-btn').addEventListener('click', () => handleShopBuy(SHOP_COST_10P));
+            document.getElementById('buy-50p').querySelector('.buy-btn').addEventListener('click', () => handleShopBuy(SHOP_COST_50P));
+            document.getElementById('buy-100p').querySelector('.buy-btn').addEventListener('click', () => handleShopBuy(SHOP_COST_100P));
+            gotchaConfirmButton.addEventListener('click', closeGotchaModal);
         });
 
-        // 1. 데이터 초기화 (V5: lastAttendanceDate 제거)
+        // 1. (V11) 데이터 초기화
         function initializeGameData() {
             userPoints = parseInt(localStorage.getItem('userPoints') || '100');
-            attendanceCount = parseInt(localStorage.getItem('attendanceCount') || '0');
+            attendanceCount = parseInt(localStorage.getItem('attendanceCount') || '0'); 
             pokedex = JSON.parse(localStorage.getItem('pokedex') || '{}');
-
-            const today = new Date();
-            const savedMonth = parseInt(localStorage.getItem('currentMonth') || '-1');
-            currentCalendarMonth = today.getMonth(); // 0-11
+            questData = JSON.parse(localStorage.getItem('questData') || '{}');
+            completedQuests = JSON.parse(localStorage.getItem('completedQuests') || '[]');
+            lastLoginDate = localStorage.getItem('lastLoginDate') || '';
             
+            questData.loginDays = questData.loginDays || 0;
+            questData.attendance = questData.attendance || 0; 
+            questData.run = questData.run || 0;
+            questData.weight = questData.weight || 0;
+            questData.pvp = questData.pvp || 0;
+            
+            const today = new Date().toISOString().split('T')[0]; 
+            if (today !== lastLoginDate) {
+                questData.loginDays += 1;
+                lastLoginDate = today;
+                localStorage.setItem('lastLoginDate', today);
+                logMessage(`새로운 접속을 환영합니다! (총 ${questData.loginDays}일째)`);
+                checkQuestCompletion('login');
+            } else {
+                logMessage(`오늘 (${questData.loginDays}일째) 다시 접속했습니다.`);
+            }
+            
+            const savedMonth = parseInt(localStorage.getItem('currentMonth') || '-1');
+            currentCalendarMonth = new Date().getMonth();
             if (savedMonth === currentCalendarMonth) {
                 monthlyStamps = JSON.parse(localStorage.getItem('monthlyStamps') || '[]');
             } else {
@@ -513,133 +642,123 @@
                 localStorage.setItem('monthlyStamps', '[]');
                 localStorage.setItem('currentMonth', currentCalendarMonth);
             }
-
-            logMessage("게임 데이터 로드 완료. (V5)");
+            
+            logMessage("게임 데이터 로드 완료. (V12 - 디자인 개선)");
+            saveData(); 
         }
 
-        // 2. 데이터 저장 (V5: lastAttendanceDate 제거)
+        // 2. (V11) 데이터 저장
         function saveData() {
             localStorage.setItem('userPoints', userPoints);
-            localStorage.setItem('attendanceCount', attendanceCount);
+            localStorage.setItem('attendanceCount', attendanceCount); 
             localStorage.setItem('pokedex', JSON.stringify(pokedex));
             localStorage.setItem('monthlyStamps', JSON.stringify(monthlyStamps));
             localStorage.setItem('currentMonth', currentCalendarMonth);
+            localStorage.setItem('questData', JSON.stringify(questData));
+            localStorage.setItem('completedQuests', JSON.stringify(completedQuests));
+            localStorage.setItem('lastLoginDate', lastLoginDate);
         }
 
-        // 3. UI 업데이트
+        // 3. (V11) UI 업데이트
         function updateUI() {
             pointsDisplay.textContent = userPoints;
-            attendanceProgress.textContent = `${attendanceCount} / ${ATTENDANCE_GOAL}`;
+            totalLoginsDisplay.textContent = questData.loginDays; 
+            attendanceProgress.textContent = `${attendanceCount} / ${ATTENDANCE_GOAL}`; 
             
             renderCalendar();
             renderPokedexGrid();
+            renderQuestPage(); 
         }
 
-        // === 캘린더 기능 (V5 관리자용 수정) ===
-        // 4. 캘린더 그리기
+        // 4. (V10) 페이지 네비게이션 (동일)
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    showPage(button.dataset.page);
+                });
+            });
+        }
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) { targetPage.classList.add('active'); }
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const targetNavButton = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+            if (targetNavButton) { targetNavButton.classList.add('active'); }
+        }
+
+        // 5. (V11) 캘린더 기능 (로직 수정됨)
         function renderCalendar() {
             calendarGrid.innerHTML = '';
-            calendarWeekdays.innerHTML = ''; // V5: 요일 헤더 분리
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-
-            calendarHeader.textContent = `${year}년 ${month + 1}월`;
-
-            const firstDayOfMonth = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const todayDate = today.getDate();
-
-            // 요일 헤더 (일~토)
+            calendarWeekdays.innerHTML = '';
+            const forcedToday = new Date(2025, 10, 12); 
+            const year_f = forcedToday.getFullYear();
+            const month_f = forcedToday.getMonth();
+            const todayDate_f = forcedToday.getDate();
+            calendarHeader.textContent = `${year_f}년 ${month_f + 1}월`;
+            const firstDayOfMonth = new Date(year_f, month_f, 1).getDay();
+            const daysInMonth = new Date(year_f, month_f + 1, 0).getDate();
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
             calendarWeekdays.innerHTML = dayNames.map(name => `<div class="calendar-day-name">${name}</div>`).join('');
-
-            // 빈 칸
-            for (let i = 0; i < firstDayOfMonth; i++) {
-                calendarGrid.innerHTML += '<div class="calendar-day empty"></div>';
-            }
-
-            // 날짜
+            for (let i = 0; i < firstDayOfMonth; i++) { calendarGrid.innerHTML += '<div class="calendar-day empty"></div>'; }
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
                 dayDiv.textContent = day;
                 dayDiv.dataset.day = day;
-
-                if (monthlyStamps.includes(day)) {
-                    dayDiv.classList.add('stamped'); // 이미 출석
-                } else {
-                    // (V5 수정) 관리자: 출석 안했으면 모두 클릭 가능
+                if (monthlyStamps.includes(day)) { dayDiv.classList.add('stamped'); }
+                else {
                     dayDiv.classList.add('clickable');
                     dayDiv.addEventListener('click', () => handleCalendarClick(dayDiv, day));
                 }
-                
-                if (day === todayDate && !monthlyStamps.includes(day)) {
-                    dayDiv.classList.add('today'); // 오늘 날짜 시각적 강조
-                }
-                
+                if (day === todayDate_f && !monthlyStamps.includes(day)) { dayDiv.classList.add('today'); }
                 calendarGrid.appendChild(dayDiv);
             }
         }
-
-        // 5. 캘린더 클릭 (V5 관리자용 수정)
+        
         function handleCalendarClick(dayDiv, day) {
-            // (V5 수정) 이미 출석했는지 여부만 체크
             if (monthlyStamps.includes(day)) {
-                logMessage("이미 출석한 날짜입니다.");
-                return;
+                logMessage("이미 출석한 날짜입니다."); return;
             }
-
-            logMessage(`[Admin] ${day}일 출석! +${ATTENDANCE_REWARD_POINTS}P 획득.`);
+            logMessage(`${day}일 출석! +${ATTENDANCE_REWARD_POINTS}P 획득.`);
             userPoints += ATTENDANCE_REWARD_POINTS;
-            attendanceCount += 1;
-            monthlyStamps.push(day); // 해당 날짜를 출석 처리
-
-            // 포인트 획득 애니메이션
+            attendanceCount += 1; 
+            monthlyStamps.push(day); 
             const pointsToast = document.createElement('span');
             pointsToast.className = 'points-toast';
             pointsToast.textContent = `+${ATTENDANCE_REWARD_POINTS}P`;
             dayDiv.appendChild(pointsToast);
             setTimeout(() => pointsToast.remove(), 1500);
 
-            // 3회 출석 보상
             if (attendanceCount >= ATTENDANCE_GOAL) {
                 logMessage(`${ATTENDANCE_GOAL}회 출석! 기본 포켓몬 지급 중...`);
-                attendanceCount = 0; // 리셋
+                attendanceCount = 0; 
+                const randomId = ATTENDANCE_POOL[Math.floor(Math.random() * ATTENDANCE_POOL.length)];
+                grantPokemonById(randomId);
                 
-                const randomId = BASIC_POKEMON_IDS[Math.floor(Math.random() * BASIC_POKEMON_IDS.length)];
-                grantPokemonById(randomId); // 비동기 호출
+                // (V10) 출석 퀘스트 진행도 업데이트 (포켓몬 1회 획득)
+                updateQuestProgress('attendance', 1); 
             }
-
             saveData();
-            updateUI(); // UI(캘린더 포함) 즉시 갱신
+            updateUI(); 
         }
 
-
-        // === 포켓몬 기능 (V4와 동일) ===
-        // (연속 진화 로직이 이미 포함되어 있습니다)
-
-        // 6. PokéAPI 데이터 가져오기 (진화 체인 포함)
-        async function fetchPokemonData(pokemonId) {
+        // === 6. 포켓몬 기능 (V9와 동일) ===
+        // (V11) 코드가 길어져 생략된 것처럼 보이지만, V10/V11 코드와 100% 동일합니다.
+        async function fetchPokemonData(pokemonId) { 
             logMessage(`PokéAPI 호출: ID ${pokemonId}...`);
             try {
                 let cachedData = localStorage.getItem(`pokeCache_v4_${pokemonId}`);
-                if (cachedData) {
-                    logMessage(`캐시에서 ID ${pokemonId} 데이터 로드.`);
-                    return JSON.parse(cachedData);
-                }
-
+                if (cachedData) { logMessage(`캐시에서 ID ${pokemonId} 데이터 로드.`); return JSON.parse(cachedData); }
                 const pokeResponse = await fetch(`${POKEAPI_BASE_URL}pokemon/${pokemonId}`);
                 if (!pokeResponse.ok) throw new Error("Pokemon API 응답 실패");
                 const pokeData = await pokeResponse.json();
-                
                 const speciesResponse = await fetch(pokeData.species.url);
                 if (!speciesResponse.ok) throw new Error("Species API 응답 실패");
                 const speciesData = await speciesResponse.json();
-                
                 const name = speciesData.names.find(n => n.language.name === 'ko')?.name || pokeData.name;
                 const sprite = pokeData.sprites.front_default;
-
                 let nextEvolutionId = null;
                 if (speciesData.evolution_chain) {
                     const chainResponse = await fetch(speciesData.evolution_chain.url);
@@ -648,30 +767,16 @@
                         nextEvolutionId = findNextEvolution(chainData.chain, pokemonId);
                     }
                 }
-
-                const pokemonData = {
-                    id: pokemonId, name: name, sprite: sprite, nextEvolutionId: nextEvolutionId
-                };
-
+                const pokemonData = { id: pokemonId, name: name, sprite: sprite, nextEvolutionId: nextEvolutionId };
                 localStorage.setItem(`pokeCache_v4_${pokemonId}`, JSON.stringify(pokemonData));
                 logMessage(`API에서 ID ${pokemonId} 데이터 로드 (다음 진화: ${nextEvolutionId})`);
                 return pokemonData;
-
-            } catch (error) {
-                logMessage(`PokéAPI 오류: ${error.message}`);
-                return null;
-            }
+            } catch (error) { logMessage(`PokéAPI 오류: ${error.message}`); return null; }
         }
-
-        // 7. 진화 체인 파싱 함수 (재귀)
-        function findNextEvolution(chainNode, targetId) {
+        function findNextEvolution(chainNode, targetId) { 
             const currentId = parseInt(chainNode.species.url.split('/')[6]);
-            
             if (currentId === targetId) {
-                if (chainNode.evolves_to.length > 0) {
-                    const nextEvoId = parseInt(chainNode.evolves_to[0].species.url.split('/')[6]);
-                    return nextEvoId;
-                }
+                if (chainNode.evolves_to.length > 0) { return parseInt(chainNode.evolves_to[0].species.url.split('/')[6]); }
                 return null;
             }
             for (const nextNode of chainNode.evolves_to) {
@@ -680,42 +785,51 @@
             }
             return null;
         }
-
-        // 8. (V5 수정) 상점 뽑기 (모달 내부 버튼에서 실행)
-        async function handleShopBuy() {
-            if (userPoints < SHOP_COST) {
-                logMessage("포인트가 부족합니다.");
-                return;
+        function disableAllShopButtons(disabled) { 
+            const btn10p = document.getElementById('buy-10p').querySelector('.buy-btn');
+            const btn50p = document.getElementById('buy-50p').querySelector('.buy-btn');
+            const btn100p = document.getElementById('buy-100p').querySelector('.buy-btn');
+            btn10p.disabled = disabled; btn50p.disabled = disabled; btn100p.disabled = disabled;
+            if (disabled) {
+                if (btn10p.disabled) btn10p.textContent = "뽑는중...";
+                if (btn50p.disabled) btn50p.textContent = "뽑는중...";
+                if (btn100p.disabled) btn100p.textContent = "뽑는중...";
+            } else {
+                btn10p.textContent = `구매 (${SHOP_COST_10P}P)`;
+                btn50p.textContent = `구매 (${SHOP_COST_50P}P)`;
+                btn100p.textContent = `구매 (${SHOP_COST_100P}P)`;
             }
-            userPoints -= SHOP_COST;
-            logMessage(`몬스터볼 뽑기! -${SHOP_COST}P...`);
-            
-            buyPokeballButton.disabled = true; // 모달 내 구매 버튼 비활성화
-            buyPokeballButton.textContent = "뽑는중...";
-            shopButton.style.animation = "shake 0.5s"; // 메인화면 볼 흔들기
-
-            const randomId = RANDOM_POKEMON_IDS[Math.floor(Math.random() * RANDOM_POKEMON_IDS.length)];
-            await grantPokemonById(randomId);
-            
-            setTimeout(() => {
-                shopButton.style.animation = "";
-                buyPokeballButton.disabled = false;
-                buyPokeballButton.textContent = "구매 (10P)";
-                shopModal.style.display = 'none'; // 뽑기 후 모달 닫기
-            }, 500);
-
-            saveData();
-            updateUI();
         }
-
-        // 9. ID로 포켓몬 획득 (V4와 동일)
-        async function grantPokemonById(pokemonId) {
+        async function handleShopBuy(cost) { 
+            if (userPoints < cost) { logMessage("포인트가 부족합니다."); return; }
+            userPoints -= cost;
+            logMessage(`포인트 사용! -${cost}P...`);
+            disableAllShopButtons(true);
+            let pool = []; let drawType = "";
+            if (cost === SHOP_COST_10P) { pool = POOL_10P; drawType = "몬스터볼"; }
+            else if (cost === SHOP_COST_50P) { pool = POOL_10P.concat(POOL_50P_MID); drawType = "슈퍼볼"; }
+            else if (cost === SHOP_COST_100P) { pool = POOL_50P_MID.concat(POOL_100P_LEGEND); drawType = "하이퍼볼"; }
+            logMessage(`${drawType} 뽑기를 시작합니다...`);
+            const randomId = pool[Math.floor(Math.random() * pool.length)];
+            const pokemonData = await grantPokemonById(randomId);
+            if (pokemonData) { showGotchaModal(pokemonData); }
+            else { logMessage("포켓몬 획득에 실패했습니다. (데이터 오류)"); disableAllShopButtons(false); }
+            saveData(); updateUI();
+        }
+        function showGotchaModal(pokemonData) { 
+            gotchaPokemonImage.src = pokemonData.sprite || '';
+            gotchaPokemonName.textContent = pokemonData.name;
+            gotchaModal.style.display = 'flex';
+        }
+        function closeGotchaModal() { 
+            gotchaModal.style.display = 'none';
+            disableAllShopButtons(false);
+            showPage('page-pokedex');
+            logMessage("획득한 포켓몬을 확인합니다. (도감 이동)");
+        }
+        async function grantPokemonById(pokemonId) { 
             const pokemonData = await fetchPokemonData(pokemonId);
-            if (!pokemonData) {
-                logMessage("포켓몬 정보를 가져오는데 실패했습니다.");
-                return;
-            }
-
+            if (!pokemonData) { logMessage("포켓몬 정보를 가져오는데 실패했습니다."); return null; }
             if (pokedex[pokemonId]) {
                 pokedex[pokemonId].count += 1;
                 logMessage(`${pokemonData.name} 획득! (보유: ${pokedex[pokemonId].count}마리)`);
@@ -723,83 +837,121 @@
                 pokedex[pokemonId] = { ...pokemonData, count: 1 };
                 logMessage(`새로운 포켓몬 ${pokemonData.name} 획득!`);
             }
-            
-            saveData();
-            updateUI();
+            saveData(); updateUI();
+            return pokemonData;
         }
-
-        // 10. 포켓몬 도감 그리기 (V4와 동일)
-        function renderPokedexGrid() {
+        function renderPokedexGrid() { 
             pokedexGrid.innerHTML = '';
             const pokemonIds = Object.keys(pokedex).sort((a, b) => a - b);
-
-            if (pokemonIds.length === 0) {
-                pokedexGrid.innerHTML = '<p style="text-align: center; color: #777; grid-column: 1 / -1;">아직 잡은 포켓몬이 없습니다.</p>';
-                return;
-            }
-            
+            if (pokemonIds.length === 0) { pokedexGrid.innerHTML = '<p style="text-align: center; color: #777; grid-column: 1 / -1;">아직 잡은 포켓몬이 없습니다.</p>'; return; }
             for (const id of pokemonIds) {
                 const pokemon = pokedex[id];
-                const card = document.createElement('div');
-                card.className = 'pokemon-grid-item';
-                
+                const card = document.createElement('div'); card.className = 'pokemon-grid-item';
                 let evolveButtonHtml = '';
                 const canEvolve = pokemon.count >= 2 && pokemon.nextEvolutionId && userPoints >= EVOLVE_COST;
                 const cantEvolveReason = pokemon.nextEvolutionId === null;
-                
-                if (cantEvolveReason) {
-                    evolveButtonHtml = `<button class="evolve-btn disabled" disabled>최종 진화</button>`;
-                } else if (canEvolve) {
-                    evolveButtonHtml = `<button class="evolve-btn" onclick="handleEvolve('${id}')">진화 (10P)</button>`;
-                }
-
-                card.innerHTML = `
-                    <div class="pokemon-count">${pokemon.count}</div>
-                    <img src="${pokemon.sprite}" alt="${pokemon.name}">
-                    <div class="pokemon-id">No. ${String(id).padStart(3, '0')}</div>
-                    <div class="pokemon-name">${pokemon.name}</div>
-                    ${evolveButtonHtml}
-                `;
+                if (cantEvolveReason) { evolveButtonHtml = `<button class="evolve-btn disabled" disabled>최종 진화</button>`; }
+                else if (canEvolve) { evolveButtonHtml = `<button class="evolve-btn" onclick="handleEvolve('${id}')">진화 (${EVOLVE_COST}P)</button>`; }
+                card.innerHTML = `<div class="pokemon-count">${pokemon.count}</div> <img src="${pokemon.sprite}" alt="${pokemon.name}"> <div class="pokemon-id">No. ${String(id).padStart(3, '0')}</div> <div class="pokemon-name">${pokemon.name}</div> ${evolveButtonHtml}`;
                 pokedexGrid.appendChild(card);
             }
         }
-
-        // 11. 진화하기 (V4와 동일)
-        async function handleEvolve(pokemonId) {
+        async function handleEvolve(pokemonId) { 
             const pokemon = pokedex[pokemonId];
             const evolvedId = pokemon.nextEvolutionId;
-
-            if (!pokemon || !evolvedId) {
-                logMessage("진화 정보를 찾을 수 없거나 최종 진화입니다."); return;
-            }
-            if (userPoints < EVOLVE_COST) {
-                logMessage("진화 포인트가 부족합니다."); return;
-            }
-            if (pokemon.count < 2) {
-                logMessage("진화에 필요한 포켓몬이 부족합니다."); return;
-            }
-
-            userPoints -= EVOLVE_COST;
-            pokemon.count -= 2;
+            if (!pokemon || !evolvedId) { logMessage("진화 정보를 찾을 수 없거나 최종 진화입니다."); return; }
+            if (userPoints < EVOLVE_COST) { logMessage("진화 포인트가 부족합니다."); return; }
+            if (pokemon.count < 2) { logMessage("진화에 필요한 포켓몬이 부족합니다."); return; }
+            userPoints -= EVOLVE_COST; pokemon.count -= 2;
             logMessage(`${pokemon.name} 2마리를 사용해 진화를 시도합니다... (-${EVOLVE_COST}P)`);
-
-            if (pokemon.count <= 0) {
-                delete pokedex[pokemonId];
-            }
-
-            await grantPokemonById(evolvedId);
-            logMessage(`진화 성공! ${pokemon.name}(이)가 새로운 포켓몬으로 진화했습니다!`);
-
-            saveData();
-            updateUI();
+            if (pokemon.count <= 0) { delete pokedex[pokemonId]; }
+            const evolvedPokemonData = await grantPokemonById(evolvedId);
+            if (evolvedPokemonData) { logMessage(`진화 성공! ${pokemon.name}(이)가 ${evolvedPokemonData.name}(으)로 진화했습니다!`); }
+            else { logMessage("진화는 성공했으나, 진화한 포켓몬 정보를 가져오지 못했습니다."); }
+            saveData(); updateUI();
         }
-        
-        // 12. 로그 메시지
-        function logMessage(message) {
+        function logMessage(message) { 
             log.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${message}</div>` + log.innerHTML;
         }
 
-        // 13. 관리자 버튼 설정
+        // === (V10) 퀘스트 로직 (V10과 동일) ===
+        
+        function setupQuestPage() {
+            document.getElementById('simRun1').addEventListener('click', () => updateQuestProgress('run', 1));
+            document.getElementById('simRun5').addEventListener('click', () => updateQuestProgress('run', 5));
+            document.getElementById('simWeight1').addEventListener('click', () => updateQuestProgress('weight', 1));
+        }
+
+        function updateQuestProgress(categoryKey, amount) {
+            if (questData[categoryKey] === undefined) {
+                questData[categoryKey] = 0;
+            }
+            questData[categoryKey] += amount;
+            
+            logMessage(`[퀘스트] '${categoryKey}' 진행도 ${amount} 증가 (현재: ${questData[categoryKey]})`);
+            checkQuestCompletion(categoryKey);
+            saveData();
+            updateUI(); 
+        }
+
+        function checkQuestCompletion(categoryKey) {
+            for (const questId in MASTER_QUEST_LIST) {
+                const quest = MASTER_QUEST_LIST[questId];
+                if (quest.category === categoryKey && !completedQuests.includes(questId)) {
+                    const currentProgress = questData[categoryKey];
+                    if (currentProgress >= quest.goal) {
+                        completedQuests.push(questId);
+                        userPoints += quest.reward;
+                        logMessage(`🏆 퀘스트 완료: ${quest.title}! +${quest.reward}P`);
+                    }
+                }
+            }
+        }
+        
+        function renderQuestPage() {
+            Object.values(questContainers).forEach(container => container.innerHTML = '');
+            for (const questId in MASTER_QUEST_LIST) {
+                const quest = MASTER_QUEST_LIST[questId];
+                const targetContainer = questContainers[quest.category];
+                if (!targetContainer) continue; 
+                const isComplete = completedQuests.includes(questId);
+                const isPvp = quest.category === 'pvp';
+                let currentProgress = questData[quest.category] || 0;
+                if (currentProgress > quest.goal) { currentProgress = quest.goal; }
+                const percent = isComplete ? 100 : Math.floor((currentProgress / quest.goal) * 100);
+                let itemClass = 'quest-item';
+                if (isComplete) itemClass += ' complete';
+                if (isPvp) itemClass += ' disabled'; 
+                const questHtml = `
+                    <div class="${itemClass}">
+                        <div class="quest-text">
+                            <span>${quest.title}</span>
+                            <span class="quest-reward">🎁 ${quest.reward} P</span>
+                        </div>
+                        <div class="quest-progress-text">
+                            ${isComplete ? '완료!' : `${currentProgress} / ${quest.goal}`}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-inner" style="width: ${percent}%;"></div>
+                        </div>
+                    </div>
+                `;
+                targetContainer.innerHTML += questHtml;
+            }
+            
+            if (completedQuests.length === 0) {
+                questContainers.log.innerHTML = '<div>아직 완료한 퀘스트가 없습니다.</div>';
+            } else {
+                completedQuests.forEach(questId => {
+                    const quest = MASTER_QUEST_LIST[questId];
+                    if (quest) {
+                        questContainers.log.innerHTML = `<div>[${new Date().toLocaleDateString()}] ${quest.title} (+${quest.reward}P)</div>` + questContainers.log.innerHTML;
+                    }
+                });
+            }
+        }
+
+        // 13. (V11) 관리자 버튼 설정
         function setupAdminButtons() {
             document.getElementById('adminAddPoints').addEventListener('click', () => {
                 userPoints += 100;
@@ -807,27 +959,29 @@
                 saveData(); updateUI();
             });
             document.getElementById('adminAddBasic').addEventListener('click', async () => {
-                const randomId = BASIC_POKEMON_IDS[Math.floor(Math.random() * BASIC_POKEMON_IDS.length)];
+                const randomId = ADMIN_BASIC_POOL[Math.floor(Math.random() * ADMIN_BASIC_POOL.length)];
                 logMessage(`[Admin] 기본 포켓몬(ID:${randomId}) 강제 획득.`);
                 await grantPokemonById(randomId);
             });
             document.getElementById('adminAddRandom').addEventListener('click', async () => {
-                const randomId = RANDOM_POKEMON_IDS[Math.floor(Math.random() * RANDOM_POKEMON_IDS.length)];
-                logMessage(`[Admin] 랜덤 포켓몬(ID:${randomId}) 강제 획득.`);
+                const randomId = ADMIN_RANDOM_POOL[Math.floor(Math.random() * ADMIN_RANDOM_POOL.length)];
+                logMessage(`[Admin] 중급 포켓몬(ID:${randomId}) 강제 획득.`);
                 await grantPokemonById(randomId);
             });
             document.getElementById('adminClearData').addEventListener('click', () => {
-                if (confirm("!! 경고 !!\n모든 데이터를 정말 삭제하시겠습니까? (포인트, 도감, 출석)")) {
+                if (confirm("!! 경고 !!\n모든 데이터를 정말 삭제하시겠습니까? (포인트, 도감, 출석, 퀘스트)")) {
                     localStorage.clear();
-                    // 리셋 후 재초기화
                     userPoints = 100;
-                    attendanceCount = 0;
+                    attendanceCount = 0; 
+                    questData = {}; 
+                    completedQuests = []; 
                     pokedex = {};
                     monthlyStamps = [];
+                    lastLoginDate = ''; 
                     currentCalendarMonth = new Date().getMonth();
                     logMessage("[Admin] 모든 데이터 초기화 완료.");
-                    saveData(); // 초기화된 상태 저장
-                    updateUI(); // 강제 UI 리셋
+                    initializeGameData(); 
+                    updateUI();
                 }
             });
         }
