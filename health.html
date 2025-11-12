@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>운동 기록 시작하기</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        .fullscreen-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #main-menu-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="main-menu-screen" class="fullscreen-container">
+        <div class="flex space-x-8">
+            <button id="health-btn" class="w-48 h-48 bg-blue-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
+                운동기록
+            </button>
+            <button id="share-btn" class="w-48 h-48 bg-purple-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
+                운동공유
+            </button>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const healthBtn = document.getElementById('health-btn');
+        const shareBtn = document.getElementById('share-btn');
+
+        // '운동기록' 버튼 클릭 시 record.html로 이동
+        healthBtn.addEventListener('click', () => {
+            window.location.href = 'record.html';
+        });
+
+        // '운동공유' 버튼 클릭 시 share.html로 이동
+        shareBtn.addEventListener('click', () => {
+            window.location.href = 'share.html';
+        });
+    });
+</script>
+
+</body>
+</html>
