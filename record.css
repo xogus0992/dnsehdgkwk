@@ -12,7 +12,16 @@ body {
     cursor:pointer; transition: all 0.2s; min-height:95px; display:flex; flex-direction:column; justify-content:space-between;
 }
 .calendar-day:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
-.calendar-day.today { background-color: #ebf8ff; border-color: #90cdf4; }
+
+.calendar-day.selected-day { 
+    background-color: #ebf8ff; 
+    border-color: #90cdf4; 
+    font-weight: bold;
+}
+.calendar-day.today {
+    font-weight: bold;
+}
+
 .calendar-day.searched {
     animation: pulse 1.5s ease-in-out;
 }
@@ -23,10 +32,15 @@ body {
 }
 .calendar-header { text-align:center; font-weight:bold; padding:10px 0; color: #718096; }
 .day-number { font-weight:bold; }
-.parts-indicator { display:flex; justify-content:center; flex-wrap:wrap; gap:3px; margin-top:8px; }
-.part-dot { width:10px; height:10px; border-radius:50%; }
 
-/* [수정됨] 미래 날짜 스타일 추가 */
+/* [수정] 달력 총 볼륨 텍스트 */
+.daily-volume-text {
+    font-size: 0.75rem; /* small font */
+    font-weight: bold;
+    color: #3b82f6; /* blue-500 */
+    margin-top: 4px;
+}
+
 .calendar-day.future-day {
     background-color: #f7fafc;
     color: #a0aec0;
@@ -78,6 +92,10 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
 .modal-content {
     background-color: #fefefe;
     margin: auto;
@@ -90,20 +108,38 @@ body {
     display: flex;
     flex-direction: column;
     animation: slideIn 0.3s ease-out;
+    z-index: 1001;
 }
 @keyframes slideIn {
     from { opacity: 0; transform: translateY(-30px); }
     to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-30px); }
 }
 .modal-header { display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom:16px; margin-bottom:20px; }
 .modal-header h2, .modal-header h3 { font-size: 1.75rem; font-weight: bold; }
 .close-modal-btn { background:none; border:none; font-size:2rem; font-weight:lighter; cursor:pointer; color: #a0aec0; }
 .close-modal-btn:hover { color: #4a5568; }
 
-/* Specific Modal Sizes */
+/* Z-index 관리 */
+#daily-log-modal.modal-overlay { z-index: 1000; }
+#stats-modal.modal-overlay { z-index: 1010; }
+#template-editor-modal.modal-overlay { z-index: 1020; }
+#workout-session-modal.modal-overlay { z-index: 1030; }
+
+#add-exercise-modal.modal-overlay { z-index: 1040; }
+#add-to-session-modal.modal-overlay { z-index: 1040; }
+
+#pr-celebration-modal.modal-overlay { z-index: 1050; }
+#summary-modal.modal-overlay { z-index: 1060; }
+#custom-confirm-modal.modal-overlay { z-index: 9999; }
+
+
 #daily-log-modal .modal-content { width: 600px; }
-#template-editor-modal .modal-content { width: 700px; }
 #stats-modal .modal-content { width: 800px; }
+
 #workout-session-modal .modal-content {
     width: 95%;
     max-width: 1200px;
@@ -167,6 +203,65 @@ body {
     opacity: 1;
 }
 
+.set-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+}
+.set-item.completed {
+    background-color: #f0fdf4;
+}
+.set-item-inputs {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: 3fr 4fr 4fr;
+    gap: 8px;
+    align-items: center;
+}
+.set-item-inputs span {
+    font-weight: 600;
+    padding-left: 8px;
+}
+.set-item-inputs input {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+.set-item-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: 12px;
+}
+.set-note-btn {
+    font-size: 1.5rem;
+    color: #9ca3af;
+    cursor: pointer;
+}
+.set-note-btn:hover {
+    color: #3b82f6;
+}
+.set-complete-btn {
+    width: 80px;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    background-color: #d1d5db;
+}
+.set-complete-btn:hover {
+    background-color: #10b981;
+    color: white;
+}
+.set-complete-btn:disabled {
+    background-color: #10b981;
+    color: white;
+    cursor: not-allowed;
+}
+
 
 /* Timer (Analog) */
 .clock {
@@ -198,11 +293,24 @@ body {
     z-index: 1;
     transition: transform 0.1s linear;
 }
-#timer-digital-display {
-    position: absolute;
-    bottom: 25%;
-    font-size: 2.5rem;
-    font-weight: bold;
+
+.timer-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #4b5563;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.session-timer-display {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    font-family: 'Courier New', Courier, monospace;
+}
+.rest-timer-display {
+    font-size: 4.5rem;
+    line-height: 1;
+    font-weight: 700;
     color: #374151;
     font-family: 'Courier New', Courier, monospace;
 }
@@ -278,14 +386,15 @@ body {
 .timer-adjust-btn {
     background-color: #e5e7eb;
     color: #4b5563;
-    border-radius: 9999px;
-    width: 36px;
-    height: 36px;
-    font-size: 1.25rem;
-    font-weight: bold;
+    border-radius: 8px;
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s;
 }
 .timer-adjust-btn:hover {
-        background-color: #d1d5db;
+    background-color: #d1d5db;
 }
 
 
@@ -298,5 +407,6 @@ body {
     #workout-session-list { padding: 16px; }
     .clock { width: 180px; height: 180px; margin: 10px auto; }
     #clock-second-hand { height: 75px; }
-    #timer-digital-display { font-size: 2rem; bottom: 20%; }
+    .session-timer-display { font-size: 1.8rem; }
+    .rest-timer-display { font-size: 3.5rem; }
 }
