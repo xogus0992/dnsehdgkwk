@@ -1,20 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // (수정) 'file://' 프로토콜 감지
-    if (window.location.protocol === 'file:') {
-        const errorDiv = document.getElementById('file-load-error');
-        if (errorDiv) {
-            errorDiv.classList.remove('hidden');
-        }
-        console.error("오류: file:// 프로토콜에서는 스크립트(exercises.js 등)가 로드되지 않습니다. Live Server와 같은 웹 서버 환경에서 실행해야 합니다.");
-        // 'file://' 환경에서는 스크립트 실행을 중단하여 추가 오류 방지
-        return; 
-    }
-
-    // (수정) '운동 추가/수정 모달'의 ID를 상수로 정의합니다.
-    // 만약 회원님의 실제 모달 ID가 다르다면, 이 값만 수정하시면 됩니다.
-    const ADD_EXERCISE_MODAL_ID = 'add-exercise-modal';
-
     const elements = {
         backBtn: document.getElementById('back-to-main-btn'),
         calendarTitle: document.getElementById('calendar-title'),
@@ -35,727 +19,1559 @@ document.addEventListener('DOMContentLoaded', () => {
         templateEditorModal: document.getElementById('template-editor-modal'),
         statsModal: document.getElementById('stats-modal'),
         workoutSessionModal: document.getElementById('workout-session-modal'),
-        
-        // (수정) 'addExerciseModal'은 ID로 찾도록 유지합니다.
-        // 이 모달은 원본 HTML에 존재해야 합니다.
-        addExerciseModal: document.getElementById(ADD_EXERCISE_MODAL_ID),
-        
+        addExerciseModal: document.getElementById('add-exercise-modal'),
+        prCelebrationModal: document.getElementById('pr-celebration-modal'),
+        summaryModal: document.getElementById('summary-modal'),
+        confirmModal: document.getElementById('custom-confirm-modal'),
+        addToSessionModal: document.getElementById('add-to-session-modal'),
+        // Template Editor
+        templateModalTitle: document.getElementById('template-modal-title'),
+        templateTitleInput: document.getElementById('template-title-input'),
+        openAddExerciseModalBtn: document.getElementById('open-add-exercise-modal-btn'),
+        exerciseCategorySelect: document.getElementById('exercise-category-select'),
+        exerciseListSelect: document.getElementById('exercise-list-select'),
+        templateWeightInput: document.getElementById('template-weight-input'),
+        templateRepsInput: document.getElementById('template-reps-input'),
+        templateSetsInput: document.getElementById('template-sets-input'),
+        addUpdateExerciseBtn: document.getElementById('add-update-exercise-btn'),
+        templateExerciseList: document.getElementById('template-exercise-list'),
+        saveTemplateBtn: document.getElementById('save-template-btn'),
+        // Add Exercise
+        newExercisePart: document.getElementById('new-exercise-part'),
+        newExerciseName: document.getElementById('new-exercise-name'),
+        saveNewExerciseBtn: document.getElementById('save-new-exercise-btn'),
+        cancelAddExerciseBtn: document.getElementById('cancel-add-exercise-btn'),
+        // Workout Session
+        workoutSessionTitle: document.getElementById('workout-session-title'),
         workoutSessionList: document.getElementById('workout-session-list'),
-        totalWorkoutTimer: document.getElementById('total-workout-timer'),
-        restTimerDisplay: document.getElementById('rest-timer-display'),
-        restTimerProgress: document.getElementById('rest-timer-progress'),
-        timerStartStopBtn: document.getElementById('timer-start-stop-btn'),
-        timerResetBtn: document.getElementById('timer-reset-btn'),
-        timerMinus30: document.getElementById('timer-minus-30'),
-        timerPlus30: document.getElementById('timer-plus-30'),
-        timerMinus10: document.getElementById('timer-minus-10'),
-        timerPlus10: document.getElementById('timer-plus-10'),
-        hideSessionBtn: document.getElementById('hide-session-btn'),
         addExerciseToSessionBtn: document.getElementById('add-exercise-to-session-btn'),
         saveSessionBtn: document.getElementById('save-session-btn'),
-        workoutSessionTitle: document.getElementById('workout-session-title'),
-        
-        // (수정) bodyPartSelect, exerciseSelect 등은 여기서 찾지 않습니다.
-        // 해당 모달이 열릴 때 찾도록 변경합니다.
-        
-        confirmModal: document.getElementById('custom-confirm-modal'),
-        confirmModalText: document.getElementById('confirm-modal-text'),
-        confirmModalYes: document.getElementById('confirm-modal-yes'),
-        confirmModalNo: document.getElementById('confirm-modal-no'),
+        hideSessionBtn: document.getElementById('hide-session-btn'),
+        // Add to Session Modal
+        sessionCategorySelect: document.getElementById('session-ex-category-select'),
+        sessionExListSelect: document.getElementById('session-ex-list-select'),
+        sessionWeightInput: document.getElementById('session-weight-input'),
+        sessionRepsInput: document.getElementById('session-reps-input'),
+        sessionSetsInput: document.getElementById('session-sets-input'),
+        saveToSessionBtn: document.getElementById('save-to-session-btn'),
+        // Timers
+        sessionTotalTimerDisplay: document.getElementById('session-total-timer-display'),
+        timerDigitalDisplay: document.getElementById('timer-digital-display'),
+        analogClockHand: document.getElementById('clock-second-hand'),
+        timerInput: document.getElementById('timer-input'),
+        timerMinus30Btn: document.getElementById('timer-minus-30'),
+        timerPlus30Btn: document.getElementById('timer-plus-30'),
+        timerMinus10Btn: document.getElementById('timer-minus-10'),
+        timerPlus10Btn: document.getElementById('timer-plus-10'),
+        // Daily Log
+        dailyLogModalTitle: document.getElementById('daily-log-modal-title'),
+        dailyLogModalList: document.getElementById('daily-log-modal-list'),
+        // Stats
+        statsStartDateInput: document.getElementById('stats-start-date'),
+        statsEndDateInput: document.getElementById('stats-end-date'),
+        statsResetBtn: document.getElementById('stats-reset-btn'),
+        statsPartSelector: document.getElementById('stats-part-selector'),
+        statsExerciseSelect: document.getElementById('stats-exercise-select'),
+        statsChartCanvas: document.getElementById('stats-chart-canvas'),
+        // PR Modal
+        prList: document.getElementById('pr-list'),
+        closePrModalBtn: document.getElementById('close-pr-modal'),
+        // Summary Modal
+        summaryContent: document.getElementById('summary-content'),
+        closeSummaryBtn: document.getElementById('close-summary-btn'),
+        // Confirm Modal
+        confirmMessage: document.getElementById('confirm-message'),
+        confirmOkBtn: document.getElementById('confirm-ok-btn'),
+        confirmCancelBtn: document.getElementById('confirm-cancel-btn')
     };
 
-    let currentView = 'calendar';
     let currentDate = new Date();
-    let workoutLogs = {}; // { 'YYYY-MM-DD': { routineName: '...', exercises: [...] } }
-    let routineTemplates = []; // [ { id: '...', name: '...', exercises: [...] } ]
+    let selectedDate = null;
+    let workoutLogs = {}; // { 'YYYY-MM-DD': { routineName, exercises: [...] } }
+    let routineTemplates = {}; // { 'uuid': { name, exercises: [...] } }
+    let exerciseDB = {}; // { 'part': [{name, pr}, ...] }
+    let prRecords = {}; // { 'exerciseName': { weight, reps, date } }
+
+    let currentSession = {
+        date: null,
+        routineName: "오늘의 운동",
+        exercises: [] // { id, name, part, sets: [{id, weight, reps, completed}] }
+    };
+    let currentTemplate = {
+        id: null,
+        name: "",
+        exercises: [] // { id, name, part, weight, reps, sets }
+    };
+    let currentEditingTemplateExerciseId = null;
     
-    let currentWorkoutSession = null; // { routineId: '...', routineName: '...', date: 'YYYY-MM-DD', exercises: [...] }
-    let totalWorkoutTimerInterval = null;
-    let totalWorkoutSeconds = 0;
-    let restTimerInterval = null;
-    let restSeconds = 0;
-    const DEFAULT_REST_TIME = 90; // 기본 휴식 시간 (초)
-    let restTimerRunning = false;
-    
-    let currentEditingExerciseId = null; // (요청사항 6)
+    // v24 ★추가 (REQ 6): 세션 내 운동 수정 시 ID를 저장할 변수
+    let currentEditingExerciseInSessionId = null; 
+
+    // Timers
+    let sessionTotalTimerInterval = null;
+    let sessionTotalSeconds = 0;
+    let sessionRestTimerInterval = null;
+    let sessionRestSeconds = 0;
+    let sessionRestDefaultSeconds = 60;
+    let isRestTimerRunning = false;
+    let lastRestAudioTime = 0;
+    const restTimerAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+    const floatingTimerRadius = 42;
+    const floatingTimerCircumference = 2 * Math.PI * floatingTimerRadius;
+
+    let statsChart = null;
+    let confirmCallback = null;
+
+    const DATA_VERSION = "v21";
+    const LOG_KEY = `workoutLogs_${DATA_VERSION}`;
+    const TEMPLATE_KEY = `routineTemplates_${DATA_VERSION}`;
+    const EXERCISE_DB_KEY = `exerciseDB_${DATA_VERSION}`;
+    const PR_KEY = `prRecords_${DATA_VERSION}`;
 
     // ===================================================================
-    // (수정) '운동 추가/수정 모달' 내부의 요소들을 저장할 변수
-    // ===================================================================
-    let modalElements = {
-        bodyPartSelect: null,
-        exerciseSelect: null,
-        customExerciseInput: null,
-        saveExerciseBtn: null,
-        cancelAddExerciseBtn: null,
-        modalTitle: null
-    };
-
-    // ===================================================================
-    // 모달 관련 함수 (open/close)
-    // ===================================================================
-    const openModal = (modal) => {
-        if (!modal) return;
-        modal.style.display = 'flex';
-        const maxZ = Math.max(0, ...Array.from(document.querySelectorAll('.modal-overlay'))
-                            .map(m => parseInt(m.style.zIndex || '0')));
-        modal.style.zIndex = maxZ + 10;
-    };
-
-    const closeModal = (modal) => {
-        if (!modal) return;
-        modal.style.display = 'none';
-        modal.style.zIndex = 'auto';
-    };
-
-    // ===================================================================
-    // 타이머 관련 함수
-    // ===================================================================
-    const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        if (h > 0) {
-            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-
-    const updateTotalWorkoutTimer = () => {
-        if (elements.totalWorkoutTimer) {
-            elements.totalWorkoutTimer.textContent = formatTime(totalWorkoutSeconds);
-        }
-        updateFloatingTimerDisplay();
-    };
-
-    const startTotalWorkoutTimer = () => {
-        if (totalWorkoutTimerInterval) return;
-        totalWorkoutTimerInterval = setInterval(() => {
-            totalWorkoutSeconds++;
-            updateTotalWorkoutTimer();
-        }, 1000);
-    };
-
-    const stopTotalWorkoutTimer = () => {
-        clearInterval(totalWorkoutTimerInterval);
-        totalWorkoutTimerInterval = null;
-    };
-    
-    const setRestTimerProgress = (percent) => {
-        if (!elements.restTimerProgress) return;
-        const radius = 90;
-        const circumference = 2 * Math.PI * radius;
-        const offset = circumference - (percent / 100) * circumference;
-        elements.restTimerProgress.style.strokeDasharray = `${circumference} ${circumference}`;
-        elements.restTimerProgress.style.strokeDashoffset = offset;
-    };
-
-    const startRestTimer = () => {
-        if (restTimerInterval) {
-            clearInterval(restTimerInterval);
-        }
-        
-        restSeconds = DEFAULT_REST_TIME;
-        if (elements.restTimerDisplay) {
-            elements.restTimerDisplay.textContent = formatTime(restSeconds);
-        }
-        setRestTimerProgress(100);
-        restTimerRunning = true;
-        if (elements.timerStartStopBtn) {
-            elements.timerStartStopBtn.textContent = '일시정지';
-        }
-
-        restTimerInterval = setInterval(() => {
-            restSeconds--;
-            if (elements.restTimerDisplay) {
-                elements.restTimerDisplay.textContent = formatTime(restSeconds);
-            }
-            const progress = (restSeconds / DEFAULT_REST_TIME) * 100;
-            setRestTimerProgress(progress);
-
-            if (restSeconds <= 0) {
-                clearInterval(restTimerInterval);
-                restTimerInterval = null;
-                restTimerRunning = false;
-                if (elements.timerStartStopBtn) {
-                    elements.timerStartStopBtn.textContent = '시작';
-                }
-                setRestTimerProgress(0);
-            }
-        }, 1000);
-    };
-    
-    const stopRestTimer = () => {
-        clearInterval(restTimerInterval);
-        restTimerInterval = null;
-        restTimerRunning = false;
-        if (elements.timerStartStopBtn) {
-            elements.timerStartStopBtn.textContent = '시작';
-        }
-    }
-
-    const updateFloatingTimerDisplay = () => {
-        if (elements.floatingTimerDisplay) {
-            elements.floatingTimerDisplay.textContent = formatTime(totalWorkoutSeconds);
-        }
-    };
-
-    // ===================================================================
-    // 운동 세션 렌더링
+    // 데이터 로드, 저장, 초기화 (v21 원본)
     // ===================================================================
 
-    const startWorkoutSession = (sessionData) => {
-        currentWorkoutSession = sessionData;
+    const loadData = () => {
+        workoutLogs = JSON.parse(localStorage.getItem(LOG_KEY)) || {};
+        routineTemplates = JSON.parse(localStorage.getItem(TEMPLATE_KEY)) || {};
+        prRecords = JSON.parse(localStorage.getItem(PR_KEY)) || {};
         
-        const date = new Date(currentWorkoutSession.date);
-        const dateString = `${date.getMonth() + 1}월 ${date.getDate()}일`;
-        if (elements.workoutSessionTitle) {
-            elements.workoutSessionTitle.textContent = `${dateString} - ${currentWorkoutSession.routineName}`;
-        }
-        
-        totalWorkoutSeconds = 0;
-        updateTotalWorkoutTimer();
-        startTotalWorkoutTimer();
-        
-        restSeconds = 0;
-        if (elements.restTimerDisplay) {
-            elements.restTimerDisplay.textContent = formatTime(restSeconds);
-        }
-        setRestTimerProgress(0);
-
-        renderWorkoutSessionList();
-        openModal(elements.workoutSessionModal);
-        if (elements.floatingTimer) {
-            elements.floatingTimer.style.display = 'none';
-        }
-    };
-
-    const renderWorkoutSessionList = () => {
-        if (!elements.workoutSessionList) return;
-        
-        if (!currentWorkoutSession) {
-            elements.workoutSessionList.innerHTML = '<p>운동 세션 정보가 없습니다.</p>';
-            return;
-        }
-
-        elements.workoutSessionList.innerHTML = '';
-        
-        currentWorkoutSession.exercises.forEach(exercise => {
-            const exerciseEl = document.createElement('div');
-            exerciseEl.className = 'bg-white p-4 rounded-lg shadow-sm';
-            exerciseEl.dataset.exerciseId = exercise.id;
-
-            // --- 요청사항 3 & 6 ---
-            const headerHtml = `
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                        <h3 class="text-xl font-bold workout-name-clickable" data-exercise-id="${exercise.id}" title="운동 이름 클릭 시 수정">
-                            ${exercise.name}
-                        </h3>
-                        <div class="flex items-center gap-2">
-                            <button class="adjust-set-btn" data-exercise-id="${exercise.id}" data-action="decrease" title="세트 줄이기">-</button>
-                            <span class="text-lg font-medium">${exercise.sets.length}세트</span>
-                            <button class="adjust-set-btn" data-exercise-id="${exercise.id}" data-action="increase" title="세트 추가">+</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const setsHeaderHtml = `
-                <div class="grid grid-cols-6 gap-2 items-center mb-2 px-2 text-sm font-semibold text-gray-600">
-                    <div class="col-span-1 text-center">세트</div>
-                    <div class="col-span-2 text-center">무게 (kg)</div>
-                    <div class="col-span-2 text-center">횟수</div>
-                    <div class="col-span-1 text-center">완료</div>
-                </div>
-            `;
-            
-            exerciseEl.innerHTML = headerHtml + setsHeaderHtml;
-
-            const setsContainer = document.createElement('div');
-            setsContainer.className = 'space-y-2';
-
-            exercise.sets.forEach((set, index) => {
-                setsContainer.appendChild(createSetRowElement(set, exercise.id, index + 1));
-            });
-
-            exerciseEl.appendChild(setsContainer);
-            
-            // --- 요청사항 4 ---
-            const footerHtml = `
-                <div class="exercise-footer-controls">
-                    <button class="complete-all-sets-btn" data-exercise-id="${exercise.id}">전체 완료</button>
-                    <button class="delete-exercise-btn" data-exercise-id="${exercise.id}">운동 삭제</button>
-                </div>
-            `;
-            exerciseEl.insertAdjacentHTML('beforeend', footerHtml);
-
-            elements.workoutSessionList.appendChild(exerciseEl);
-        });
-    };
-
-    const createSetRowElement = (set, exerciseId, setNumber) => {
-        const setRow = document.createElement('div');
-        setRow.className = `set-row grid grid-cols-6 gap-2 items-center p-2 rounded-md ${set.completed ? 'completed-set' : ''}`;
-        setRow.dataset.setId = set.id;
-        setRow.dataset.exerciseId = exerciseId;
-        
-        const completedClass = set.completed ? 'bg-blue-500 text-white' : 'bg-gray-200';
-        
-        // --- 요청사항 5 (메모 버튼 제거됨) ---
-        setRow.innerHTML = `
-            <div class="col-span-1 text-center">
-                <span class="font-bold text-lg">${setNumber}</span>
-            </div>
-            <div class="col-span-2">
-                <input type="number" class="set-input set-weight-input" value="${set.weight || ''}" placeholder="-" data-field="weight">
-            </div>
-            <div class="col-span-2">
-                <input type="number" class="set-input set-reps-input" value="${set.reps || ''}" placeholder="-" data-field="reps">
-            </div>
-            <div class="col-span-1 flex justify-center">
-                <button class="set-complete-btn ${completedClass}" data-set-id="${set.id}" data-exercise-id="${exerciseId}" title="세트 완료/취소">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            </div>
-        `;
-        return setRow;
-    };
-
-
-    // ===================================================================
-    // (수정) 운동 추가/수정 모달 관련 (요청사항 6)
-    // ===================================================================
-    
-    // (수정) 'exercises.js' 로드 확인
-    const checkExercisesData = () => {
-        if (typeof exercisesData === 'undefined') {
-            console.error("오류: 'exercises.js' 파일이 로드되지 않았거나 'exercisesData' 변수가 없습니다.");
-            // (필요시 사용자에게 오류 알림)
-            // alert("운동 데이터를 불러오는 데 실패했습니다.");
-            return false;
-        }
-        return true;
-    };
-    
-    const populateBodyPartSelect = () => {
-        if (!modalElements.bodyPartSelect || !checkExercisesData()) return;
-        
-        modalElements.bodyPartSelect.innerHTML = '';
-        Object.keys(exercisesData).forEach(part => {
-            modalElements.bodyPartSelect.add(new Option(part, part));
-        });
-    };
-    
-    const populateExerciseSelect = (part) => {
-        if (!modalElements.exerciseSelect || !checkExercisesData()) return;
-
-        modalElements.exerciseSelect.innerHTML = '';
-        if (exercisesData[part]) {
-            exercisesData[part].forEach(exercise => {
-                modalElements.exerciseSelect.add(new Option(exercise.name, exercise.name));
-            });
-        }
-        modalElements.exerciseSelect.add(new Option('직접입력', '직접입력'));
-    };
-
-    const openAddExerciseModal = (exerciseId = null) => {
-        // (수정) 모달 내부의 요소들을 이 시점에 찾습니다.
-        if (!elements.addExerciseModal) {
-             console.error(`오류: ID가 '${ADD_EXERCISE_MODAL_ID}'인 모달을 찾을 수 없습니다.`);
-             return;
-        }
-        
-        // (수정) 모달 요소들을 modalElements 객체에 할당
-        modalElements.bodyPartSelect = elements.addExerciseModal.querySelector('#body-part-select');
-        modalElements.exerciseSelect = elements.addExerciseModal.querySelector('#exercise-select');
-        modalElements.customExerciseInput = elements.addExerciseModal.querySelector('#custom-exercise-input');
-        modalElements.saveExerciseBtn = elements.addExerciseModal.querySelector('#save-exercise-btn');
-        modalElements.cancelAddExerciseBtn = elements.addExerciseModal.querySelector('#cancel-add-exercise-btn');
-        modalElements.modalTitle = elements.addExerciseModal.querySelector('h2'); // 모달 제목
-
-        // (수정) 요소들이 하나라도 없는지 확인
-        if (!modalElements.bodyPartSelect || !modalElements.exerciseSelect || !modalElements.customExerciseInput || !modalElements.saveExerciseBtn || !modalElements.cancelAddExerciseBtn || !modalElements.modalTitle) {
-            console.error(`오류: '${ADD_EXERCISE_MODAL_ID}' 모달 내부에 필요한 요소들(body-part-select 등)이 없습니다.`);
-            return;
-        }
-        
-        // (수정) 모달 요소 이벤트 리스너가 중복 등록되지 않도록 초기화 (단순한 방법)
-        // (더 좋은 방법은 init 시점에 한 번만 등록하는 것이지만, 이 방법이 더 안전합니다.)
-        modalElements.saveExerciseBtn.onclick = handleSaveExerciseFromModal;
-        modalElements.cancelAddExerciseBtn.onclick = () => {
-             closeModal(elements.addExerciseModal);
-             currentEditingExerciseId = null;
-        };
-        modalElements.bodyPartSelect.onchange = () => {
-            populateExerciseSelect(modalElements.bodyPartSelect.value);
-            modalElements.customExerciseInput.style.display = 'none';
-        };
-         modalElements.exerciseSelect.onchange = () => {
-            if (modalElements.exerciseSelect.value === '직접입력') {
-                modalElements.customExerciseInput.style.display = 'block';
-            } else {
-                modalElements.customExerciseInput.style.display = 'none';
-            }
-        };
-
-        // (수정) 폼을 채우기 전에 운동 목록을 먼저 로드
-        populateBodyPartSelect();
-        
-        currentEditingExerciseId = exerciseId;
-        
-        if (exerciseId) {
-            // --- 수정 모드 ---
-            modalElements.modalTitle.textContent = '운동 수정';
-            modalElements.saveExerciseBtn.textContent = '수정하기';
-
-            const exercise = currentWorkoutSession.exercises.find(ex => ex.id === exerciseId);
-            if (exercise) {
-                modalElements.bodyPartSelect.value = exercise.part;
-                populateExerciseSelect(exercise.part); // 부위에 맞는 운동 목록 로드
-                
-                const exerciseExists = Array.from(modalElements.exerciseSelect.options).some(opt => opt.value === exercise.name);
-                
-                if (exerciseExists) {
-                    modalElements.exerciseSelect.value = exercise.name;
-                    modalElements.customExerciseInput.style.display = 'none';
-                    modalElements.customExerciseInput.value = '';
-                } else {
-                    modalElements.exerciseSelect.value = '직접입력';
-                    modalElements.customExerciseInput.style.display = 'block';
-                    modalElements.customExerciseInput.value = exercise.name;
-                }
-            }
+        const storedExerciseDB = JSON.parse(localStorage.getItem(EXERCISE_DB_KEY));
+        if (!storedExerciseDB || Object.keys(storedExerciseDB).length === 0) {
+            exerciseDB = { ...exercisesData }; // exercises.js에서 복사
+            saveExerciseDB();
         } else {
-            // --- 추가 모드 ---
-            modalElements.modalTitle.textContent = '운동 추가';
-            modalElements.saveExerciseBtn.textContent = '추가하기';
+            exerciseDB = storedExerciseDB;
+        }
+    };
 
-            modalElements.bodyPartSelect.value = '가슴'; // 기본값
-            populateExerciseSelect('가슴');
-            modalElements.exerciseSelect.value = '';
-            modalElements.customExerciseInput.style.display = 'none';
-            modalElements.customExerciseInput.value = '';
+    const saveData = (key, data) => {
+        localStorage.setItem(key, JSON.stringify(data));
+    };
+    
+    const saveLogs = () => saveData(LOG_KEY, workoutLogs);
+    const saveTemplates = () => saveData(TEMPLATE_KEY, routineTemplates);
+    const saveExerciseDB = () => saveData(EXERCISE_DB_KEY, exerciseDB);
+    const savePRs = () => saveData(PR_KEY, prRecords);
+
+    // ===================================================================
+    // 캘린더
+    // ===================================================================
+
+    const renderCalendar = (date) => {
+        elements.calendarBody.innerHTML = '';
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        elements.calendarTitle.textContent = `${year}년 ${month + 1}월`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+        
+        // v25 ★수정: 오늘 날짜를 '자정' 기준으로 설정 (정확한 비교 위함)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 오늘 날짜 자정
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const prevLastDate = new Date(year, month, 0).getDate();
+        for (let i = firstDay - 1; i >= 0; i--) {
+            elements.calendarBody.appendChild(createDayCell(prevLastDate - i, 'other-month', null, today));
+        }
+
+        for (let day = 1; day <= lastDate; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const classes = [];
+            if (dateStr === todayStr) classes.push('today');
+            if (dateStr === selectedDate) classes.push('selected-day');
+            
+            elements.calendarBody.appendChild(createDayCell(day, classes.join(' '), dateStr, today));
         }
         
+        const nextDays = (7 - (firstDay + lastDate) % 7) % 7;
+        for (let day = 1; day <= nextDays; day++) {
+            elements.calendarBody.appendChild(createDayCell(day, 'other-month', null, today));
+        }
+    };
+
+    // v25 ★수정: createDayCell에 'today' 인자 추가 (미래 날짜 비교용)
+    const createDayCell = (day, classes, dateStr, today) => {
+        const dayCell = document.createElement('div');
+        dayCell.className = `calendar-day ${classes}`;
+        
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = day;
+        dayCell.appendChild(dayNumber);
+
+        if (dateStr && workoutLogs[dateStr]) {
+            // (v21 원본)
+            const log = workoutLogs[dateStr];
+            const parts = new Set(log.exercises.map(ex => ex.part.toLowerCase().replace('/', '-').split(' ')[0]));
+            const partsContainer = document.createElement('div');
+            partsContainer.className = 'day-parts';
+            parts.forEach(part => {
+                const partSpan = document.createElement('span');
+                partSpan.className = `part-${part}`; // CSS 스타일링용 클래스
+                partSpan.textContent = part.charAt(0).toUpperCase() + part.slice(1);
+                partsContainer.appendChild(partSpan);
+            });
+            dayCell.appendChild(partsContainer);
+            dayCell.dataset.date = dateStr;
+        }
+
+        if (dateStr) {
+            // v25 ★수정 (REQ 2, v26 ★수정 REQ 1): 미래 날짜 비활성화 (오늘 *이후* 부터)
+            const cellDate = new Date(dateStr);
+            if (cellDate > today) { // '오늘'은 cellDate > today가 false임
+                dayCell.classList.add('future-day'); // 'record.css'에 추가된 스타일
+                // 클릭 이벤트를 추가하지 않음 (선택 불가)
+            } else {
+                // 과거 또는 오늘 날짜만 클릭 가능
+                dayCell.addEventListener('click', () => handleDayClick(dateStr, dayCell));
+            }
+        }
+        
+        return dayCell;
+    };
+    
+    const handleDayClick = (dateStr, dayCell) => {
+        if (selectedDate === dateStr) {
+            // 두 번 클릭: 로그 보기
+            openDailyLogModal(dateStr);
+            return;
+        }
+
+        const oldSelected = elements.calendarBody.querySelector('.selected-day');
+        if (oldSelected) {
+            oldSelected.classList.remove('selected-day');
+        }
+        
+        dayCell.classList.add('selected-day');
+        selectedDate = dateStr;
+    };
+
+    // ===================================================================
+    // 루틴 템플릿
+    // ===================================================================
+
+    const renderTemplateList = () => {
+        elements.routineTemplateList.innerHTML = '';
+        const templateIds = Object.keys(routineTemplates);
+
+        if (templateIds.length === 0) {
+            elements.routineTemplateList.innerHTML = '<p class="text-gray-500 text-center">저장된 루틴이 없습니다.</p>';
+            return;
+        }
+
+        templateIds.forEach(id => {
+            const template = routineTemplates[id];
+            elements.routineTemplateList.appendChild(createTemplateCard(id, template));
+        });
+    };
+
+    const createTemplateCard = (id, template) => {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.dataset.templateId = id;
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'template-info';
+
+        // v26 ★삭제 (REQ 11): 템플릿 이미지 삭제
+        // const img = document.createElement('img'); ...
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'template-details';
+        
+        const nameP = document.createElement('p');
+        nameP.className = 'template-name editable'; // v26 ★추가 (REQ 10): 'editable' 클래스
+        nameP.textContent = template.name;
+        // v26 ★추가 (REQ 10): 루틴 이름 클릭 시 '수정'
+        nameP.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTemplateEditorModal(id);
+        });
+
+        const partsP = document.createElement('p');
+        partsP.className = 'template-parts';
+        const parts = new Set(template.exercises.map(ex => ex.part));
+        partsP.textContent = Array.from(parts).slice(0, 3).join(', ');
+
+        detailsDiv.appendChild(nameP);
+        detailsDiv.appendChild(partsP);
+        // infoDiv.appendChild(img); // v26 ★삭제 (REQ 11)
+        infoDiv.appendChild(detailsDiv);
+
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'template-controls flex gap-2';
+        
+        // v26 ★수정 (REQ 10): '수정' 버튼을 '실행' 버튼으로 변경
+        const startBtn = document.createElement('button');
+        startBtn.textContent = '실행';
+        startBtn.className = 'start-btn'; // 'record.css'에 스타일 추가
+        startBtn.onclick = (e) => {
+            e.stopPropagation();
+            startWorkoutFromTemplate(id);
+        };
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '삭제';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            customConfirm(`'${template.name}' 루틴을 삭제하시겠습니까?`, () => {
+                delete routineTemplates[id];
+                saveTemplates();
+                renderTemplateList();
+            });
+        };
+
+        controlsDiv.appendChild(startBtn); // v26 ★수정 (REQ 10)
+        controlsDiv.appendChild(deleteBtn);
+        
+        card.appendChild(infoDiv);
+        card.appendChild(controlsDiv);
+        
+        // v26 ★삭제 (REQ 10): 카드 전체 클릭 이벤트 삭제 (버튼으로 대체)
+        // card.addEventListener('click', () => startWorkoutFromTemplate(id));
+        
+        return card;
+    };
+
+    const startWorkoutFromTemplate = (templateId) => {
+        if (!selectedDate) {
+            alert('운동을 시작할 날짜를 캘린더에서 먼저 선택하세요.');
+            return;
+        }
+        
+        const template = routineTemplates[templateId];
+        if (!template) return;
+        
+        if (workoutLogs[selectedDate]) {
+            customConfirm(`${selectedDate}에 이미 운동 기록이 있습니다.\n루틴을 새로 시작하면 이전 기록을 덮어씁니다.\n계속하시겠습니까?`, () => {
+                loadTemplateIntoSession(template);
+            });
+        } else {
+            loadTemplateIntoSession(template);
+        }
+    };
+    
+    const loadTemplateIntoSession = (template) => {
+        currentSession.date = selectedDate;
+        currentSession.routineName = template.name;
+        currentSession.exercises = template.exercises.map(ex => ({
+            id: `ex_${Date.now()}_${Math.random()}`,
+            name: ex.name,
+            part: ex.part,
+            sets: Array(ex.sets).fill(0).map((_, i) => ({
+                id: `set_${Date.now()}_${Math.random()}_${i}`,
+                weight: ex.weight,
+                reps: ex.reps,
+                completed: false
+            }))
+        }));
+        
+        openWorkoutSessionModal();
+    };
+
+    // ===================================================================
+    // 모달 공통 (v21 원본)
+    // ===================================================================
+    let modalStack = [];
+    const openModal = (modalEl) => {
+        const zIndex = 50 + modalStack.length;
+        modalEl.style.zIndex = zIndex;
+        modalEl.setAttribute('aria-hidden', 'false');
+        modalEl.style.display = 'flex'; // 'hidden' 클래스 대신 display 사용
+        setTimeout(() => modalEl.style.opacity = 1, 10);
+        modalStack.push(modalEl);
+    };
+
+    const closeModal = (modalEl) => {
+        if (!modalEl) modalEl = modalStack[modalStack.length - 1]; // 최상위 모달 닫기
+        if (!modalEl) return;
+
+        modalEl.style.opacity = 0;
+        setTimeout(() => {
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.style.display = 'none';
+            modalStack = modalStack.filter(m => m !== modalEl);
+        }, 200);
+    };
+    
+    const customConfirm = (message, onOk) => {
+        elements.confirmMessage.textContent = message;
+        confirmCallback = onOk;
+        openModal(elements.confirmModal);
+    };
+
+    // ===================================================================
+    // 운동 데이터베이스 (v21 원본)
+    // ===================================================================
+
+    const populateExerciseSelect = (selectEl, part) => {
+        selectEl.innerHTML = '<option value="">운동 선택</option>';
+        if (part && exerciseDB[part]) {
+            selectEl.disabled = false;
+            exerciseDB[part].forEach(ex => {
+                const option = document.createElement('option');
+                option.value = ex.name;
+                option.textContent = ex.name;
+                selectEl.appendChild(option);
+            });
+        } else {
+            selectEl.disabled = true;
+        }
+    };
+    
+    const populateCategorySelect = (selectEl) => {
+        selectEl.innerHTML = '<option value="">부위 선택</option>';
+        Object.keys(exerciseDB).forEach(part => {
+            const option = document.createElement('option');
+            option.value = part;
+            option.textContent = part;
+            selectEl.appendChild(option);
+        });
+    };
+
+    // ===================================================================
+    // 새 운동 만들기 모달 (v21 원본)
+    // ===================================================================
+
+    const openAddExerciseModal = () => {
+        populateCategorySelect(elements.newExercisePart);
+        elements.newExerciseName.value = '';
         openModal(elements.addExerciseModal);
     };
 
-    const handleSaveExerciseFromModal = () => {
-        // (수정) modalElements 객체에서 요소들을 가져옵니다.
-        if (!modalElements.bodyPartSelect || !modalElements.exerciseSelect || !modalElements.customExerciseInput) return;
+    const handleSaveNewExercise = () => {
+        const part = elements.newExercisePart.value;
+        const name = elements.newExerciseName.value.trim();
 
-        const part = modalElements.bodyPartSelect.value;
-        let name = modalElements.exerciseSelect.value;
-
-        if (name === '직접입력') {
-            name = modalElements.customExerciseInput.value.trim();
-            if (!name) {
-                console.error('운동 이름을 입력해주세요.');
-                return;
-            }
+        if (!part || !name) {
+            alert('부위와 운동 이름을 모두 입력하세요.');
+            return;
         }
-
-        if (currentEditingExerciseId) {
-            // --- 수정 로직 ---
-            const exercise = currentWorkoutSession.exercises.find(ex => ex.id === currentEditingExerciseId);
-            if (exercise) {
-                exercise.name = name;
-                exercise.part = part;
-            }
-        } else {
-            // --- 추가 로직 ---
-            const newExercise = {
-                id: crypto.randomUUID(),
-                name: name,
-                part: part,
-                sets: [
-                    { id: crypto.randomUUID(), weight: '', reps: '', completed: false }
-                ]
-            };
-            currentWorkoutSession.exercises.push(newExercise);
+        
+        if (!exerciseDB[part]) exerciseDB[part] = [];
+        
+        if (exerciseDB[part].some(ex => ex.name === name)) {
+            alert('이미 존재하는 운동 이름입니다.');
+            return;
         }
-
-        currentEditingExerciseId = null;
-        renderWorkoutSessionList();
+        
+        exerciseDB[part].push({ name: name, pr: 0 }); // pr은 1rm
+        saveExerciseDB();
+        
+        // 템플릿 편집기 드롭다운 새로고침
+        populateCategorySelect(elements.exerciseCategorySelect);
+        elements.exerciseCategorySelect.value = part;
+        populateExerciseSelect(elements.exerciseListSelect, part);
+        elements.exerciseListSelect.value = name;
+        
+        // 세션에 추가 모달 드롭다운 새로고침
+        populateCategorySelect(elements.sessionCategorySelect);
+        
         closeModal(elements.addExerciseModal);
     };
 
+    // ===================================================================
+    // 템플릿 편집기 모달
+    // ===================================================================
 
-    // ===================================================================
-    // 이벤트 리스너 초기화
-    // ===================================================================
-    const initEventListeners = () => {
+    const openTemplateEditorModal = (templateId = null) => {
+        if (templateId) {
+            // 수정 모드
+            currentTemplate = JSON.parse(JSON.stringify(routineTemplates[templateId]));
+            currentTemplate.id = templateId;
+            elements.templateModalTitle.textContent = "루틴 수정";
+            elements.templateTitleInput.value = currentTemplate.name;
+        } else {
+            // 생성 모드
+            currentTemplate = {
+                id: `template_${Date.now()}`,
+                name: "",
+                exercises: []
+            };
+            elements.templateModalTitle.textContent = "새 루틴 만들기";
+            elements.templateTitleInput.value = "";
+        }
         
-        // ... (기존 캘린더, 뒤로가기 등 리스너) ...
-        // (캘린더 관련 리스너들은 여기에 존재한다고 가정합니다)
-        // elements.prevMonthBtn?.addEventListener('click', ...);
-        // elements.nextMonthBtn?.addEventListener('click', ...);
-        // elements.todayBtn?.addEventListener('click', ...);
-        // elements.calendarBody?.addEventListener('click', ...);
+        currentEditingTemplateExerciseId = null;
+        elements.addUpdateExerciseBtn.textContent = "운동 추가";
+        
+        populateCategorySelect(elements.exerciseCategorySelect);
+        populateExerciseSelect(elements.exerciseListSelect, "");
+        
+        elements.templateWeightInput.value = "";
+        elements.templateRepsInput.value = "";
+        elements.templateSetsInput.value = "";
+        
+        renderTemplateExerciseList();
+        openModal(elements.templateEditorModal);
+    };
 
-        // 운동 세션 모달 내 리스너 (이벤트 위임)
-        if (elements.workoutSessionList) {
-            elements.workoutSessionList.addEventListener('click', (e) => {
-                
-                // --- 요청사항 1 & 2: 세트 완료 버튼 ---
-                if (e.target.closest('.set-complete-btn')) {
-                    const btn = e.target.closest('.set-complete-btn');
-                    const setId = btn.dataset.setId;
-                    const exerciseId = btn.dataset.exerciseId;
-                    
-                    if (!currentWorkoutSession) return;
-                    const exercise = currentWorkoutSession.exercises.find(ex => ex.id === exerciseId);
-                    if (!exercise) return;
-                    const set = exercise.sets.find(s => s.id === setId);
-                    if (!set) return;
-
-                    if (set.completed) {
-                        // --- 2. 토글 OFF (완료 -> 미완료) ---
-                        set.completed = false;
-                        btn.classList.remove('bg-blue-500', 'text-white');
-                        btn.classList.add('bg-gray-200');
-                        btn.closest('.set-row').classList.remove('completed-set');
-                        
-                        if (restTimerInterval) {
-                            stopRestTimer();
-                            restSeconds = 0;
-                            if (elements.restTimerDisplay) {
-                                elements.restTimerDisplay.textContent = formatTime(restSeconds);
-                            }
-                            setRestTimerProgress(0);
-                        }
-                        
-                    } else {
-                        // --- 2. 토글 ON (미완료 -> 완료) ---
-                        set.completed = true;
-                        btn.classList.add('bg-blue-500', 'text-white');
-                        btn.classList.remove('bg-gray-200');
-                        btn.closest('.set-row').classList.add('completed-set');
-                        
-                        // --- 1. 총 운동 시간 (멈추지 않음) ---
-                        startRestTimer();
-                    }
-                }
-                
-                // --- 요청사항 3: 세트 수 조절 (+/-) 버튼 ---
-                else if (e.target.closest('.adjust-set-btn')) {
-                    const btn = e.target.closest('.adjust-set-btn');
-                    const exerciseId = btn.dataset.exerciseId;
-                    const action = btn.dataset.action;
-                    handleAdjustSet(exerciseId, action);
-                }
-                
-                // --- 요청사항 4: 전체 완료 버튼 ---
-                else if (e.target.closest('.complete-all-sets-btn')) {
-                    const btn = e.target.closest('.complete-all-sets-btn');
-                    const exerciseId = btn.dataset.exerciseId;
-                    handleCompleteAllSets(exerciseId);
-                }
-
-                // --- 요청사항 6: 운동 이름 클릭 (수정) ---
-                else if (e.target.closest('.workout-name-clickable')) {
-                    const title = e.target.closest('.workout-name-clickable');
-                    const exerciseId = title.dataset.exerciseId;
-                    openAddExerciseModal(exerciseId); // ID 전달 (수정 모드)
-                }
-                
-                else if (e.target.closest('.delete-exercise-btn')) {
-                    // (운동 삭제 로직...)
-                }
+    const renderTemplateExerciseList = () => {
+        elements.templateExerciseList.innerHTML = "";
+        if (currentTemplate.exercises.length === 0) {
+            elements.templateExerciseList.innerHTML = "<p class='text-gray-500 text-center'>운동을 추가하세요.</p>";
+            return;
+        }
+        
+        currentTemplate.exercises.forEach(ex => {
+            const item = document.createElement('div');
+            item.className = 'template-exercise-item';
+            item.dataset.id = ex.id;
+            
+            item.innerHTML = `
+                <div>
+                    <p class="template-exercise-name">${ex.name} (${ex.part})</p>
+                    <p class="template-exercise-info">${ex.weight}kg / ${ex.reps}회 / ${ex.sets}세트</p>
+                </div>
+                <div>
+                    <button class="template-exercise-edit p-2 text-blue-500">수정</button>
+                    <button class="template-exercise-delete p-2 text-red-500">삭제</button>
+                </div>
+            `;
+            
+            item.querySelector('.template-exercise-edit').addEventListener('click', () => {
+                currentEditingTemplateExerciseId = ex.id;
+                elements.exerciseCategorySelect.value = ex.part;
+                populateExerciseSelect(elements.exerciseListSelect, ex.part);
+                elements.exerciseListSelect.value = ex.name;
+                elements.templateWeightInput.value = ex.weight;
+                elements.templateRepsInput.value = ex.reps;
+                elements.templateSetsInput.value = ex.sets;
+                elements.addUpdateExerciseBtn.textContent = "운동 수정";
             });
             
-            elements.workoutSessionList.addEventListener('input', (e) => {
-                if (e.target.classList.contains('set-input')) {
-                    const input = e.target;
-                    const field = input.dataset.field;
-                    const setRow = input.closest('.set-row');
-                    const setId = setRow.dataset.setId;
-                    const exerciseId = setRow.dataset.exerciseId;
-
-                    if (!currentWorkoutSession) return;
-                    const exercise = currentWorkoutSession.exercises.find(ex => ex.id === exerciseId);
-                    if (!exercise) return;
-                    const set = exercise.sets.find(s => s.id === setId);
-                    if (!set) return;
-
-                    set[field] = input.value;
-                }
+            item.querySelector('.template-exercise-delete').addEventListener('click', () => {
+                currentTemplate.exercises = currentTemplate.exercises.filter(e => e.id !== ex.id);
+                renderTemplateExerciseList();
             });
-        } 
-
-        // "운동 완료 및 저장" 버튼
-        elements.saveSessionBtn?.addEventListener('click', () => {
-            // --- 요청사항 1 ---
-            stopTotalWorkoutTimer();
-            stopRestTimer();
             
-            if (elements.floatingTimer) {
-                elements.floatingTimer.style.display = 'none';
-            }
-            
-            if (currentWorkoutSession) {
-                currentWorkoutSession.totalWorkoutTime = totalWorkoutSeconds;
-            }
-            
-            // saveWorkoutLogs();
-            closeModal(elements.workoutSessionModal);
-            // renderCalendar();
+            elements.templateExerciseList.appendChild(item);
         });
         
-        elements.hideSessionBtn?.addEventListener('click', () => {
-            if (elements.workoutSessionModal) {
-                elements.workoutSessionModal.style.display = 'none';
+        // SortableJS
+        new Sortable(elements.templateExerciseList, {
+            animation: 150,
+            onEnd: (evt) => {
+                const movedItem = currentTemplate.exercises.splice(evt.oldIndex, 1)[0];
+                currentTemplate.exercises.splice(evt.newIndex, 0, movedItem);
             }
-            if (elements.floatingTimer) {
-                elements.floatingTimer.style.display = 'flex';
+        });
+    };
+
+    const handleAddOrUpdateExerciseInTemplate = () => {
+        const part = elements.exerciseCategorySelect.value;
+        const name = elements.exerciseListSelect.value;
+        const weight = parseFloat(elements.templateWeightInput.value) || 0;
+        const reps = parseInt(elements.templateRepsInput.value) || 0;
+        const sets = parseInt(elements.templateSetsInput.value) || 0;
+
+        if (!part || !name || sets === 0) {
+            alert('부위, 운동, 세트 수를 모두 입력하세요.');
+            return;
+        }
+
+        if (currentEditingTemplateExerciseId) {
+            // 수정
+            const ex = currentTemplate.exercises.find(e => e.id === currentEditingTemplateExerciseId);
+            if (ex) {
+                ex.part = part;
+                ex.name = name;
+                ex.weight = weight;
+                ex.reps = reps;
+                ex.sets = sets;
             }
+        } else {
+            // 추가
+            currentTemplate.exercises.push({
+                id: `template_ex_${Date.now()}`,
+                part, name, weight, reps, sets
+            });
+        }
+        
+        renderTemplateExerciseList();
+        
+        // 폼 리셋
+        currentEditingTemplateExerciseId = null;
+        elements.addUpdateExerciseBtn.textContent = "운동 추가";
+        elements.exerciseCategorySelect.value = "";
+        populateExerciseSelect(elements.exerciseListSelect, "");
+        elements.templateWeightInput.value = "";
+        elements.templateRepsInput.value = "";
+        elements.templateSetsInput.value = "";
+    };
+
+    const handleSaveTemplate = () => {
+        // v25 ★수정 (REQ 3): 루틴 이름 자동 생성
+        let name = elements.templateTitleInput.value.trim(); // let으로 변경
+        
+        if (currentTemplate.exercises.length === 0) {
+            alert('적어도 하나의 운동을 추가하세요.');
+            return;
+        }
+
+        if (!name) {
+            // v26 ★수정 (REQ 11): '운동 이름' -> '부위 이름'으로 자동 생성
+            // 여러 부위가 섞여있을 수 있으니 Set으로 중복 제거
+            const parts = new Set(currentTemplate.exercises.map(ex => ex.part));
+            name = `${Array.from(parts).join('/')} 루틴`;
+        }
+        
+        currentTemplate.name = name;
+        routineTemplates[currentTemplate.id] = currentTemplate;
+        saveTemplates();
+        renderTemplateList();
+        closeModal(elements.templateEditorModal);
+    };
+
+    // ===================================================================
+    // 운동 세션 모달
+    // ===================================================================
+    
+    const openWorkoutSessionModal = () => {
+        elements.workoutSessionTitle.textContent = currentSession.routineName;
+        renderWorkoutSessionList();
+        startSessionTimers();
+        openModal(elements.workoutSessionModal);
+    };
+    
+    const closeWorkoutSessionModal = () => {
+        stopSessionTimers();
+        closeModal(elements.workoutSessionModal);
+    };
+    
+    const getSessionData = () => {
+        return currentSession;
+    };
+
+    const renderWorkoutSessionList = () => {
+        elements.workoutSessionList.innerHTML = "";
+        if (currentSession.exercises.length === 0) {
+            elements.workoutSessionList.innerHTML = "<p class='text-gray-500 text-center py-10'>'운동 추가' 버튼으로 운동을 추가하세요.</p>";
+            return;
+        }
+        
+        currentSession.exercises.forEach(ex => {
+            elements.workoutSessionList.appendChild(createExerciseCard(ex));
+        });
+        
+        // SortableJS
+        new Sortable(elements.workoutSessionList, {
+            animation: 150,
+            handle: '.exercise-header', // 헤더를 드래그
+            onEnd: (evt) => {
+                const movedItem = currentSession.exercises.splice(evt.oldIndex, 1)[0];
+                currentSession.exercises.splice(evt.newIndex, 0, movedItem);
+            }
+        });
+    };
+
+    const createExerciseCard = (exercise) => {
+        const card = document.createElement('div');
+        card.className = 'exercise-card';
+        card.dataset.exerciseid = exercise.id; // html은 dataset.exerciseid
+
+        const exerciseHeader = document.createElement('div');
+        exerciseHeader.className = 'exercise-header';
+
+        const exerciseNameEl = document.createElement('h4');
+        exerciseNameEl.className = 'exercise-name';
+        exerciseNameEl.textContent = exercise.name;
+        
+        // v24 ★추가 (REQ 6): 운동 이름 클릭 시 수정 모달 열기
+        exerciseNameEl.style.cursor = 'pointer'; // 클릭 가능하도록 커서 변경
+        exerciseNameEl.addEventListener('click', () => {
+            openAddToSessionModal(exercise.id); // exercise.id를 인자로 전달
+        });
+
+        const controlsWrapper = document.createElement('div');
+        controlsWrapper.className = 'flex items-center gap-2'; // Tailwind
+        
+        // v24 ★추가 (REQ 3): 세트 조절 버튼 (+/-)
+        const setControlsDiv = document.createElement('div');
+        setControlsDiv.className = 'flex items-center gap-1';
+        
+        const removeSetBtn = document.createElement('button');
+        removeSetBtn.className = 'adjust-set-btn-small'; // 새 CSS 클래스 (record.css에 추가됨)
+        removeSetBtn.textContent = '–'; // - (마이너스)
+        removeSetBtn.title = '세트 삭제';
+        removeSetBtn.onclick = () => {
+            if (exercise.sets.length > 1) { // 최소 1세트는 남김
+                exercise.sets.pop(); // 데이터 모델에서 마지막 세트 제거
+                renderWorkoutSessionList(); // 목록 새로고침 (가장 간단한 방법)
+            }
+        };
+
+        const addSetBtn = document.createElement('button');
+        addSetBtn.className = 'adjust-set-btn-small'; // 새 CSS 클래스 (record.css에 추가됨)
+        addSetBtn.textContent = '+';
+        addSetBtn.title = '세트 추가';
+        addSetBtn.onclick = () => {
+            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: 0, reps: 0 };
+            exercise.sets.push({
+                id: `set_${Date.now()}_${Math.random()}`,
+                weight: lastSet.weight, // 마지막 세트 정보 복사
+                reps: lastSet.reps,
+                completed: false
+            });
+            renderWorkoutSessionList(); // 목록 새로고침
+        };
+        
+        setControlsDiv.appendChild(removeSetBtn);
+        setControlsDiv.appendChild(addSetBtn);
+
+        // v24 ★추가 (REQ 4): 전체 완료 버튼
+        const completeAllBtn = document.createElement('button');
+        completeAllBtn.className = 'complete-all-btn'; // 새 CSS 클래스 (record.css에 추가됨)
+        // v26 ★수정 (REQ 9): '✓' -> '전체'
+        completeAllBtn.textContent = '✓'; // 텍스트가 길면 버튼이 커지므로 아이콘 유지, title 수정
+        completeAllBtn.title = '모든 세트 완료'; // (v24 원본)
+        completeAllBtn.onclick = () => {
+            card.querySelectorAll('.set-checkbox:not(:checked)').forEach(checkbox => {
+                checkbox.checked = true;
+                const setItem = checkbox.closest('.set-item');
+                const setId = setItem.dataset.setId;
+                handleSetComplete(checkbox, setItem, exercise.id, setId);
+            });
+        };
+
+        // v21 (원본) 삭제 버튼
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-exercise-btn';
+        // v26 ★수정 (REQ 9): '×' -> '삭제'
+        deleteBtn.textContent = '×'; // 텍스트가 길면 디자인이 깨지므로 아이콘 유지
+        deleteBtn.title = "운동 삭제"; // 툴팁으로 '삭제' 표시
+        deleteBtn.onclick = () => deleteExercise(exercise.id, card);
+
+        // 헤더에 버튼들 추가
+        exerciseHeader.appendChild(exerciseNameEl);
+        controlsWrapper.appendChild(setControlsDiv); // v24 (REQ 3)
+        controlsWrapper.appendChild(completeAllBtn); // v24 (REQ 4)
+        
+        // v24 ★수정 (REQ 5): 메모 아이콘(연필) 없음 (v21 원본)
+        
+        controlsWrapper.appendChild(deleteBtn); // v21 (원본) 삭제 버튼
+        exerciseHeader.appendChild(controlsWrapper);
+        
+        card.appendChild(exerciseHeader);
+
+        const setHeader = document.createElement('div');
+        setHeader.className = 'set-header';
+        // v26 ★수정 (REQ 9): 헤더 텍스트 한글로 변경
+        setHeader.innerHTML = `
+            <span>세트</span>
+            <span>무게 (kg)</span>
+            <span>횟수</span>
+            <span>완료</span>
+        `;
+        card.appendChild(setHeader);
+
+        const setsContainer = document.createElement('div');
+        setsContainer.className = 'sets-container';
+        exercise.sets.forEach((set, index) => {
+            setsContainer.appendChild(createSetItem(exercise, set, index + 1));
+        });
+        card.appendChild(setsContainer);
+
+        return card;
+    };
+
+    const createSetItem = (exercise, set, index) => {
+        const setItem = document.createElement('div');
+        setItem.className = 'set-item';
+        setItem.dataset.setId = set.id;
+        if (set.completed) {
+            setItem.classList.add('set-completed');
+        }
+
+        setItem.innerHTML = `
+            <span class="set-number">${index}</span>
+            <div><input type="number" class="set-input weight-input" value="${set.weight}" placeholder="0"></div>
+            <div><input type="number" class="set-input reps-input" value="${set.reps}" placeholder="0"></div>
+            <div><input type="checkbox" class="set-checkbox" ${set.completed ? 'checked' : ''}></div>
+        `;
+
+        const weightInput = setItem.querySelector('.weight-input');
+        const repsInput = setItem.querySelector('.reps-input');
+        const setCheckbox = setItem.querySelector('.set-checkbox');
+        
+        weightInput.addEventListener('change', () => { set.weight = parseFloat(weightInput.value) || 0; });
+        repsInput.addEventListener('change', () => { set.reps = parseInt(repsInput.value) || 0; });
+        
+        // v24 ★수정 (REQ 2): 'click' 대신 'change' 이벤트를 사용
+        setCheckbox.addEventListener('change', () => {
+            handleSetComplete(setCheckbox, setItem, exercise.id, set.id);
+        });
+
+        return setItem;
+    };
+
+    const deleteExercise = (exerciseId, card) => {
+        customConfirm("이 운동을 세션에서 삭제하시겠습니까?", () => {
+            currentSession.exercises = currentSession.exercises.filter(ex => ex.id !== exerciseId);
+            card.remove();
+        });
+    };
+
+    const handleSetComplete = (setCheckbox, setItem, exerciseId, setId) => {
+        const session = getSessionData();
+        const exercise = session.exercises.find(ex => ex.id === exerciseId);
+        const set = exercise.sets.find(s => s.id === setId);
+        
+        // v24 ★수정 (REQ 2): 체크/해제 토글 기능
+        if (setCheckbox.checked) {
+            // 체크 시
+            setItem.classList.add('set-completed');
+            set.completed = true;
+            startRestTimer(); // REQ 1을 위해 수정된 함수
+            checkPR(exercise.name, set.weight, set.reps);
+        } else {
+            // v24 ★추가 (REQ 2): 체크 해제 시
+            setItem.classList.remove('set-completed');
+            set.completed = false;
+            stopSessionTimers(false); // REQ 1을 위해 'false' 전달
+        }
+    };
+
+    // v24 ★수정 (REQ 6): '세션에 운동 추가' 모달 열기 (수정 모드 지원)
+    const openAddToSessionModal = (editingExerciseId = null) => {
+        const modal = elements.addToSessionModal;
+        const title = modal.querySelector('#add-to-session-modal-title');
+        const saveBtn = modal.querySelector('#save-to-session-btn');
+        
+        elements.sessionCategorySelect.value = "";
+        elements.sessionExListSelect.innerHTML = "<option value=''>운동 선택</option>";
+        elements.sessionExListSelect.disabled = true;
+        elements.sessionWeightInput.value = "";
+        elements.sessionRepsInput.value = "";
+        elements.sessionSetsInput.value = "";
+        
+        populateCategorySelect(elements.sessionCategorySelect); 
+
+        if (editingExerciseId) {
+            // v24 ★추가 (REQ 6): 수정 모드
+            currentEditingExerciseInSessionId = editingExerciseId; 
+            title.textContent = "세션에서 운동 수정";
+            saveBtn.textContent = "수정";
+
+            const exercise = currentSession.exercises.find(ex => ex.id === editingExerciseId);
+            if (exercise) {
+                const category = exercise.part;
+                if (category && exerciseDB[category]) {
+                    elements.sessionCategorySelect.value = category;
+                    populateExerciseSelect(elements.sessionExListSelect, category);
+                    elements.sessionExListSelect.value = exercise.name;
+                }
+                
+                if (exercise.sets.length > 0) {
+                    elements.sessionWeightInput.value = exercise.sets[0].weight;
+                    elements.sessionRepsInput.value = exercise.sets[0].reps;
+                }
+                elements.sessionSetsInput.value = exercise.sets.length;
+            }
+        } else {
+            // v21 (원본): 추가 모드
+            currentEditingExerciseInSessionId = null; 
+            title.textContent = "세션에 운동 추가";
+            saveBtn.textContent = "추가";
+        }
+
+        openModal(modal);
+    };
+
+    // v24 ★수정 (REQ 6): '세션에 운동 추가' 모달 저장 (수정 모드 지원)
+    const handleSaveToSession = () => {
+        const category = elements.sessionCategorySelect.value;
+        const exerciseName = elements.sessionExListSelect.value;
+        const weight = parseFloat(elements.sessionWeightInput.value) || 0;
+        const reps = parseInt(elements.sessionRepsInput.value) || 0;
+        const setCount = parseInt(elements.sessionSetsInput.value) || 0;
+
+        if (!category || !exerciseName || setCount === 0) {
+            alert('부위, 운동, 세트 수를 모두 입력하세요.');
+            return;
+        }
+
+        if (currentEditingExerciseInSessionId) {
+            // v24 ★추가 (REQ 6): 수정 로직
+            const exercise = currentSession.exercises.find(ex => ex.id === currentEditingExerciseInSessionId);
+            if (exercise) {
+                exercise.name = exerciseName;
+                exercise.part = category;
+                
+                const newSets = [];
+                for (let i = 0; i < setCount; i++) {
+                    const oldSet = exercise.sets[i];
+                    newSets.push({
+                        id: oldSet ? oldSet.id : `set_${Date.now()}_${Math.random()}_${i}`,
+                        weight: weight,
+                        reps: reps,    
+                        completed: oldSet ? oldSet.completed : false 
+                    });
+                }
+                exercise.sets = newSets;
+            }
+            renderWorkoutSessionList(); 
+
+        } else {
+            // v21 (원본): 추가 로직
+            const newExercise = {
+                id: `ex_${Date.now()}`,
+                name: exerciseName,
+                part: category,
+                sets: []
+            };
+            for (let i = 0; i < setCount; i++) {
+                newExercise.sets.push({ 
+                    id: `${newExercise.id}_set${i+1}`, 
+                    weight: weight, 
+                    reps: reps, 
+                    completed: false 
+                });
+            }
+            addExerciseToSession(newExercise);
+        }
+
+        closeModal(elements.addToSessionModal);
+        currentEditingExerciseInSessionId = null; 
+    };
+    
+    const addExerciseToSession = (exercise) => {
+        if (currentSession.exercises.length === 0) {
+            elements.workoutSessionList.innerHTML = "";
+        }
+        currentSession.exercises.push(exercise);
+        elements.workoutSessionList.appendChild(createExerciseCard(exercise));
+    };
+
+    const handleSaveSession = () => {
+        if (currentSession.exercises.length === 0) {
+            alert('저장할 운동이 없습니다.');
+            return;
+        }
+        
+        // v24 ★수정 (REQ 1): 'true'를 전달하여 총 운동시간 타이머도 정지시킴
+        stopSessionTimers(true); 
+
+        const finalLog = {
+            routineName: currentSession.routineName,
+            exercises: JSON.parse(JSON.stringify(currentSession.exercises)) 
+        };
+        
+        workoutLogs[currentSession.date] = finalLog;
+        saveLogs();
+        renderCalendar(currentDate); 
+        closeWorkoutSessionModal();
+        openSummaryModal(finalLog);
+    };
+
+    // ===================================================================
+    // 타이머
+    // ===================================================================
+
+    const startSessionTimers = () => {
+        sessionTotalSeconds = 0;
+        elements.sessionTotalTimerDisplay.textContent = formatTime(sessionTotalSeconds);
+        
+        if (sessionTotalTimerInterval) clearInterval(sessionTotalTimerInterval);
+        sessionTotalTimerInterval = setInterval(() => {
+            sessionTotalSeconds++;
+            elements.sessionTotalTimerDisplay.textContent = formatTime(sessionTotalSeconds);
+        }, 1000);
+        
+        sessionRestDefaultSeconds = parseInt(elements.timerInput.value) || 60;
+        sessionRestSeconds = sessionRestDefaultSeconds;
+        updateRestTimerDisplay();
+    };
+
+    // v24 ★수정 (REQ 1): 총 운동시간 타이머를 선택적으로 정지
+    const stopSessionTimers = (stopTotalTimer = true) => {
+        // v24 ★수정 (REQ 1): 'stopTotalTimer'가 true일 때만 총 운동시간 정지
+        if (stopTotalTimer) {
+            clearInterval(sessionTotalTimerInterval);
+            sessionTotalTimerInterval = null;
+        }
+        
+        // v21 (원본): 휴식 타이머는 항상 정지
+        clearInterval(sessionRestTimerInterval);
+        sessionRestTimerInterval = null;
+        isRestTimerRunning = false;
+        
+        sessionRestSeconds = sessionRestDefaultSeconds;
+        updateRestTimerDisplay();
+        
+        elements.floatingTimer.style.display = 'none';
+    };
+
+    const startRestTimer = () => {
+        // v24 ★수정 (REQ 1): 'false'를 전달 (총 운동시간은 놔두고 휴식 타이머만 제어)
+        stopSessionTimers(false); 
+
+        isRestTimerRunning = true;
+        sessionRestSeconds = sessionRestDefaultSeconds;
+        lastRestAudioTime = 0;
+        updateRestTimerDisplay();
+
+        sessionRestTimerInterval = setInterval(() => {
+            sessionRestSeconds--;
+            updateRestTimerDisplay();
+            updateFloatingTimerDisplay();
+
+            if (sessionRestSeconds === 10 || sessionRestSeconds === 3) {
+                playRestTimerSound(1);
+            }
+
+            if (sessionRestSeconds <= 0) {
+                stopSessionTimers(false); // v24 ★수정 (REQ 1)
+                playRestTimerSound(3); 
+            }
+        }, 1000);
+    };
+    
+    const updateRestTimerDisplay = () => {
+        const minutes = Math.floor(sessionRestSeconds / 60);
+        const seconds = sessionRestSeconds % 60;
+        elements.timerDigitalDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        // v26 ★수정 (REQ 8): 시계 방향으로 회전 (0 -> 360)
+        // (기존) const angle = (sessionRestSeconds / sessionRestDefaultSeconds) * 360;
+        const angle = (sessionRestDefaultSeconds - sessionRestSeconds) / sessionRestDefaultSeconds * 360;
+        elements.analogClockHand.style.transform = `rotate(${angle}deg)`;
+    };
+    
+    const updateFloatingTimerDisplay = () => {
+        if (!isRestTimerRunning) {
+            elements.floatingTimer.style.display = 'none';
+            return;
+        }
+        
+        elements.floatingTimerDisplay.textContent = `${String(Math.floor(sessionRestSeconds / 60)).padStart(2, '0')}:${String(sessionRestSeconds % 60).padStart(2, '0')}`;
+        
+        const progress = sessionRestSeconds / sessionRestDefaultSeconds;
+        const offset = floatingTimerCircumference * (1 - progress);
+        elements.floatingTimerProgress.style.strokeDasharray = `${floatingTimerCircumference}`;
+        elements.floatingTimerProgress.style.strokeDashoffset = offset;
+    };
+    
+    const adjustRestTimer = (seconds) => {
+        sessionRestDefaultSeconds = Math.max(0, sessionRestDefaultSeconds + seconds);
+        elements.timerInput.value = sessionRestDefaultSeconds;
+        if (!isRestTimerRunning) {
+            sessionRestSeconds = sessionRestDefaultSeconds;
+            updateRestTimerDisplay();
+        }
+    };
+    
+    const playRestTimerSound = (count) => {
+        if (Date.now() - lastRestAudioTime < 1000) return; 
+        lastRestAudioTime = Date.now();
+        
+        restTimerAudio.currentTime = 0;
+        let played = 0;
+        const playCount = () => {
+            if (played < count) {
+                restTimerAudio.play();
+                played++;
+            }
+        };
+        restTimerAudio.onended = playCount;
+        playCount();
+    };
+
+    const formatTime = (totalSeconds) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+    
+    // ===================================================================
+    // PR 및 요약 (v21 원본)
+    // ===================================================================
+
+    const checkPR = (exerciseName, weight, reps) => {
+        const currentPR = prRecords[exerciseName] || { weight: 0, reps: 0 };
+        const estimated1RM = weight * (1 + reps / 30);
+        const current1RM = currentPR.weight * (1 + currentPR.reps / 30);
+
+        if (estimated1RM > current1RM) {
+            const newPR = { weight, reps, date: currentSession.date };
+            prRecords[exerciseName] = newPR;
+            savePRs();
+            
+            const prItem = document.createElement('p');
+            prItem.innerHTML = `<strong>${exerciseName}:</strong> ${weight}kg x ${reps}회 (새 기록!)`;
+            elements.prList.appendChild(prItem);
+        }
+    };
+
+    const openSummaryModal = (log) => {
+        elements.summaryContent.innerHTML = "";
+        
+        let totalVolume = 0;
+        let totalSets = 0;
+        
+        log.exercises.forEach(ex => {
+            const exDiv = document.createElement('div');
+            exDiv.className = 'mb-3';
+            exDiv.innerHTML = `<h4 class="font-bold text-lg">${ex.name} (${ex.part})</h4>`;
+            
+            const setsList = document.createElement('ul');
+            setsList.className = 'list-disc list-inside text-gray-700';
+            
+            ex.sets.forEach(set => {
+                if(set.completed) {
+                    setsList.innerHTML += `<li>${set.weight}kg x ${set.reps}회</li>`;
+                    totalVolume += set.weight * set.reps;
+                    totalSets++;
+                }
+            });
+            exDiv.appendChild(setsList);
+            elements.summaryContent.appendChild(exDiv);
+        });
+        
+        const summaryText = document.createElement('p');
+        summaryText.className = 'mt-4 pt-4 border-t font-bold';
+        summaryText.textContent = `총 볼륨: ${totalVolume}kg | 총 세트: ${totalSets}세트`;
+        elements.summaryContent.prepend(summaryText);
+        
+        if (elements.prList.children.length > 0) {
+            openModal(elements.prCelebrationModal);
+        } else {
+            openModal(elements.summaryModal);
+        }
+    };
+
+    // ===================================================================
+    // 일간 로그 모달 (v21 원본)
+    // ===================================================================
+    
+    const openDailyLogModal = (dateStr) => {
+        const log = workoutLogs[dateStr];
+        if (!log) return;
+        
+        elements.dailyLogModalTitle.textContent = `${dateStr} (${log.routineName})`;
+        elements.dailyLogModalList.innerHTML = "";
+        
+        log.exercises.forEach(ex => {
+            const exDiv = document.createElement('div');
+            exDiv.className = 'mb-3';
+            exDiv.innerHTML = `<h4 class="font-bold text-lg">${ex.name} (${ex.part})</h4>`;
+            
+            const setsList = document.createElement('ul');
+            setsList.className = 'list-disc list-inside text-gray-700';
+            
+            ex.sets.forEach(set => {
+                if(set.completed) {
+                    setsList.innerHTML += `<li>${set.weight}kg x ${set.reps}회</li>`;
+                } else {
+                    setsList.innerHTML += `<li class="text-gray-400 line-through">${set.weight}kg x ${set.reps}회 (미완료)</li>`;
+                }
+            });
+            exDiv.appendChild(setsList);
+            elements.dailyLogModalList.appendChild(exDiv);
+        });
+        
+        openModal(elements.dailyLogModal);
+    };
+    
+    // ===================================================================
+    // 통계 모달 (v21 원본)
+    // ===================================================================
+    
+    const openStatsModal = () => {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        elements.statsStartDateInput.value = firstDay.toISOString().split('T')[0];
+        elements.statsEndDateInput.value = lastDay.toISOString().split('T')[0];
+        
+        elements.statsPartSelector.innerHTML = "";
+        const allBtn = createPartBtn('전체');
+        allBtn.classList.add('selected');
+        elements.statsPartSelector.appendChild(allBtn);
+        
+        Object.keys(exerciseDB).forEach(part => {
+            elements.statsPartSelector.appendChild(createPartBtn(part));
+        });
+        
+        updateStatsExerciseSelect('전체');
+        updateStatsChart();
+        
+        openModal(elements.statsModal);
+    };
+
+    const createPartBtn = (part) => {
+        const btn = document.createElement('button');
+        btn.className = 'part-btn';
+        btn.textContent = part;
+        btn.dataset.part = part;
+        btn.addEventListener('click', () => {
+            elements.statsPartSelector.querySelectorAll('.part-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            updateStatsExerciseSelect(part);
+            updateStatsChart();
+        });
+        return btn;
+    };
+    
+    const updateStatsExerciseSelect = (part) => {
+        elements.statsExerciseSelect.innerHTML = '<option value="전체">모든 운동</option>';
+        if (part === '전체') {
+            Object.values(exerciseDB).flat().forEach(ex => {
+                elements.statsExerciseSelect.innerHTML += `<option value="${ex.name}">${ex.name}</option>`;
+            });
+        } else if (exerciseDB[part]) {
+            exerciseDB[part].forEach(ex => {
+                elements.statsExerciseSelect.innerHTML += `<option value="${ex.name}">${ex.name}</option>`;
+            });
+        }
+    };
+    
+    const updateStatsChart = () => {
+        const startDate = elements.statsStartDateInput.value;
+        const endDate = elements.statsEndDateInput.value;
+        const part = elements.statsPartSelector.querySelector('.part-btn.selected').dataset.part;
+        const exercise = elements.statsExerciseSelect.value;
+        
+        const data = {
+            labels: [],
+            datasets: [
+                {
+                    label: '총 볼륨 (kg)',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'yVolume',
+                    tension: 0.1
+                },
+                {
+                    label: '최대 1RM (kg)',
+                    data: [],
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    yAxisID: 'y1RM',
+                    tension: 0.1
+                }
+            ]
+        };
+        
+        const dates = Object.keys(workoutLogs).filter(date => date >= startDate && date <= endDate).sort();
+        
+        dates.forEach(date => {
+            const log = workoutLogs[date];
+            let dailyVolume = 0;
+            let dailyMax1RM = 0;
+            
+            log.exercises.forEach(ex => {
+                if ((part === '전체' || ex.part === part) && (exercise === '전체' || ex.name === exercise)) {
+                    ex.sets.forEach(set => {
+                        if (set.completed) {
+                            dailyVolume += set.weight * set.reps;
+                            const est1RM = set.weight * (1 + set.reps / 30);
+                            if (est1RM > dailyMax1RM) dailyMax1RM = est1RM;
+                        }
+                    });
+                }
+            });
+            
+            if (dailyVolume > 0 || dailyMax1RM > 0) {
+                data.labels.push(date);
+                data.datasets[0].data.push(dailyVolume);
+                data.datasets[1].data.push(dailyMax1RM);
+            }
+        });
+
+        if (statsChart) statsChart.destroy();
+        
+        statsChart = new Chart(elements.statsChartCanvas, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yVolume: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: '볼륨 (kg)' }
+                    },
+                    y1RM: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: '1RM (kg)' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    };
+    
+    const resetStatsDate = () => {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        elements.statsStartDateInput.value = firstDay.toISOString().split('T')[0];
+        elements.statsEndDateInput.value = lastDay.toISOString().split('T')[0];
+        updateStatsChart();
+    };
+    
+    // v25 ★추가 (REQ 4): Enter 키 탐색 헬퍼 함수
+    const addEnterNavigation = (inputs) => {
+        inputs.forEach((input, index) => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    
+                    if (input.tagName === 'BUTTON') {
+                        input.click();
+                        return; 
+                    }
+
+                    const nextInput = inputs[index + 1];
+                    if (nextInput) {
+                        nextInput.focus();
+                        if (nextInput.tagName === 'INPUT' && nextInput.type !== 'select-one') {
+                            nextInput.select();
+                        }
+                    } else {
+                        inputs[0].focus();
+                        if (inputs[0].tagName === 'INPUT' && inputs[0].type !== 'select-one') {
+                            inputs[0].select();
+                        }
+                    }
+                }
+            });
+        });
+    };
+
+
+    // ===================================================================
+    // 이벤트 리스너 초기화 (v21 원본 + v24, v25, v26 수정)
+    // ===================================================================
+
+    const initEventListeners = () => {
+        // 캘린더
+        elements.prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+        elements.nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+        elements.todayBtn.addEventListener('click', () => {
+            currentDate = new Date();
+            // v25 ★수정: 오늘 날짜로 '선택'
+            selectedDate = new Date().toISOString().split('T')[0];
+            renderCalendar(currentDate);
+        });
+        elements.dateSearchBtn.addEventListener('click', () => {
+            elements.dateSearchInput.showPicker();
+        });
+        elements.dateSearchInput.addEventListener('change', () => {
+            const dateStr = elements.dateSearchInput.value;
+            if (dateStr) {
+                // v25 ★수정: 미래 날짜 선택 시 경고
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const cellDate = new Date(dateStr);
+
+                if (cellDate > today) { // v26 ★수정 (REQ 1): '오늘'은 > today가 false임
+                    alert("오늘 이후의 날짜는 선택할 수 없습니다.");
+                    elements.dateSearchInput.value = ""; // 값 초기화
+                    return;
+                }
+                
+                currentDate = new Date(dateStr);
+                selectedDate = dateStr;
+                renderCalendar(currentDate);
+            }
+        });
+        
+        // 메인
+        elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditorModal());
+        elements.openStatsModalBtn.addEventListener('click', openStatsModal);
+        elements.backBtn.addEventListener('click', () => {
+            if (document.referrer) window.history.back();
+            else alert('이전 페이지가 없습니다.');
+        });
+
+        // 템플릿 편집기
+        elements.openAddExerciseModalBtn.addEventListener('click', openAddExerciseModal);
+        elements.exerciseCategorySelect.addEventListener('change', (e) => {
+            populateExerciseSelect(elements.exerciseListSelect, e.target.value);
+        });
+        elements.addUpdateExerciseBtn.addEventListener('click', handleAddOrUpdateExerciseInTemplate);
+        elements.saveTemplateBtn.addEventListener('click', handleSaveTemplate);
+        
+        // v25 ★추가 (REQ 4-1): 템플릿 편집기 Enter 키 탐색
+        addEnterNavigation([
+            elements.templateTitleInput,
+            elements.exerciseCategorySelect,
+            elements.exerciseListSelect,
+            elements.templateWeightInput,
+            elements.templateRepsInput,
+            elements.templateSetsInput,
+            elements.addUpdateExerciseBtn
+        ]);
+
+        // 새 운동 만들기
+        elements.saveNewExerciseBtn.addEventListener('click', handleSaveNewExercise);
+        elements.cancelAddExerciseBtn.addEventListener('click', () => closeModal(elements.addExerciseModal));
+        
+        // v25 ★추가 (REQ 4-2): 새 운동 만들기 모달 Enter 키 탐색
+        addEnterNavigation([
+            elements.newExercisePart,
+            elements.newExerciseName,
+            elements.saveNewExerciseBtn
+        ]);
+
+        // 운동 세션
+        // v24 ★수정 (REQ 6)
+        elements.addExerciseToSessionBtn.addEventListener('click', () => openAddToSessionModal()); 
+        elements.saveSessionBtn.addEventListener('click', handleSaveSession);
+        elements.hideSessionBtn.addEventListener('click', () => {
+            elements.workoutSessionModal.style.display = 'none'; 
+            elements.floatingTimer.style.display = 'flex';
             updateFloatingTimerDisplay();
         });
 
-        elements.floatingTimer?.addEventListener('click', (e) => {
-            if (e.target.id === 'close-floating-timer') return;
-            if (elements.workoutSessionModal) {
-                elements.workoutSessionModal.style.display = 'flex';
-            }
-            if (elements.floatingTimer) {
-                elements.floatingTimer.style.display = 'none';
+        // v24 ★수정 (REQ 6)
+        elements.saveToSessionBtn.addEventListener('click', handleSaveToSession);
+        
+        elements.sessionCategorySelect.addEventListener('change', (e) => {
+            populateExerciseSelect(elements.sessionExListSelect, e.target.value);
+        });
+        
+        // v25 ★추가 (REQ 4-3): 세션에 추가 모달 Enter 키 탐색
+        addEnterNavigation([
+            elements.sessionCategorySelect,
+            elements.sessionExListSelect,
+            elements.sessionWeightInput,
+            elements.sessionRepsInput,
+            elements.sessionSetsInput,
+            elements.saveToSessionBtn
+        ]);
+
+        // 타이머
+        elements.timerInput.addEventListener('change', () => {
+            sessionRestDefaultSeconds = parseInt(elements.timerInput.value) || 60;
+            if (!isRestTimerRunning) {
+                sessionRestSeconds = sessionRestDefaultSeconds;
+                updateRestTimerDisplay();
             }
         });
-
-        elements.closeFloatingTimer?.addEventListener('click', (e) => {
+        elements.timerMinus30Btn.addEventListener('click', () => adjustRestTimer(-30));
+        elements.timerPlus30Btn.addEventListener('click', () => adjustRestTimer(30));
+        elements.timerMinus10Btn.addEventListener('click', () => adjustRestTimer(-10));
+        elements.timerPlus10Btn.addEventListener('click', () => adjustRestTimer(10));
+        
+        // 플로팅 타이머
+        elements.floatingTimer.addEventListener('click', () => {
+            elements.floatingTimer.style.display = 'none';
+            elements.workoutSessionModal.style.display = 'flex';
+            openModal(elements.workoutSessionModal); 
+        });
+        elements.closeFloatingTimer.addEventListener('click', (e) => {
             e.stopPropagation();
-            // (확인 모달 로직...)
+            customConfirm("운동 세션을 종료하시겠습니까?\n저장되지 않은 기록은 사라집니다.", () => {
+                closeWorkoutSessionModal();
+            });
         });
 
-        // 휴식 타이머 컨트롤
-        elements.timerStartStopBtn?.addEventListener('click', () => {
-            if (restTimerRunning) {
-                stopRestTimer();
-            } else {
-                startRestTimer();
-            }
+        // 통계
+        elements.statsStartDateInput.addEventListener('change', updateStatsChart);
+        elements.statsEndDateInput.addEventListener('change', updateStatsChart);
+        elements.statsExerciseSelect.addEventListener('change', updateStatsChart);
+        elements.statsResetBtn.addEventListener('click', resetStatsDate);
+        
+        // PR/요약 모달
+        elements.closePrModalBtn.addEventListener('click', () => {
+            closeModal(elements.prCelebrationModal);
+            openModal(elements.summaryModal); 
+        });
+        elements.closeSummaryBtn.addEventListener('click', () => closeModal(elements.summaryModal));
+
+        // 확인 모달
+        elements.confirmOkBtn.addEventListener('click', () => {
+            if (confirmCallback) confirmCallback();
+            confirmCallback = null;
+            closeModal(elements.confirmModal);
+        });
+        elements.confirmCancelBtn.addEventListener('click', () => {
+            confirmCallback = null;
+            closeModal(elements.confirmModal);
         });
 
-        elements.timerResetBtn?.addEventListener('click', () => {
-            stopRestTimer();
-            restSeconds = DEFAULT_REST_TIME;
-            if (elements.restTimerDisplay) {
-                elements.restTimerDisplay.textContent = formatTime(restSeconds);
-            }
-            setRestTimerProgress(100);
+        // 전역 모달 닫기
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal && modal.id !== 'workout-session-modal' && modal.id !== 'custom-confirm-modal') {
+                    closeModal(modal);
+                }
+            });
+        });
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal-overlay');
+                if (modal) closeModal(modal);
+            });
         });
         
-        const adjustRestTime = (amount) => {
-            restSeconds += amount;
-            if (restSeconds < 0) restSeconds = 0;
-            if (elements.restTimerDisplay) {
-                elements.restTimerDisplay.textContent = formatTime(restSeconds);
+        // 전역 Esc 키
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                let topModal = null;
+                let maxZ = 0;
+                const visibleModals = document.querySelectorAll('.modal-overlay[style*="display: flex"]');
+                
+                visibleModals.forEach(modal => {
+                    const z = parseInt(window.getComputedStyle(modal).zIndex) || 0;
+                    if (z > maxZ) {
+                        maxZ = z;
+                        topModal = modal;
+                    }
+                });
+
+                if (topModal) {
+                    if (topModal.id === 'workout-session-modal') {
+                        elements.workoutSessionModal.style.display = 'none';
+                        elements.floatingTimer.style.display = 'flex';
+                        updateFloatingTimerDisplay();
+                    } else if (topModal.id !== 'custom-confirm-modal') {
+                        closeModal(topModal);
+                    }
+                }
             }
-            const progress = (restSeconds / DEFAULT_REST_TIME) * 100;
-            setRestTimerProgress(progress > 100 ? 100 : progress);
-        };
+        });
         
-        elements.timerMinus30?.addEventListener('click', () => adjustRestTime(-30));
-        elements.timerPlus30?.addEventListener('click', () => adjustRestTime(30));
-        elements.timerMinus10?.addEventListener('click', () => adjustRestTime(-10));
-        elements.timerPlus10?.addEventListener('click', () => adjustRestTime(10));
-
-
-        // "운동 추가" (세션 모달 하단) 버튼
-        // --- 요청사항 6 ---
-        elements.addExerciseToSessionBtn?.addEventListener('click', () => {
-            openAddExerciseModal(null); // null 전달 (추가 모드)
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', e => e.preventDefault());
         });
-
-        // (수정) '운동 추가/수정 모달'의 버튼 리스너들은
-        // 'openAddExerciseModal' 함수 내부에서 등록하도록 변경되었습니다.
-        // (initEventListeners에서는 더 이상 등록하지 않습니다.)
-    };
-    
-    // ===================================================================
-    // 새롭게 추가된 헬퍼 함수 (요청사항 3, 4)
-    // ===================================================================
-
-    const handleAdjustSet = (exerciseId, action) => {
-        if (!currentWorkoutSession) return;
-        const exercise = currentWorkoutSession.exercises.find(ex => ex.id === exerciseId);
-        if (!exercise) return;
-
-        if (action === 'increase') {
-            const lastSet = exercise.sets[exercise.sets.length - 1] || {};
-            const newSet = {
-                id: crypto.randomUUID(),
-                weight: lastSet.weight || '',
-                reps: lastSet.reps || '',
-                completed: false,
-            };
-            exercise.sets.push(newSet);
-        } else if (action === 'decrease') {
-            if (exercise.sets.length > 1) {
-                exercise.sets.pop();
-            } else {
-                console.log("최소 1세트가 필요합니다.");
+        
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+            if (el.type !== 'checkbox' && el.type !== 'radio') {
+                 el.style.fontSize = '16px';
             }
-        }
-        renderWorkoutSessionList();
-    };
-
-    const handleCompleteAllSets = (exerciseId) => {
-        if (!currentWorkoutSession) return;
-        const exercise = currentWorkoutSession.exercises.find(ex => ex.id === exerciseId);
-        if (!exercise) return;
-
-        const allCompleted = exercise.sets.every(set => set.completed);
-        const newCompletedState = !allCompleted;
-
-        exercise.sets.forEach(set => {
-            set.completed = newCompletedState;
         });
-        renderWorkoutSessionList();
-    };
-    
 
-    // ===================================================================
-    // 초기화 함수
-    // ===================================================================
+    };
+
     const init = () => {
-        // (수정) exercises.js가 로드되었는지 확인
-        if (!checkExercisesData()) {
-            // (선택) exercisesData가 없으면 캘린더 렌더링도 막을 수 있습니다.
-            // 하지만 지금은 file:// 감지 로직이 return 하므로 괜찮습니다.
-        }
-        
-        // (중요) 캘린더 렌더링 함수가 여기에 있어야 합니다.
-        // (회원님의 원본 코드에 renderCalendar()가 있다고 가정합니다)
-        // renderCalendar(currentDate); 
-        
-        // (중요) 템플릿 렌더링 함수가 여기에 있어야 합니다.
-        // (회원님의 원본 코드에 renderTemplateList()가 있다고 가정합니다)
-        // renderTemplateList();
-        
-        // (수정) populate... 함수들을 init()에서 호출하지 않습니다.
-        // openAddExerciseModal 함수 내부에서 호출하도록 변경되었습니다.
-        
+        loadData();
+        // v25 ★수정 (REQ 1): 오늘 날짜를 기본으로 선택
+        selectedDate = new Date().toISOString().split('T')[0];
+        renderCalendar(currentDate);
+        renderTemplateList();
         initEventListeners();
-        
-        // (테스트 코드 - 실제 사용 시 주석 처리)
-        /*
-        const testSession = {
-            routineId: 'temp1',
-            routineName: '테스트 세션',
-            date: new Date().toISOString().split('T')[0],
-            exercises: [
-                { id: 'ex1', name: '벤치 프레스', part: '가슴', sets: [ { id: 's1', weight: '60', reps: '10', completed: false } ]},
-                { id: 'ex2', name: '랫풀다운', part: '등', sets: [ { id: 's4', weight: '50', reps: '12', completed: false } ]}
-            ]
-        };
-        startWorkoutSession(testSession);
-        */
     };
 
-    // --- 앱 시작 ---
     init();
 });

@@ -13,191 +13,393 @@ body {
 }
 .calendar-day:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
-.calendar-day.selected-day { background-color:#3b82f6; color:white; border-color:#2563eb; }
-.calendar-day.today { border: 2px solid #3b82f6; font-weight:bold; }
-.day-number { font-size:1.1rem; }
-.day-log-summary { font-size: 0.8rem; margin-top: 4px; opacity: 0.8; }
-.day-dot { width: 8px; height: 8px; background-color: #3b82f6; border-radius: 50%; margin: 4px auto 0; }
-.selected-day .day-dot { background-color: white; }
+.calendar-day.selected-day { background-color: #ebf8ff; border-color: #63b3ed; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(59,130,246,0.2), 0 4px 6px -2px rgba(59,130,246,0.1); }
+.calendar-day.other-month { background-color: #fdfdfe; color: #a0aec0; }
+.calendar-day.today { background-color: #fefcbf; border-color: #f6e05e; }
 
-/* Modal Styles */
-.modal-overlay { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.5); 
-    display: none; align-items: center; justify-content: center; 
-    z-index: 1000;
+/* v25 ★추가: 미래 날짜 비활성화 스타일 */
+.calendar-day.future-day {
+    background-color: #f8fafc; /* gray-50 */
+    color: #cbd5e1; /* gray-300 */
+    cursor: not-allowed;
 }
-.modal-content { 
-    background: white; 
-    border-radius: 12px; 
-    padding: 28px; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-    max-height: 90vh; 
-    overflow-y: auto;
-    width: 600px;
-    max-width: 95%;
+.calendar-day.future-day:hover {
+    transform: none;
+    box-shadow: none;
 }
 
-/* Template Editor Modal */
-#template-editor-modal .modal-content { width: 700px; }
-.exercise-card { background: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; border-radius: 8px; }
-.set-row-editor { display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 10px; align-items: center; }
 
-/* Workout Session Modal */
-#workout-session-modal .modal-content {
-    width: 90%;
-    max-width: 1200px;
-    height: 90vh;
-    padding: 0;
+.day-number { font-weight: 600; font-size: 0.95em; }
+.day-parts { font-size:0.75em; color: #4a5568; margin-top:5px; line-height:1.4; word-break: keep-all; }
+.day-parts span {
+    display: inline-block;
+    padding: 2px 5px;
+    background-color: #edf2f7;
+    border-radius: 4px;
+    margin: 1px;
+}
+.day-parts .part-chest { background-color: #fef2f2; color: #dc2626; }
+.day-parts .part-back { background-color: #eff6ff; color: #3b82f6; }
+.day-parts .part-legs { background-color: #f0fdf4; color: #16a34a; }
+.day-parts .part-shoulder { background-color: #fefce8; color: #ca8a04; }
+.day-parts .part-arms { background-color: #faf5ff; color: #9333ea; }
+.day-parts .part-core { background-color: #fff7ed; color: #f97316; }
+.day-parts .part-cardio { background-color: #f1f5f9; color: #475569; }
+
+/* 템플릿 카드 */
+.template-card {
     display: flex;
-    overflow: hidden;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    /* v26 ★수정 (REQ 10): 카드 전체 클릭이 아닌, 버튼/이름 클릭으로 변경 */
+    cursor: default;
+}
+.template-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-color: #dbeafe; /* blue-100 */
+}
+.template-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+/* v26 ★삭제 (REQ 11): 템플릿 이미지 스타일 삭제
+.template-img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+*/
+.template-details {
+    display: flex;
+    flex-direction: column;
+}
+.template-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+/* v26 ★추가 (REQ 10): 루틴 이름 클릭 시 수정 가능하도록 */
+.template-name.editable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.template-name.editable:hover {
+    color: #3b82f6; /* blue-500 */
+}
+
+
+.template-parts {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.template-controls button,
+.session-controls button {
+    background-color: #edf2f7;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+.template-controls button:hover,
+.session-controls button:hover {
+    background-color: #e2e8f0;
+}
+.template-controls .delete-btn,
+.session-controls .delete-btn {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+.template-controls .delete-btn:hover,
+.session-controls .delete-btn:hover {
+    background-color: #fee2e2;
+}
+
+/* v26 ★추가 (REQ 10): '실행' 버튼 전용 스타일 */
+.template-controls .start-btn {
+    background-color: #dbeafe; /* blue-100 */
+    color: #2563eb; /* blue-600 */
+    font-weight: 600;
+}
+.template-controls .start-btn:hover {
+    background-color: #bfdbfe; /* blue-200 */
+}
+
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none; /* 'hidden' -> 'none' */
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.modal-overlay[aria-hidden="false"] {
+    display: flex;
+    opacity: 1;
+}
+.modal-content {
+    background-color: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.95);
+    transition: transform 0.2s ease-in-out;
+}
+.modal-overlay[aria-hidden="false"] .modal-content {
+    transform: scale(1);
+}
+#workout-session-modal .modal-content {
+    height: 90vh;
+    max-height: 800px;
+    padding: 0; /* 패딩 제거 (내부에서 처리) */
+    overflow: hidden; /* 내부 스크롤 방지 */
+}
+#stats-modal .modal-content {
+    max-width: 700px;
+}
+#daily-log-modal .modal-content {
+    max-width: 600px;
+}
+
+/* Session Panel */
+.workout-panel {
+    background-color: #ffffff;
 }
 .timer-panel {
-    width: 33.3333%;
-    background-color: #f3f4f6;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #e5e7eb;
+    background-color: #f8fafc; /* gray-50 */
 }
-.workout-panel {
-    width: 66.6667%;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
+.timer-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b; /* gray-500 */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
-#workout-session-list {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-.timer-display {
-    text-align: center;
-    font-size: 4.5rem;
+.session-timer-display {
+    font-size: 2.25rem; /* 4xl */
     font-weight: 700;
-    letter-spacing: -0.025em;
-    color: #1f2937;
+    color: #1e293b; /* gray-800 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.rest-timer-display {
+    font-size: 4rem; /* 6xl */
+    font-weight: 800;
+    color: #2563eb; /* blue-600 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     line-height: 1;
 }
 
-.rest-timer-wrapper {
-    position: relative;
-    width: 200px;
-    height: 200px;
-    margin: 24px auto;
-}
-.rest-timer-circle-bg {
-    fill: none;
-    stroke: #e5e7eb;
-    stroke-width: 10;
-}
-.rest-timer-progress {
-    fill: none;
-    stroke: #3b82f6;
-    stroke-width: 10;
-    stroke-linecap: round;
-    transform: rotate(-90deg);
-    transform-origin: 50% 50%;
-    transition: stroke-dashoffset 0.3s;
-}
-.rest-timer-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 3rem;
-    font-weight: 600;
-}
-.timer-controls button {
-    width: 100%;
-    padding: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    transition: background-color 0.2s;
+#clock-second-hand {
+    transition: transform 1s linear; /* 부드러운 초침 움직임 */
 }
 
-.set-row {
-    transition: background-color 0.2s;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
+/* Session Exercise Card */
+.exercise-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    overflow: hidden;
 }
-.set-row.completed-set {
-    background-color: #eff6ff; /* blue-50 */
-    border-color: #bfdbfe; /* blue-200 */
+.exercise-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background-color: #f8fafc;
+}
+.exercise-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.delete-exercise-btn {
+    background: none;
+    border: none;
+    color: #ef4444; /* red-500 */
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.delete-exercise-btn:hover { color: #b91c1c; /* red-800 */ }
+
+/* Session Set Item */
+.set-header {
+    display: grid;
+    /* v26 ★수정 (REQ 9): 한글 텍스트에 맞게 컬럼 너비 조절 */
+    grid-template-columns: 30px 1fr 1fr 50px;
+    gap: 12px;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: center;
+    text-transform: uppercase;
+}
+.set-item {
+    display: grid;
+    /* v26 ★수정 (REQ 9): 한글 텍스트에 맞게 컬럼 너비 조절 */
+    grid-template-columns: 30px 1fr 1fr 50px;
+    gap: 12px;
+    padding: 10px 16px;
+    align-items: center;
+    text-align: center;
+    border-top: 1px solid #f1f5f9;
+    transition: background-color 0.2s;
+}
+.set-item.set-completed {
+    background-color: #f0fdf4; /* green-50 */
+    opacity: 0.8;
+}
+.set-item.set-completed input[type="number"] {
+    background-color: #f1f5f9; /* gray-100 */
+    color: #64748b;
+}
+
+.set-number {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #475569;
 }
 .set-input {
     width: 100%;
-    text-align: center;
+    padding: 8px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    padding: 10px 8px;
-    font-size: 1.1rem;
-    -moz-appearance: textfield; /* Firefox용 */
-    appearance: textfield;     /* 표준 */
-}
-.set-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+    text-align: center;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 .set-input::-webkit-outer-spin-button,
 .set-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+.set-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+.set-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 2px solid #9ca3af;
+    accent-color: #2563eb;
+    margin: 0 auto;
+    cursor: pointer;
+}
 
-.set-complete-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+/* Template Editor */
+.template-exercise-item {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
+    padding: 10px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.template-exercise-name {
+    font-weight: 600;
+}
+.template-exercise-info {
+    font-size: 0.9rem;
+    color: #475569;
+}
+.template-exercise-delete {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+.modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+.workout-panel #workout-session-list {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+/* Stats */
+.part-btn {
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
     transition: all 0.2s;
 }
-.set-complete-btn.bg-gray-200:hover {
-    background-color: #d1d5db;
+.part-btn:hover {
+    background-color: #f8fafc;
+}
+.part-btn.selected {
+    background-color: #ebf8ff;
+    border-color: #3b82f6;
+    color: #2563eb;
+    font-weight: 600;
 }
 
 /* Floating Timer */
 #floating-timer {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 120px;
-    height: 50px;
-    background-color: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 25px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    font-weight: 600;
-    cursor: pointer;
-    z-index: 2000;
-    transition: all 0.3s;
-}
-#floating-timer:hover {
-    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-    transform: translateY(-2px);
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    border-radius: 50%;
+    background-color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px; /* 안쪽 여백 */
+    display: none; /* 'hidden' -> 'none' */
 }
 #close-floating-timer {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 24px;
-    height: 24px;
-    background: #ef4444;
-    color: white;
-    border-radius: 50%;
-    border: 2px solid white;
-    font-size: 14px;
-    line-height: 20px;
-    text-align: center;
-    font-weight: bold;
     opacity: 0;
     transition: opacity 0.2s;
 }
@@ -242,77 +444,43 @@ body {
     background-color: #d1d5db;
 }
 
-
-/* =================================================
-  요청사항 3, 4, 6을 위한 스타일 (변경 없음)
-=================================================
-*/
-
-.workout-name-clickable {
-    cursor: pointer;
-    transition: color 0.2s;
-    user-select: none;
-}
-.workout-name-clickable:hover {
-    color: #3b82f6;
-}
-
-.adjust-set-btn {
-    background-color: #e5e7eb;
-    color: #4b5563;
-    border: none;
+/* v24 ★추가 (REQ 3): 세트 조절 버튼 (+/-) 스타일 */
+.adjust-set-btn-small {
+    background-color: #e5e7eb; /* 기존 gray-200 */
+    color: #4b5563; /* gray-600 */
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 1.2rem;
+    width: 26px; /* 크기 */
+    height: 26px;
+    font-size: 1.1rem;
     font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    padding-bottom: 2px;
+    transition: background-color 0.2s;
+    padding-bottom: 2px; /* 텍스트 정렬 */
+    cursor: pointer;
+}
+.adjust-set-btn-small:hover {
+    background-color: #d1d5db; /* gray-300 */
+}
+
+/* v24 ★추가 (REQ 4): 전체 완료 버튼 스타일 */
+.complete-all-btn {
+    background-color: #f0fdf4; /* green-50 */
+    color: #16a34a; /* green-600 */
+    border: 1px solid #bbf7d0; /* green-200 */
+    border-radius: 6px;
+    width: 28px; /* 크기 */
+    height: 28px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: background-color 0.2s;
     cursor: pointer;
 }
-.adjust-set-btn:hover {
-    background-color: #d1d5db;
-}
-.adjust-set-btn:active {
-    transform: scale(0.95);
-}
-
-.exercise-footer-controls {
-    display: flex;
-    gap: 12px;
-    margin-top: 12px;
-    justify-content: flex-end;
-    padding-top: 12px;
-    border-top: 1px solid #f3f4f6;
-}
-
-.complete-all-sets-btn,
-.delete-exercise-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.complete-all-sets-btn {
-    background-color: #dbeafe;
-    color: #2563eb;
-}
-.complete-all-sets-btn:hover {
-    background-color: #bfdbfe;
-}
-
-.delete-exercise-btn {
-    background-color: #fee2e2;
-    color: #dc2626;
-}
-.delete-exercise-btn:hover {
-    background-color: #fecaca;
+.complete-all-btn:hover {
+    background-color: #dcfce7; /* green-100 */
 }
