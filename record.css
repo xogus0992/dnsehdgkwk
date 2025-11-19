@@ -17,17 +17,16 @@ body {
 .calendar-day.other-month { background-color: #fdfdfe; color: #a0aec0; }
 .calendar-day.today { background-color: #fefcbf; border-color: #f6e05e; }
 
-/* v25 ★추가: 미래 날짜 비활성화 스타일 */
+/* 미래 날짜 비활성화 스타일 */
 .calendar-day.future-day {
-    background-color: #f8fafc; /* gray-50 */
-    color: #cbd5e1; /* gray-300 */
+    background-color: #f8fafc;
+    color: #cbd5e1;
     cursor: not-allowed;
 }
 .calendar-day.future-day:hover {
     transform: none;
     box-shadow: none;
 }
-
 
 .day-number { font-weight: 600; font-size: 0.95em; }
 .day-parts { font-size:0.75em; color: #4a5568; margin-top:5px; line-height:1.4; word-break: keep-all; }
@@ -56,28 +55,17 @@ body {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     transition: box-shadow 0.2s, border-color 0.2s;
-    /* v26 ★수정 (REQ 10): 카드 전체 클릭이 아닌, 버튼/이름 클릭으로 변경 */
     cursor: default;
 }
 .template-card:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    border-color: #dbeafe; /* blue-100 */
+    border-color: #dbeafe;
 }
 .template-info {
     display: flex;
     align-items: center;
     gap: 12px;
 }
-/* v26 ★삭제 (REQ 11): 템플릿 이미지 스타일 삭제
-.template-img {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-*/
 .template-details {
     display: flex;
     flex-direction: column;
@@ -88,15 +76,14 @@ body {
     color: #1a202c;
 }
 
-/* v26 ★추가 (REQ 10): 루틴 이름 클릭 시 수정 가능하도록 */
+/* 루틴 이름 수정 가능 표시 */
 .template-name.editable {
     cursor: pointer;
     transition: color 0.2s;
 }
 .template-name.editable:hover {
-    color: #3b82f6; /* blue-500 */
+    color: #3b82f6;
 }
-
 
 .template-parts {
     font-size: 0.85rem;
@@ -128,23 +115,22 @@ body {
     background-color: #fee2e2;
 }
 
-/* v26 ★추가 (REQ 10): '실행' 버튼 전용 스타일 */
+/* '실행' 버튼 */
 .template-controls .start-btn {
-    background-color: #dbeafe; /* blue-100 */
-    color: #2563eb; /* blue-600 */
+    background-color: #dbeafe;
+    color: #2563eb;
     font-weight: 600;
 }
 .template-controls .start-btn:hover {
-    background-color: #bfdbfe; /* blue-200 */
+    background-color: #bfdbfe;
 }
-
 
 /* Modal */
 .modal-overlay {
     position: fixed;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.6);
-    display: none; /* 'hidden' -> 'none' */
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 50;
@@ -174,8 +160,8 @@ body {
 #workout-session-modal .modal-content {
     height: 90vh;
     max-height: 800px;
-    padding: 0; /* 패딩 제거 (내부에서 처리) */
-    overflow: hidden; /* 내부 스크롤 방지 */
+    padding: 0;
+    overflow: hidden;
 }
 #stats-modal .modal-content {
     max-width: 700px;
@@ -189,31 +175,31 @@ body {
     background-color: #ffffff;
 }
 .timer-panel {
-    background-color: #f8fafc; /* gray-50 */
+    background-color: #f8fafc;
 }
 .timer-label {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #64748b; /* gray-500 */
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 .session-timer-display {
-    font-size: 2.25rem; /* 4xl */
+    font-size: 2.25rem;
     font-weight: 700;
-    color: #1e293b; /* gray-800 */
+    color: #1e293b;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 .rest-timer-display {
-    font-size: 4rem; /* 6xl */
+    font-size: 4rem;
     font-weight: 800;
-    color: #2563eb; /* blue-600 */
+    color: #2563eb;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     line-height: 1;
 }
 
 #clock-second-hand {
-    transition: transform 1s linear; /* 부드러운 초침 움직임 */
+    transition: transform 1s linear;
 }
 
 /* Session Exercise Card */
@@ -239,7 +225,7 @@ body {
 .delete-exercise-btn {
     background: none;
     border: none;
-    color: #ef4444; /* red-500 */
+    color: #ef4444;
     font-size: 1.8rem;
     font-weight: 300;
     line-height: 1;
@@ -247,12 +233,11 @@ body {
     cursor: pointer;
     transition: color 0.2s;
 }
-.delete-exercise-btn:hover { color: #b91c1c; /* red-800 */ }
+.delete-exercise-btn:hover { color: #b91c1c; }
 
 /* Session Set Item */
 .set-header {
     display: grid;
-    /* v26 ★수정 (REQ 9): 한글 텍스트에 맞게 컬럼 너비 조절 */
     grid-template-columns: 30px 1fr 1fr 50px;
     gap: 12px;
     padding: 8px 16px;
@@ -264,7 +249,6 @@ body {
 }
 .set-item {
     display: grid;
-    /* v26 ★수정 (REQ 9): 한글 텍스트에 맞게 컬럼 너비 조절 */
     grid-template-columns: 30px 1fr 1fr 50px;
     gap: 12px;
     padding: 10px 16px;
@@ -274,11 +258,11 @@ body {
     transition: background-color 0.2s;
 }
 .set-item.set-completed {
-    background-color: #f0fdf4; /* green-50 */
+    background-color: #f0fdf4;
     opacity: 0.8;
 }
 .set-item.set-completed input[type="number"] {
-    background-color: #f1f5f9; /* gray-100 */
+    background-color: #f1f5f9;
     color: #64748b;
 }
 
@@ -309,9 +293,9 @@ body {
     outline: none;
 }
 .set-checkbox {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px; /* 원형 */
     border: 2px solid #9ca3af;
     accent-color: #2563eb;
     margin: 0 auto;
@@ -396,8 +380,8 @@ body {
     border-radius: 50%;
     background-color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    padding: 8px; /* 안쪽 여백 */
-    display: none; /* 'hidden' -> 'none' */
+    padding: 8px;
+    display: none;
 }
 #close-floating-timer {
     opacity: 0;
@@ -444,12 +428,12 @@ body {
     background-color: #d1d5db;
 }
 
-/* v24 ★추가 (REQ 3): 세트 조절 버튼 (+/-) 스타일 */
+/* 세트 조절 버튼 (+/-) */
 .adjust-set-btn-small {
-    background-color: #e5e7eb; /* 기존 gray-200 */
-    color: #4b5563; /* gray-600 */
+    background-color: #e5e7eb;
+    color: #4b5563;
     border-radius: 50%;
-    width: 26px; /* 크기 */
+    width: 26px;
     height: 26px;
     font-size: 1.1rem;
     font-weight: bold;
@@ -458,20 +442,20 @@ body {
     justify-content: center;
     line-height: 1;
     transition: background-color 0.2s;
-    padding-bottom: 2px; /* 텍스트 정렬 */
+    padding-bottom: 2px;
     cursor: pointer;
 }
 .adjust-set-btn-small:hover {
-    background-color: #d1d5db; /* gray-300 */
+    background-color: #d1d5db;
 }
 
-/* v24 ★추가 (REQ 4): 전체 완료 버튼 스타일 */
+/* 전체 완료 버튼 */
 .complete-all-btn {
-    background-color: #f0fdf4; /* green-50 */
-    color: #16a34a; /* green-600 */
-    border: 1px solid #bbf7d0; /* green-200 */
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
     border-radius: 6px;
-    width: 28px; /* 크기 */
+    width: 28px;
     height: 28px;
     font-size: 1.1rem;
     font-weight: bold;
@@ -482,5 +466,21 @@ body {
     cursor: pointer;
 }
 .complete-all-btn:hover {
-    background-color: #dcfce7; /* green-100 */
+    background-color: #dcfce7;
+}
+
+/* 요약 / PR / 일일 기록용 공통 레이아웃 */
+.summary-exercise-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.summary-exercise-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
 }
