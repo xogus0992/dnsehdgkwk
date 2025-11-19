@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryModal: document.getElementById('summary-modal'),
         confirmModal: document.getElementById('custom-confirm-modal'),
         addToSessionModal: document.getElementById('add-to-session-modal'),
-        // Template Editor
         templateModalTitle: document.getElementById('template-modal-title'),
         templateTitleInput: document.getElementById('template-title-input'),
         openAddExerciseModalBtn: document.getElementById('open-add-exercise-modal-btn'),
@@ -36,25 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
         addUpdateExerciseBtn: document.getElementById('add-update-exercise-btn'),
         templateExerciseList: document.getElementById('template-exercise-list'),
         saveTemplateBtn: document.getElementById('save-template-btn'),
-        // Add Exercise
         newExercisePart: document.getElementById('new-exercise-part'),
         newExerciseName: document.getElementById('new-exercise-name'),
         saveNewExerciseBtn: document.getElementById('save-new-exercise-btn'),
         cancelAddExerciseBtn: document.getElementById('cancel-add-exercise-btn'),
-        // Workout Session
         workoutSessionTitle: document.getElementById('workout-session-title'),
         workoutSessionList: document.getElementById('workout-session-list'),
         addExerciseToSessionBtn: document.getElementById('add-exercise-to-session-btn'),
         saveSessionBtn: document.getElementById('save-session-btn'),
         hideSessionBtn: document.getElementById('hide-session-btn'),
-        // Add to Session Modal
         sessionCategorySelect: document.getElementById('session-ex-category-select'),
         sessionExListSelect: document.getElementById('session-ex-list-select'),
         sessionWeightInput: document.getElementById('session-weight-input'),
         sessionRepsInput: document.getElementById('session-reps-input'),
         sessionSetsInput: document.getElementById('session-sets-input'),
         saveToSessionBtn: document.getElementById('save-to-session-btn'),
-        // Timers
         sessionTotalTimerDisplay: document.getElementById('session-total-timer-display'),
         timerDigitalDisplay: document.getElementById('timer-digital-display'),
         analogClockHand: document.getElementById('clock-second-hand'),
@@ -63,34 +58,34 @@ document.addEventListener('DOMContentLoaded', () => {
         timerPlus30Btn: document.getElementById('timer-plus-30'),
         timerMinus10Btn: document.getElementById('timer-minus-10'),
         timerPlus10Btn: document.getElementById('timer-plus-10'),
-        // Daily Log
         dailyLogModalTitle: document.getElementById('daily-log-modal-title'),
         dailyLogModalList: document.getElementById('daily-log-modal-list'),
-        // Stats
         statsStartDateInput: document.getElementById('stats-start-date'),
         statsEndDateInput: document.getElementById('stats-end-date'),
         statsResetBtn: document.getElementById('stats-reset-btn'),
         statsPartSelector: document.getElementById('stats-part-selector'),
         statsExerciseSelect: document.getElementById('stats-exercise-select'),
         statsChartCanvas: document.getElementById('stats-chart-canvas'),
-        // PR Modal
         prList: document.getElementById('pr-list'),
         closePrModalBtn: document.getElementById('close-pr-modal'),
-        // Summary Modal
         summaryContent: document.getElementById('summary-content'),
         closeSummaryBtn: document.getElementById('close-summary-btn'),
-        // Confirm Modal
         confirmMessage: document.getElementById('confirm-message'),
         confirmOkBtn: document.getElementById('confirm-ok-btn'),
-        confirmCancelBtn: document.getElementById('confirm-cancel-btn')
+        confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+        choiceModal: document.getElementById('choice-modal'),
+        choiceMessage: document.getElementById('choice-message'),
+        choiceOverwriteBtn: document.getElementById('choice-overwrite-btn'),
+        choiceAppendBtn: document.getElementById('choice-append-btn'),
+        choiceCancelBtn: document.getElementById('choice-cancel-btn')
     };
 
     let currentDate = new Date();
     let selectedDate = null;
-    let workoutLogs = {}; // 'YYYY-MM-DD': [ { routineName, exercises: [...] }, ... ]
+    let workoutLogs = {}; 
     let routineTemplates = {};
     let exerciseDB = {};
-    let prRecords = {}; // { exerciseName: { weight, reps, date } }
+    let prRecords = {}; 
 
     let currentSession = {
         date: null,
@@ -104,20 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let currentEditingTemplateExerciseId = null;
     let currentEditingExerciseInSessionId = null; 
+    let lastSelectedBodyPart = null; 
+    let editingLogIndex = null; 
 
-    // 부위별 이미지 매핑
     const bodyPartImages = {
         "가슴": "images/chest.png",
         "등": "images/back.png",
         "하체": "images/legs.png",
-        "다리": "images/legs.png",
         "어깨": "images/shoulders.png",
         "팔": "images/arms.png",
-        "코어": "images/core.png",
         "복근": "images/core.png"
     };
 
-    // Timers
     let sessionTotalTimerInterval = null;
     let sessionTotalSeconds = 0;
     let sessionRestTimerInterval = null;
@@ -131,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let statsChart = null;
     let confirmCallback = null;
+    let choiceCallbacks = { onOverwrite: null, onAppend: null, onCancel: null };
 
     const DATA_VERSION = "v21";
     const LOG_KEY = `workoutLogs_${DATA_VERSION}`;
@@ -138,13 +132,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const EXERCISE_DB_KEY = `exerciseDB_${DATA_VERSION}`;
     const PR_KEY = `prRecords_${DATA_VERSION}`;
 
-    // 데이터 로드
+    const getLocalToday = () => {
+        const d = new Date();
+        const offset = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    };
+
     const loadData = () => {
         workoutLogs = JSON.parse(localStorage.getItem(LOG_KEY)) || {};
         routineTemplates = JSON.parse(localStorage.getItem(TEMPLATE_KEY)) || {};
         prRecords = JSON.parse(localStorage.getItem(PR_KEY)) || {};
         
-        // exerciseDB
         const storedExerciseDB = JSON.parse(localStorage.getItem(EXERCISE_DB_KEY));
         if (!storedExerciseDB || Object.keys(storedExerciseDB).length === 0) {
             exerciseDB = { ...exercisesData };
@@ -153,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
             exerciseDB = storedExerciseDB;
         }
 
-        // 기존 단일 로그를 배열 형태로 변환
         Object.keys(workoutLogs).forEach(date => {
             if (!Array.isArray(workoutLogs[date])) {
                 workoutLogs[date] = [ workoutLogs[date] ];
@@ -170,10 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveExerciseDB = () => saveData(EXERCISE_DB_KEY, exerciseDB);
     const savePRs = () => saveData(PR_KEY, prRecords);
 
-    // ===================================================================
-    // 캘린더
-    // ===================================================================
-
     const renderCalendar = (date) => {
         elements.calendarBody.innerHTML = '';
         const year = date.getFullYear();
@@ -184,13 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const firstDay = new Date(year, month, 1).getDay();
         const lastDate = new Date(year, month + 1, 0).getDate();
         
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayStr = getLocalToday();
         
         const prevLastDate = new Date(year, month, 0).getDate();
         for (let i = firstDay - 1; i >= 0; i--) {
-            elements.calendarBody.appendChild(createDayCell(prevLastDate - i, 'other-month', null, today));
+            elements.calendarBody.appendChild(createDayCell(prevLastDate - i, 'other-month', null, todayStr));
         }
 
         for (let day = 1; day <= lastDate; day++) {
@@ -199,16 +190,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dateStr === todayStr) classes.push('today');
             if (dateStr === selectedDate) classes.push('selected-day');
             
-            elements.calendarBody.appendChild(createDayCell(day, classes.join(' '), dateStr, today));
+            elements.calendarBody.appendChild(createDayCell(day, classes.join(' '), dateStr, todayStr));
         }
         
         const nextDays = (7 - (firstDay + lastDate) % 7) % 7;
         for (let day = 1; day <= nextDays; day++) {
-            elements.calendarBody.appendChild(createDayCell(day, 'other-month', null, today));
+            elements.calendarBody.appendChild(createDayCell(day, 'other-month', null, todayStr));
         }
     };
 
-    const createDayCell = (day, classes, dateStr, today) => {
+    const createDayCell = (day, classes, dateStr, todayStr) => {
         const dayCell = document.createElement('div');
         dayCell.className = `calendar-day ${classes}`;
         
@@ -221,31 +212,50 @@ document.addEventListener('DOMContentLoaded', () => {
             const logsForDay = workoutLogs[dateStr];
             const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
             const partsSet = new Set();
+            let totalVolume = 0; 
+
             logsArray.forEach(log => {
                 log.exercises.forEach(ex => {
                     const partKey = ex.part.toLowerCase().replace('/', '-').split(' ')[0];
                     partsSet.add(partKey);
+                    ex.sets.forEach(s => {
+                        if(s.completed) totalVolume += (s.weight * s.reps);
+                    });
                 });
             });
+
+            if (totalVolume > 0) {
+                const volDiv = document.createElement('div');
+                volDiv.className = 'calendar-volume-text';
+                volDiv.innerText = `${(totalVolume).toLocaleString()}kg`;
+                dayCell.appendChild(volDiv);
+            }
 
             const partsContainer = document.createElement('div');
             partsContainer.className = 'day-parts';
             partsSet.forEach(part => {
                 const partSpan = document.createElement('span');
-                partSpan.className = `part-${part}`;
-                partSpan.textContent = part.charAt(0).toUpperCase() + part.slice(1);
-                partsContainer.appendChild(partSpan);
+                let className = `part-${part}`;
+                if(part === '복근') className = 'part-abs';
+                const partSpanEl = document.createElement('span');
+                partSpanEl.className = className;
+                partSpanEl.textContent = part.charAt(0).toUpperCase() + part.slice(1);
+                partsContainer.appendChild(partSpanEl);
             });
             dayCell.appendChild(partsContainer);
             dayCell.dataset.date = dateStr;
         }
 
         if (dateStr) {
-            const cellDate = new Date(dateStr);
-            if (cellDate > today) {
+            if (dateStr > todayStr) {
                 dayCell.classList.add('future-day');
             } else {
                 dayCell.addEventListener('click', () => handleDayClick(dateStr, dayCell));
+                dayCell.addEventListener('dblclick', () => {
+                    if (workoutLogs[dateStr]) {
+                        openDailyLogModal(dateStr);
+                    }
+                });
             }
         }
         
@@ -253,23 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const handleDayClick = (dateStr, dayCell) => {
-        if (selectedDate === dateStr) {
-            openDailyLogModal(dateStr);
-            return;
-        }
-
         const oldSelected = elements.calendarBody.querySelector('.selected-day');
         if (oldSelected) {
             oldSelected.classList.remove('selected-day');
         }
-        
         dayCell.classList.add('selected-day');
         selectedDate = dateStr;
     };
-
-    // ===================================================================
-    // 루틴 템플릿
-    // ===================================================================
 
     const renderTemplateList = () => {
         elements.routineTemplateList.innerHTML = '';
@@ -340,9 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
         controlsDiv.appendChild(startBtn);
         controlsDiv.appendChild(deleteBtn);
         
-        // 카드의 나머지 영역 클릭 시도 "실행"
         card.addEventListener('click', (e) => {
-            if (e.target === card || e.target === infoDiv || e.target === partsP) {
+            if (e.target === card || e.target === infoDiv || e.target === partsP || e.target === detailsDiv) {
                 startWorkoutFromTemplate(id);
             }
         });
@@ -362,19 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const template = routineTemplates[templateId];
         if (!template) return;
         
-        if (workoutLogs[selectedDate] && workoutLogs[selectedDate].length > 0) {
-            customConfirm(`${selectedDate}에 이미 운동 기록이 있습니다.\n오늘 운동을 추가로 기록하시겠습니까?`, () => {
-                loadTemplateIntoSession(template);
-            });
-        } else {
-            loadTemplateIntoSession(template);
-        }
-    };
-    
-    const loadTemplateIntoSession = (template) => {
-        currentSession.date = selectedDate;
-        currentSession.routineName = template.name;
-        currentSession.exercises = template.exercises.map(ex => ({
+        const templateExercises = template.exercises.map(ex => ({
             id: `ex_${Date.now()}_${Math.random()}`,
             name: ex.name,
             part: ex.part,
@@ -385,13 +372,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 completed: false
             }))
         }));
-        
+
+        if (workoutLogs[selectedDate] && workoutLogs[selectedDate].length > 0) {
+            customConfirm(`${selectedDate}에 이미 운동 기록이 있습니다.\n추가하시겠습니까?`, () => {
+                startSession(template.name, templateExercises);
+            });
+        } else {
+            startSession(template.name, templateExercises);
+        }
+    };
+    
+    const startSession = (name, exercises) => {
+        editingLogIndex = null;
+        currentSession.date = selectedDate;
+        currentSession.routineName = name;
+        currentSession.exercises = exercises;
         openWorkoutSessionModal();
     };
 
-    // ===================================================================
-    // 모달 공통
-    // ===================================================================
     let modalStack = [];
     const openModal = (modalEl) => {
         const zIndex = 50 + modalStack.length;
@@ -420,7 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(elements.confirmModal);
     };
 
-    // 운동 데이터베이스 선택 UI
+    const showChoiceModal = (message, callbacks) => {
+        elements.choiceMessage.textContent = message;
+        choiceCallbacks = callbacks;
+        openModal(elements.choiceModal);
+    };
+
     const populateExerciseSelect = (selectEl, part) => {
         selectEl.innerHTML = '<option value="">운동 선택</option>';
         if (part && exerciseDB[part]) {
@@ -455,12 +458,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
-    // ===================================================================
-    // 새 운동 만들기
-    // ===================================================================
-
     const openAddExerciseModal = () => {
         populateCategorySelect(elements.newExercisePart);
+        if(lastSelectedBodyPart) {
+            elements.newExercisePart.value = lastSelectedBodyPart;
+        }
         elements.newExerciseName.value = '';
         openModal(elements.addExerciseModal);
     };
@@ -474,6 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        lastSelectedBodyPart = part; 
+
         if (!exerciseDB[part]) exerciseDB[part] = [];
         
         if (exerciseDB[part].some(ex => ex.name === name)) {
@@ -493,10 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         closeModal(elements.addExerciseModal);
     };
-
-    // ===================================================================
-    // 템플릿 편집기
-    // ===================================================================
 
     const openTemplateEditorModal = (templateId = null) => {
         if (templateId) {
@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('부위, 운동, 세트 수를 모두 입력하세요.');
             return;
         }
-
+        
         if (currentEditingTemplateExerciseId) {
             const ex = currentTemplate.exercises.find(e => e.id === currentEditingTemplateExerciseId);
             if (ex) {
@@ -608,11 +608,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         renderTemplateExerciseList();
-        
         currentEditingTemplateExerciseId = null;
         elements.addUpdateExerciseBtn.textContent = "운동 추가";
-        elements.exerciseCategorySelect.value = "";
-        populateExerciseSelect(elements.exerciseListSelect, "");
         elements.templateWeightInput.value = "";
         elements.templateRepsInput.value = "";
         elements.templateSetsInput.value = "";
@@ -638,13 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(elements.templateEditorModal);
     };
 
-    // ===================================================================
-    // 운동 세션 모달
-    // ===================================================================
-    
     const openWorkoutSessionModal = () => {
         elements.workoutSessionTitle.textContent = currentSession.routineName;
-        elements.prList.innerHTML = ""; // PR 리스트 초기화
+        elements.prList.innerHTML = "";
         renderWorkoutSessionList();
         startSessionTimers();
         openModal(elements.workoutSessionModal);
@@ -685,12 +678,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const exerciseHeader = document.createElement('div');
         exerciseHeader.className = 'exercise-header';
-
-        const exerciseNameEl = document.createElement('h4');
-        exerciseNameEl.className = 'exercise-name';
-        exerciseNameEl.textContent = exercise.name;
-        exerciseNameEl.style.cursor = 'pointer';
-        exerciseNameEl.addEventListener('click', () => {
+        
+        const imgUrl = bodyPartImages[exercise.part] || bodyPartImages["가슴"];
+        const headerLeft = document.createElement('div');
+        headerLeft.className = 'flex items-center gap-2';
+        headerLeft.innerHTML = `
+            <img src="${imgUrl}" class="w-8 h-8 rounded border">
+            <h4 class="exercise-name cursor-pointer">${exercise.name}</h4>
+        `;
+        headerLeft.querySelector('.exercise-name').addEventListener('click', () => {
             openAddToSessionModal(exercise.id);
         });
 
@@ -703,7 +699,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const removeSetBtn = document.createElement('button');
         removeSetBtn.className = 'adjust-set-btn-small';
         removeSetBtn.textContent = '–';
-        removeSetBtn.title = '세트 삭제';
         removeSetBtn.onclick = () => {
             if (exercise.sets.length > 1) {
                 exercise.sets.pop();
@@ -714,7 +709,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const addSetBtn = document.createElement('button');
         addSetBtn.className = 'adjust-set-btn-small';
         addSetBtn.textContent = '+';
-        addSetBtn.title = '세트 추가';
         addSetBtn.onclick = () => {
             const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: 0, reps: 0 };
             exercise.sets.push({
@@ -737,13 +731,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-exercise-btn';
         deleteBtn.textContent = '×';
-        deleteBtn.title = "운동 삭제";
         deleteBtn.onclick = () => deleteExercise(exercise.id, card);
 
         controlsWrapper.appendChild(setControlsDiv);
         controlsWrapper.appendChild(completeAllBtn);
         controlsWrapper.appendChild(deleteBtn);
-        exerciseHeader.appendChild(exerciseNameEl);
+        
+        exerciseHeader.appendChild(headerLeft);
         exerciseHeader.appendChild(controlsWrapper);
         card.appendChild(exerciseHeader);
 
@@ -764,16 +758,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         card.appendChild(setsContainer);
 
-        // 전체 완료 / 전체 취소 토글
         completeAllBtn.onclick = () => {
             const allCompleted = exercise.sets.every(s => s.completed);
             const targetChecked = !allCompleted;
 
-            card.querySelectorAll('.set-checkbox').forEach(checkbox => {
+            card.querySelectorAll('.set-checkbox').forEach((checkbox, idx) => {
                 checkbox.checked = targetChecked;
                 const setItem = checkbox.closest('.set-item');
                 const setId = setItem.dataset.setId;
-                handleSetComplete(checkbox, setItem, exercise.id, setId, false);
+                const isLast = idx === exercise.sets.length - 1;
+                handleSetComplete(checkbox, setItem, exercise.id, setId, isLast && targetChecked);
             });
         };
 
@@ -784,23 +778,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const setItem = document.createElement('div');
         setItem.className = 'set-item';
         setItem.dataset.setId = set.id;
-        if (set.completed) {
-            setItem.classList.add('set-completed');
-        }
+        if (set.completed) setItem.classList.add('set-completed');
+
+        const createStepperHtml = (value, type) => `
+            <div class="stepper-input-wrapper">
+                <input type="number" class="stepper-input ${type}-input" value="${value}" placeholder="0">
+                <div class="stepper-controls">
+                    <div class="stepper-btn up">▲</div>
+                    <div class="stepper-btn down">▼</div>
+                </div>
+            </div>
+        `;
 
         setItem.innerHTML = `
             <span class="set-number">${index}</span>
-            <div><input type="number" class="set-input weight-input" value="${set.weight}" placeholder="0"></div>
-            <div><input type="number" class="set-input reps-input" value="${set.reps}" placeholder="0"></div>
+            <div>${createStepperHtml(set.weight, 'weight')}</div>
+            <div>${createStepperHtml(set.reps, 'reps')}</div>
             <div><input type="checkbox" class="set-checkbox" ${set.completed ? 'checked' : ''}></div>
         `;
 
         const weightInput = setItem.querySelector('.weight-input');
         const repsInput = setItem.querySelector('.reps-input');
         const setCheckbox = setItem.querySelector('.set-checkbox');
-        
+
         weightInput.addEventListener('change', () => { set.weight = parseFloat(weightInput.value) || 0; });
         repsInput.addEventListener('change', () => { set.reps = parseInt(repsInput.value) || 0; });
+
+        const setupStepper = (input, type) => {
+            const wrapper = input.closest('.stepper-input-wrapper');
+            wrapper.querySelector('.up').addEventListener('click', () => {
+                input.value = Number(input.value) + 1;
+                input.dispatchEvent(new Event('change'));
+            });
+            wrapper.querySelector('.down').addEventListener('click', () => {
+                if(input.value > 0) {
+                    input.value = Number(input.value) - 1;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+        setupStepper(weightInput, 'weight');
+        setupStepper(repsInput, 'reps');
         
         setCheckbox.addEventListener('change', () => {
             handleSetComplete(setCheckbox, setItem, exercise.id, set.id, true);
@@ -834,7 +852,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 세션에 운동 추가/수정 모달
     const openAddToSessionModal = (editingExerciseId = null) => {
         const modal = elements.addToSessionModal;
         const title = modal.querySelector('#add-to-session-modal-title');
@@ -956,17 +973,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!workoutLogs[currentSession.date]) {
             workoutLogs[currentSession.date] = [];
         }
-        workoutLogs[currentSession.date].push(finalLog);
+        
+        if (editingLogIndex !== null && editingLogIndex >= 0) {
+             workoutLogs[currentSession.date][editingLogIndex] = finalLog;
+        } else {
+             workoutLogs[currentSession.date].push(finalLog);
+        }
         
         saveLogs();
         renderCalendar(currentDate); 
         closeWorkoutSessionModal();
         openSummaryModal(finalLog);
+        editingLogIndex = null;
     };
-
-    // ===================================================================
-    // 타이머
-    // ===================================================================
 
     const startSessionTimers = () => {
         sessionTotalSeconds = 0;
@@ -1029,7 +1048,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const seconds = sessionRestSeconds % 60;
         elements.timerDigitalDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
-        const angle = (sessionRestDefaultSeconds - sessionRestSeconds) / sessionRestDefaultSeconds * 360;
+        const total = sessionRestDefaultSeconds > 0 ? sessionRestDefaultSeconds : 60;
+        const angle = ((total - sessionRestSeconds) / total) * 360;
         elements.analogClockHand.style.transform = `rotate(${angle}deg)`;
     };
     
@@ -1041,18 +1061,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elements.floatingTimerDisplay.textContent = `${String(Math.floor(sessionRestSeconds / 60)).padStart(2, '0')}:${String(sessionRestSeconds % 60).padStart(2, '0')}`;
         
-        const progress = sessionRestSeconds / sessionRestDefaultSeconds;
+        const total = sessionRestDefaultSeconds > 0 ? sessionRestDefaultSeconds : 60;
+        const progress = sessionRestSeconds / total;
         const offset = floatingTimerCircumference * (1 - progress);
         elements.floatingTimerProgress.style.strokeDasharray = `${floatingTimerCircumference}`;
         elements.floatingTimerProgress.style.strokeDashoffset = offset;
     };
     
     const adjustRestTimer = (seconds) => {
-        sessionRestDefaultSeconds = Math.max(0, sessionRestDefaultSeconds + seconds);
-        elements.timerInput.value = sessionRestDefaultSeconds;
-        if (!isRestTimerRunning) {
-            sessionRestSeconds = sessionRestDefaultSeconds;
-            updateRestTimerDisplay();
+        sessionRestSeconds = Math.max(0, sessionRestSeconds + seconds);
+        updateRestTimerDisplay();
+        if (isRestTimerRunning) {
+            updateFloatingTimerDisplay();
         }
     };
     
@@ -1079,12 +1099,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
     
-    // ===================================================================
-    // PR 및 요약
-    // ===================================================================
-
     const checkPR = (exerciseName, weight, reps) => {
         const currentPR = prRecords[exerciseName] || { weight: 0, reps: 0 };
+        
         const estimated1RM = weight * (1 + reps / 30);
         const current1RM = currentPR.weight * (1 + currentPR.reps / 30);
 
@@ -1093,7 +1110,6 @@ document.addEventListener('DOMContentLoaded', () => {
             prRecords[exerciseName] = newPR;
             savePRs();
 
-            // 기존 같은 운동의 PR 표시 삭제
             Array.from(elements.prList.children).forEach(child => {
                 if (child.dataset && child.dataset.exercise === exerciseName) {
                     elements.prList.removeChild(child);
@@ -1133,6 +1149,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         log.exercises.forEach(ex => {
             const imgUrl = bodyPartImages[ex.part] || bodyPartImages["가슴"];
+
+            const hasCompletedSets = ex.sets.some(s => s.completed);
+            if(!hasCompletedSets) return;
 
             const exWrap = document.createElement('div');
             exWrap.className = 'summary-exercise-item';
@@ -1190,10 +1209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===================================================================
-    // 일간 로그 모달
-    // ===================================================================
-    
     const openDailyLogModal = (dateStr) => {
         const logs = workoutLogs[dateStr];
         if (!logs || (Array.isArray(logs) && logs.length === 0)) {
@@ -1210,13 +1225,54 @@ document.addEventListener('DOMContentLoaded', () => {
             const logWrapper = document.createElement('div');
             logWrapper.className = 'mb-4 pb-4 border-b';
             
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'flex justify-between items-center mb-2';
+            
             const logTitle = document.createElement('h3');
-            logTitle.className = 'text-xl font-bold text-blue-600 mb-2';
+            logTitle.className = 'text-xl font-bold text-blue-600';
             logTitle.textContent = `[운동 ${index + 1}] ${log.routineName}`;
-            logWrapper.appendChild(logTitle);
+            
+            const btnGroup = document.createElement('div');
+            btnGroup.className = 'flex gap-2';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'text-sm bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded';
+            editBtn.textContent = '수정';
+            editBtn.onclick = () => {
+                editingLogIndex = index;
+                currentSession.date = dateStr;
+                currentSession.routineName = log.routineName;
+                currentSession.exercises = JSON.parse(JSON.stringify(log.exercises));
+                closeModal(elements.dailyLogModal);
+                openWorkoutSessionModal();
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-sm bg-red-100 text-red-500 hover:bg-red-200 px-2 py-1 rounded';
+            deleteBtn.textContent = '삭제';
+            deleteBtn.onclick = () => {
+                customConfirm("이 운동 기록을 정말 삭제하시겠습니까?", () => {
+                    workoutLogs[dateStr].splice(index, 1);
+                    if(workoutLogs[dateStr].length === 0) delete workoutLogs[dateStr];
+                    saveLogs();
+                    renderCalendar(currentDate);
+                    closeModal(elements.dailyLogModal);
+                    if(workoutLogs[dateStr]) openDailyLogModal(dateStr);
+                });
+            };
+
+            btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(deleteBtn);
+            
+            headerDiv.appendChild(logTitle);
+            headerDiv.appendChild(btnGroup);
+            logWrapper.appendChild(headerDiv);
 
             log.exercises.forEach(ex => {
                 const imgUrl = bodyPartImages[ex.part] || bodyPartImages["가슴"];
+
+                const hasCompletedSets = ex.sets.some(s => s.completed);
+                if(!hasCompletedSets) return;
 
                 const exWrap = document.createElement('div');
                 exWrap.className = 'summary-exercise-item mb-2';
@@ -1270,18 +1326,16 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(elements.dailyLogModal);
     };
     
-    // ===================================================================
-    // 통계
-    // ===================================================================
-    
     const openStatsModal = () => {
-        const today = new Date();
-        const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const today = new Date(); 
+        const endStr = getLocalToday();
+        
+        const end = new Date(endStr);
         const start = new Date(end);
-        start.setDate(start.getDate() - 6); // 최근 7일
+        start.setDate(start.getDate() - 6);
 
         elements.statsStartDateInput.value = start.toISOString().split('T')[0];
-        elements.statsEndDateInput.value = end.toISOString().split('T')[0];
+        elements.statsEndDateInput.value = endStr;
         
         elements.statsPartSelector.innerHTML = "";
         const allBtn = createPartBtn('전체');
@@ -1325,6 +1379,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    const getRandomColor = () => {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    };
+
     const updateStatsChart = () => {
         const startDate = elements.statsStartDateInput.value;
         const endDate = elements.statsEndDateInput.value;
@@ -1338,47 +1401,115 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             dates.push(d.toISOString().split('T')[0]);
         }
+        
+        let datasets = [];
 
-        const volumes = dates.map(date => {
-            const logsForDay = workoutLogs[date];
-            if (!logsForDay) return 0;
-            const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
+        if (part === '전체') {
+            const bodyParts = Object.keys(bodyPartImages);
+            const partColors = {
+                "가슴": '#ff6384', "등": '#36a2eb', "하체": '#cc65fe',
+                "어깨": '#ffce56', "팔": '#4bc0c0', "복근": '#9966ff'
+            };
 
-            let dailyVolume = 0;
-            logsArray.forEach(log => {
-                log.exercises.forEach(ex => {
-                    if ((part === '전체' || ex.part === part) && (exercise === '전체' || ex.name === exercise)) {
-                        ex.sets.forEach(set => {
-                            if (set.completed) {
-                                dailyVolume += set.weight * set.reps;
+            datasets = bodyParts.map(bp => {
+                return {
+                    label: bp,
+                    backgroundColor: partColors[bp] || '#999',
+                    stack: 'combined', 
+                    data: dates.map(date => {
+                        const logsForDay = workoutLogs[date];
+                        if (!logsForDay) return 0;
+                        const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
+                        
+                        let vol = 0;
+                        logsArray.forEach(log => {
+                            log.exercises.forEach(ex => {
+                                if (exercise !== '전체' && ex.name !== exercise) return;
+                                if (ex.part === bp) {
+                                    ex.sets.forEach(s => {
+                                        if (s.completed) vol += (s.weight * s.reps);
+                                    });
+                                }
+                            });
+                        });
+                        return vol;
+                    })
+                };
+            });
+
+        } else {
+            const exerciseNames = new Set();
+            dates.forEach(date => {
+                const logsForDay = workoutLogs[date];
+                if (logsForDay) {
+                    const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
+                    logsArray.forEach(log => {
+                        log.exercises.forEach(ex => {
+                            if (ex.part === part) {
+                                if (exercise === '전체' || ex.name === exercise) {
+                                    exerciseNames.add(ex.name);
+                                }
                             }
                         });
-                    }
-                });
+                    });
+                }
             });
-            return dailyVolume;
-        });
+
+            datasets = Array.from(exerciseNames).map(exName => {
+                return {
+                    label: exName,
+                    backgroundColor: getRandomColor(),
+                    stack: 'combined',
+                    data: dates.map(date => {
+                        const logsForDay = workoutLogs[date];
+                        if (!logsForDay) return 0;
+                        const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
+                        
+                        let vol = 0;
+                        logsArray.forEach(log => {
+                            log.exercises.forEach(ex => {
+                                if (ex.name === exName) {
+                                    ex.sets.forEach(s => {
+                                        if (s.completed) vol += (s.weight * s.reps);
+                                    });
+                                }
+                            });
+                        });
+                        return vol;
+                    })
+                };
+            });
+        }
+
+        const filteredDatasets = datasets.filter(ds => ds.data.some(v => v > 0));
 
         if (statsChart) statsChart.destroy();
         
         statsChart = new Chart(elements.statsChartCanvas, {
             type: 'bar',
             data: {
-                labels: dates,
-                datasets: [
-                    {
-                        label: '총 볼륨 (kg)',
-                        data: volumes,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)'
-                    }
-                ]
+                labels: dates.map(d => d.slice(5)),
+                datasets: filteredDatasets.length > 0 ? filteredDatasets : [{label:'데이터 없음', data:[], stack:'combined'}]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        title: { display: true, text: '볼륨 (kg)' }
+                    x: { stacked: true },
+                    y: { 
+                        stacked: true, 
+                        beginAtZero: true, 
+                        title: { display: true, text: '볼륨 (kg)' } 
+                    }
+                },
+                plugins: {
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw.toLocaleString()} kg`;
+                            }
+                        }
                     }
                 }
             }
@@ -1386,28 +1517,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const resetStatsDate = () => {
-        const today = new Date();
-        const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endStr = getLocalToday();
+        const end = new Date(endStr);
         const start = new Date(end);
         start.setDate(start.getDate() - 6);
 
         elements.statsStartDateInput.value = start.toISOString().split('T')[0];
-        elements.statsEndDateInput.value = end.toISOString().split('T')[0];
+        elements.statsEndDateInput.value = endStr;
         updateStatsChart();
     };
     
-    // Enter 키 이동
     const addEnterNavigation = (inputs) => {
         inputs.forEach((input, index) => {
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    
                     if (input.tagName === 'BUTTON') {
                         input.click();
                         return; 
                     }
-
                     const nextInput = inputs[index + 1];
                     if (nextInput) {
                         nextInput.focus();
@@ -1425,12 +1553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // ===================================================================
-    // 이벤트 리스너 초기화
-    // ===================================================================
-
     const initEventListeners = () => {
-        // 캘린더
         elements.prevMonthBtn.addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
             renderCalendar(currentDate);
@@ -1441,7 +1564,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         elements.todayBtn.addEventListener('click', () => {
             currentDate = new Date();
-            selectedDate = new Date().toISOString().split('T')[0];
+            selectedDate = getLocalToday();
             renderCalendar(currentDate);
         });
         elements.dateSearchBtn.addEventListener('click', () => {
@@ -1450,23 +1573,18 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.dateSearchInput.addEventListener('change', () => {
             const dateStr = elements.dateSearchInput.value;
             if (dateStr) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const cellDate = new Date(dateStr);
-
-                if (cellDate > today) {
+                const todayStr = getLocalToday();
+                if (dateStr > todayStr) {
                     alert("오늘 이후의 날짜는 선택할 수 없습니다.");
                     elements.dateSearchInput.value = "";
                     return;
                 }
-                
                 currentDate = new Date(dateStr);
                 selectedDate = dateStr;
                 renderCalendar(currentDate);
             }
         });
         
-        // 메인
         elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditorModal());
         elements.openStatsModalBtn.addEventListener('click', openStatsModal);
         elements.backBtn.addEventListener('click', () => {
@@ -1474,7 +1592,6 @@ document.addEventListener('DOMContentLoaded', () => {
             else alert('이전 페이지가 없습니다.');
         });
 
-        // 템플릿 편집기
         elements.openAddExerciseModalBtn.addEventListener('click', openAddExerciseModal);
         elements.exerciseCategorySelect.addEventListener('change', (e) => {
             populateExerciseSelect(elements.exerciseListSelect, e.target.value);
@@ -1492,7 +1609,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addUpdateExerciseBtn
         ]);
 
-        // 새 운동 만들기
         elements.saveNewExerciseBtn.addEventListener('click', handleSaveNewExercise);
         elements.cancelAddExerciseBtn.addEventListener('click', () => closeModal(elements.addExerciseModal));
         
@@ -1502,12 +1618,11 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.saveNewExerciseBtn
         ]);
 
-        // 운동 세션
         elements.addExerciseToSessionBtn.addEventListener('click', () => openAddToSessionModal()); 
         elements.saveSessionBtn.addEventListener('click', handleSaveSession);
 
-        // X 버튼: 세션 종료
-        elements.hideSessionBtn.addEventListener('click', () => {
+        elements.hideSessionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             customConfirm("운동 세션을 종료하시겠습니까?\n저장되지 않은 기록은 사라집니다.", () => {
                 stopSessionTimers(true);
                 currentSession = {
@@ -1534,7 +1649,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.saveToSessionBtn
         ]);
 
-        // 타이머
         elements.timerInput.addEventListener('change', () => {
             sessionRestDefaultSeconds = parseInt(elements.timerInput.value) || 60;
             if (!isRestTimerRunning) {
@@ -1547,12 +1661,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.timerMinus10Btn.addEventListener('click', () => adjustRestTimer(-10));
         elements.timerPlus10Btn.addEventListener('click', () => adjustRestTimer(10));
         
-        // 플로팅 타이머
         elements.floatingTimer.addEventListener('click', () => {
             elements.floatingTimer.style.display = 'none';
             elements.workoutSessionModal.style.display = 'flex';
             openModal(elements.workoutSessionModal); 
         });
+        
         elements.closeFloatingTimer.addEventListener('click', (e) => {
             e.stopPropagation();
             customConfirm("운동 세션을 종료하시겠습니까?\n저장되지 않은 기록은 사라집니다.", () => {
@@ -1566,20 +1680,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 통계
         elements.statsStartDateInput.addEventListener('change', updateStatsChart);
         elements.statsEndDateInput.addEventListener('change', updateStatsChart);
         elements.statsExerciseSelect.addEventListener('change', updateStatsChart);
         elements.statsResetBtn.addEventListener('click', resetStatsDate);
         
-        // PR/요약 모달
         elements.closePrModalBtn.addEventListener('click', () => {
             closeModal(elements.prCelebrationModal);
             openModal(elements.summaryModal); 
         });
         elements.closeSummaryBtn.addEventListener('click', () => closeModal(elements.summaryModal));
 
-        // 확인 모달
         elements.confirmOkBtn.addEventListener('click', () => {
             if (confirmCallback) confirmCallback();
             confirmCallback = null;
@@ -1589,13 +1700,24 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmCallback = null;
             closeModal(elements.confirmModal);
         });
+        
+        elements.choiceOverwriteBtn.addEventListener('click', () => {
+            if(choiceCallbacks.onOverwrite) choiceCallbacks.onOverwrite();
+            closeModal(elements.choiceModal);
+        });
+        elements.choiceAppendBtn.addEventListener('click', () => {
+            if(choiceCallbacks.onAppend) choiceCallbacks.onAppend();
+            closeModal(elements.choiceModal);
+        });
+        elements.choiceCancelBtn.addEventListener('click', () => {
+            if(choiceCallbacks.onCancel) choiceCallbacks.onCancel();
+            closeModal(elements.choiceModal);
+        });
 
-        // 전역 모달 닫기
         document.querySelectorAll('.modal-overlay').forEach(modal => {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal && modal.id !== 'custom-confirm-modal') {
+                if (e.target === modal && modal.id !== 'custom-confirm-modal' && modal.id !== 'choice-modal') {
                     if (modal.id === 'workout-session-modal') {
-                        // 백그라운드 전환
                         elements.workoutSessionModal.style.display = 'none';
                         elements.floatingTimer.style.display = 'flex';
                         updateFloatingTimerDisplay();
@@ -1612,7 +1734,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Esc 키
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 let topModal = null;
@@ -1632,7 +1753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.workoutSessionModal.style.display = 'none';
                         elements.floatingTimer.style.display = 'flex';
                         updateFloatingTimerDisplay();
-                    } else if (topModal.id !== 'custom-confirm-modal') {
+                    } else if (topModal.id !== 'custom-confirm-modal' && topModal.id !== 'choice-modal') {
                         closeModal(topModal);
                     }
                 }
@@ -1652,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const init = () => {
         loadData();
-        selectedDate = new Date().toISOString().split('T')[0];
+        selectedDate = getLocalToday();
         renderCalendar(currentDate);
         renderTemplateList();
         initEventListeners();
