@@ -12,10 +12,8 @@ body {
     cursor:pointer; transition: all 0.2s; min-height:95px; display:flex; flex-direction:column; justify-content:space-between;
 }
 .calendar-day:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
-
 .calendar-day.selected-day { background-color: #ebf8ff; border-color: #63b3ed; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(59,130,246,0.2), 0 4px 6px -2px rgba(59,130,246,0.1); }
 .calendar-day.other-month { background-color: #fdfdfe; color: #a0aec0; }
-
 .calendar-day.today { 
     color: #2563eb; 
     font-weight: 700;
@@ -26,7 +24,6 @@ body {
     border-color: #3b82f6;
     color: #1e40af;
 }
-
 .calendar-day.future-day {
     background-color: #f8fafc;
     color: #cbd5e1;
@@ -36,7 +33,6 @@ body {
     transform: none;
     box-shadow: none;
 }
-
 .calendar-volume-text { 
     font-size: 0.75rem; 
     font-weight: 700; 
@@ -45,7 +41,6 @@ body {
     line-height: 1.2;
     word-break: keep-all;
 }
-
 .day-number { font-weight: 600; font-size: 0.95em; }
 .day-parts { font-size:0.75em; color: #4a5568; margin-top:5px; line-height:1.4; word-break: keep-all; }
 .day-parts span {
@@ -62,7 +57,6 @@ body {
 .day-parts .part-arms { background-color: #faf5ff; color: #9333ea; }
 .day-parts .part-abs { background-color: #fff7ed; color: #f97316; }
 .day-parts .part-cardio { background-color: #f1f5f9; color: #475569; }
-
 .template-card {
     display: flex;
     justify-content: space-between;
@@ -135,7 +129,6 @@ body {
 .template-controls .start-btn:hover {
     background-color: #bfdbfe;
 }
-
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -179,7 +172,6 @@ body {
 #daily-log-modal .modal-content {
     max-width: 600px;
 }
-
 .workout-panel {
     background-color: #ffffff;
 }
@@ -209,7 +201,6 @@ body {
 #clock-second-hand {
     transition: transform 1s linear;
 }
-
 .exercise-card {
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
@@ -241,7 +232,6 @@ body {
     transition: color 0.2s;
 }
 .delete-exercise-btn:hover { color: #b91c1c; }
-
 .set-header {
     display: grid;
     grid-template-columns: 30px 1fr 1fr 50px;
@@ -267,7 +257,6 @@ body {
     background-color: #f0fdf4;
     opacity: 0.8;
 }
-
 .stepper-input-wrapper {
     position: relative;
     width: 100%;
@@ -282,7 +271,7 @@ body {
     font-weight: 600;
     color: #1f2937;
     -moz-appearance: textfield;
-    appearance: textfield;
+    appearance: none;
 }
 .stepper-input::-webkit-outer-spin-button,
 .stepper-input::-webkit-inner-spin-button {
@@ -315,7 +304,6 @@ body {
 .stepper-btn:hover { background: #e5e7eb; color: #1f2937; }
 .stepper-btn.up { border-top-right-radius: 5px; border-bottom: 1px solid #e5e7eb; }
 .stepper-btn.down { border-bottom-right-radius: 5px; }
-
 .set-checkbox {
     width: 28px;
     height: 28px;
@@ -325,7 +313,6 @@ body {
     margin: 0 auto;
     cursor: pointer;
 }
-
 .template-exercise-item {
     display: flex;
     justify-content: space-between;
@@ -338,14 +325,12 @@ body {
 .template-exercise-name { font-weight: 600; }
 .template-exercise-info { font-size: 0.9rem; color: #475569; }
 .template-exercise-delete { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; }
-
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 .modal-content { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
 .workout-panel #workout-session-list { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
-
 .part-btn {
     padding: 6px 12px;
     border: 1px solid #e2e8f0;
@@ -361,7 +346,6 @@ body {
     color: #2563eb;
     font-weight: 600;
 }
-
 #floating-timer {
     position: fixed;
     bottom: 24px;
@@ -383,10 +367,8 @@ body {
     stroke: #3b82f6;
     stroke-linecap: round;
 }
-
 #custom-confirm-modal .modal-content { width: 400px; max-width: 90%; }
 #confirm-modal-text { font-size: 1.2rem; margin-bottom: 24px; text-align: center; white-space: pre-line; }
-
 .timer-adjust-btn {
     background-color: #e5e7eb;
     color: #4b5563;
@@ -398,7 +380,6 @@ body {
     transition: background-color 0.2s;
 }
 .timer-adjust-btn:hover { background-color: #d1d5db; }
-
 .adjust-set-btn-small {
     background-color: #e5e7eb;
     color: #4b5563;
@@ -416,7 +397,6 @@ body {
     cursor: pointer;
 }
 .adjust-set-btn-small:hover { background-color: #d1d5db; }
-
 .complete-all-btn {
     background-color: #f0fdf4;
     color: #16a34a;
@@ -433,7 +413,6 @@ body {
     cursor: pointer;
 }
 .complete-all-btn:hover { background-color: #dcfce7; }
-
 .summary-exercise-item {
     display: flex;
     align-items: flex-start;

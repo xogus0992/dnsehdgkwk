@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         backBtn: document.getElementById('back-to-main-btn'),
+        resetDataBtn: document.getElementById('reset-data-btn'), // 추가됨
         calendarTitle: document.getElementById('calendar-title'),
         calendarBody: document.getElementById('calendar'),
         prevMonthBtn: document.getElementById('prev-month-btn'),
@@ -156,6 +157,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 workoutLogs[date] = [ workoutLogs[date] ];
             }
         });
+
+        // 자동 마이그레이션: 복근/코어, 코어 -> 복근, 다리 -> 하체
+        let dataChanged = false;
+        const migrateKey = (obj, oldKey, newKey) => {
+            if (obj[oldKey]) {
+                obj[newKey] = obj[oldKey];
+                delete obj[oldKey];
+                dataChanged = true;
+            }
+        };
+
+        migrateKey(exerciseDB, "복근/코어", "복근");
+        migrateKey(exerciseDB, "코어", "복근");
+        migrateKey(exerciseDB, "다리", "하체");
+        
+        if (dataChanged) saveExerciseDB();
+
+        dataChanged = false;
+        Object.keys(workoutLogs).forEach(date => {
+            workoutLogs[date].forEach(log => {
+                log.exercises.forEach(ex => {
+                    if (ex.part === "복근/코어" || ex.part === "코어") {
+                        ex.part = "복근";
+                        dataChanged = true;
+                    }
+                    if (ex.part === "다리") {
+                        ex.part = "하체";
+                        dataChanged = true;
+                    }
+                });
+            });
+        });
+        if (dataChanged) saveLogs();
+
+        dataChanged = false;
+        Object.keys(routineTemplates).forEach(id => {
+             routineTemplates[id].exercises.forEach(ex => {
+                  if (ex.part === "복근/코어" || ex.part === "코어") {
+                        ex.part = "복근";
+                        dataChanged = true;
+                  }
+                  if (ex.part === "다리") {
+                        ex.part = "하체";
+                        dataChanged = true;
+                  }
+             });
+        });
+        if (dataChanged) saveTemplates();
     };
 
     const saveData = (key, data) => {
@@ -1590,6 +1639,14 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.backBtn.addEventListener('click', () => {
             if (document.referrer) window.history.back();
             else alert('이전 페이지가 없습니다.');
+        });
+
+        // 초기화 버튼 이벤트
+        elements.resetDataBtn.addEventListener('click', () => {
+            customConfirm("⚠️ 경고: 모든 운동 기록과 루틴이 삭제됩니다.\n정말 초기화하시겠습니까?", () => {
+                localStorage.clear();
+                location.reload();
+            });
         });
 
         elements.openAddExerciseModalBtn.addEventListener('click', openAddExerciseModal);

@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>나의 운동 기록 v29 (Clean)</title>
+    <title>나의 운동 기록 v31 (Reset Added)</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    
     <link rel="stylesheet" href="record.css">
     <script src="exercises.js" defer></script>
     <script src="record.js" defer></script>
 </head>
-
 <body>
-    <header class="bg-blue-500 text-white p-4 relative text-center shadow-md">
-        <button id="back-to-main-btn" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white text-blue-500 px-3 py-1 rounded-md shadow-sm hover:bg-gray-100 transition">← 뒤로가기</button>
-        <h1 class="text-3xl font-semibold">나의 운동 기록</h1>
+    <header class="bg-blue-500 text-white p-4 relative flex items-center justify-between shadow-md">
+        <!-- 왼쪽: 뒤로가기 -->
+        <button id="back-to-main-btn" class="bg-white text-blue-500 px-3 py-1 rounded-md shadow-sm hover:bg-gray-100 transition text-sm font-bold">← 뒤로가기</button>
+        
+        <!-- 중앙: 제목 -->
+        <h1 class="text-2xl md:text-3xl font-semibold absolute left-1/2 transform -translate-x-1/2">나의 운동 기록</h1>
+        
+        <!-- 오른쪽: 초기화 버튼 (추가됨) -->
+        <button id="reset-data-btn" class="text-white hover:text-red-200 text-sm font-medium flex items-center gap-1 transition opacity-80 hover:opacity-100" title="모든 데이터 삭제">
+            <span class="hidden md:inline">데이터 초기화</span> 🗑️
+        </button>
     </header>
 
     <div id="floating-timer" class="hidden cursor-pointer">
@@ -30,7 +36,7 @@
             <button id="close-floating-timer" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold text-sm shadow-md">&times;</button>
         </div>
     </div>
-    
+
     <main class="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2">
             <section class="card">
@@ -62,9 +68,7 @@
                     시작할 날짜를 <span class="text-blue-500 font-semibold">(한번)</span> 클릭한 후, 루틴을 시작하세요.<br>
                     기록 확인은 <span class="text-blue-500 font-semibold">(두번)</span> 클릭하세요.
                 </p>
-                
                 <div id="routine-template-list" class="space-y-3"></div>
-                
                 <button id="create-new-template-btn" class="mt-4 w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition group cursor-pointer">
                     <div class="bg-gray-100 p-3 rounded-full mb-2 group-hover:bg-blue-100 transition">
                         <span class="text-2xl text-gray-500 group-hover:text-blue-500 font-bold">+</span>
@@ -75,6 +79,7 @@
         </div>
     </main>
 
+    <!-- Modals -->
     <div id="daily-log-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -84,7 +89,6 @@
             <div id="daily-log-modal-list" class="space-y-4"></div>
         </div>
     </div>
-    
     <div id="pr-celebration-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content text-center">
             <h2 class="text-3xl font-bold mb-2">🎉 PR 달성! 🎉</h2>
@@ -93,7 +97,6 @@
             <button id="close-pr-modal" class="mt-5 w-full bg-blue-500 text-white p-3 rounded-lg">확인</button>
         </div>
     </div>
-
     <div id="template-editor-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -122,7 +125,6 @@
             </div>
         </div>
     </div>
-    
     <div id="add-to-session-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content" style="max-width: 500px;">
              <div class="flex justify-between items-center mb-4">
@@ -141,7 +143,6 @@
             <button id="save-to-session-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition">추가</button>
         </div>
     </div>
-
     <div id="add-exercise-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -164,7 +165,6 @@
             </div>
         </div>
     </div>
-
     <div id="summary-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -175,7 +175,6 @@
             <button id="close-summary-btn" class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition">확인</button>
         </div>
     </div>
-    
     <div id="stats-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -201,7 +200,6 @@
             </div>
         </div>
     </div>
-
     <div id="custom-confirm-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content" style="max-width: 400px;">
             <p id="confirm-message" class="text-xl mb-6 text-center"></p>
@@ -211,7 +209,6 @@
             </div>
         </div>
     </div>
-
     <div id="choice-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content" style="max-width: 450px;">
             <p id="choice-message" class="text-xl mb-6 font-bold text-center text-gray-800"></p>
@@ -222,7 +219,6 @@
             </div>
         </div>
     </div>
-
     <div id="workout-session-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <div class="flex h-full flex-col md:flex-row">

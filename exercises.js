@@ -1,8 +1,8 @@
 const bodyPartImages = {
     "가슴": "images/chest.png",
     "등": "images/back.png",
-    "어깨": "images/shoulders.png",
     "하체": "images/legs.png",
+    "어깨": "images/shoulders.png",
     "팔": "images/arms.png",
     "복근": "images/core.png"
 };
