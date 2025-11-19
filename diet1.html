@@ -573,9 +573,7 @@
     // v3.4: [요청 7] 앱 초기화 관련 변수
     let myPageListenersSet = false; // v3.5: 이벤트 리스너 중복 등록 방지 플래그
 
-    // Kakao Mobility Directions REST API 키 (실제 값으로 교체해서 사용하세요)
     const KAKAO_REST_API_KEY = "71b46fcb7202af130ab7c6c18bf5163a";
-
 
     // v2.6: DOM 요소 캐싱 (v3.2에 맞게 수정)
     const domElements = {
@@ -771,114 +769,39 @@
              * v2.6: 경로 탐색 (v3.1과 동일)
              */
             
-            /**
-             * Kakao Mobility Directions API를 사용하는 실제 경로 탐색 함수
-             *  - Kakao REST API를 호출하여 routes[0]을 반환합니다.
-             *  - 반환 객체는 summary.distance / summary.duration / sections[*].roads[*].vertexes 등을 포함합니다.
-             */
-            const getRoute = async (waypoints) => {
-                if (!Array.isArray(waypoints) || waypoints.length < 2) {
-                    throw new Error("출발지와 도착지는 최소 1개씩 필요합니다.");
-                }
+const getRoute = async (waypoints) => {
+    const origin = waypoints[0];
+    const destination = waypoints[waypoints.length - 1];
+    const restWaypoints =
+        waypoints.length > 2
+            ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join("|")
+            : "";
 
-                const origin = waypoints[0];
-                const destination = waypoints[waypoints.length - 1];
-                const restWaypoints =
-                    waypoints.length > 2
-                        ? waypoints
-                              .slice(1, -1)
-                              .map((wp) => `${wp.x},${wp.y}`)
-                              .join("|")
-                        : "";
+    const params = new URLSearchParams({
+        origin: `${origin.x},${origin.y}`,
+        destination: `${destination.x},${destination.y}`,
+        priority: "DISTANCE"
+    });
 
-                const params = new URLSearchParams({
-                    origin: `${origin.x},${origin.y}`,
-                    destination: `${destination.x},${destination.y}`,
-                    priority: "DISTANCE", // DISTANCE 또는 TIME
-                });
+    if (restWaypoints) params.append("waypoints", restWaypoints);
 
-                if (restWaypoints) {
-                    params.append("waypoints", restWaypoints);
-                }
+    const response = await fetch(
+        `https://apis-navi.kakaomobility.com/v1/directions?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { Authorization: `KakaoAK ${KAKAO_REST_API_KEY}` }
+        }
+    );
 
-                const response = await fetch(
-                    `https://apis-navi.kakaomobility.com/v1/directions?${params.toString()}`,
-                    {
-                        method: "GET",
-                        headers: {
-                            Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
-                        },
-                    }
-                );
+    if (!response.ok) throw new Error("길찾기 API 호출 실패");
 
-                if (!response.ok) {
-                    throw new Error(
-                        `길찾기 API 호출 실패: ${response.status} ${response.statusText}`
-                    );
-                }
+    const data = await response.json();
+    if (!data.routes || data.routes.length === 0)
+        throw new Error("경로를 찾을 수 없습니다");
 
-                const data = await response.json();
+    return data.routes[0];
+};
 
-                if (!data.routes || data.routes.length === 0) {
-                    throw new Error("조건에 맞는 경로를 찾지 못했습니다.");
-                }
-
-                // routes[0]은 summary / sections / fare 등의 정보를 포함합니다.
-                return data.routes[0];
-            };
-
-
-            function drawMarker(position, content) {
-                const marker = new kakao.maps.Marker({ position, map });
-                if (content) {
-                    const customOverlay = new kakao.maps.CustomOverlay({
-                        position: position,
-                        content: content,
-                        yAnchor: 1.5
-                    });
-                    customOverlay.setMap(map);
-                    navMapObjects.push(customOverlay);
-                }
-                navMapObjects.push(marker);
-                return marker;
-            }
-
-            /**
-             * v2.6: 경로 그리기 (v3.1과 동일)
-             */
-            function drawSingleRoutePolyline(route, color) {
-                // v3.2: 더미 데이터에서는 단순하게 시작/도착점만으로 경로를 만듦
-                const path = [
-                    new kakao.maps.LatLng(route.sections[0].roads[0].vertexes[1], route.sections[0].roads[0].vertexes[0]),
-                    new kakao.maps.LatLng(route.sections[0].roads[0].vertexes[3], route.sections[0].roads[0].vertexes[2])
-                ];
-                
-                const polyline = new kakao.maps.Polyline({
-                    path, 
-                    strokeWeight: 8, 
-                    strokeColor: color, 
-                    strokeOpacity: 0.8, 
-                    strokeStyle: 'solid', 
-                    map: map 
-                });
-                navMapObjects.push(polyline);
-                return path;
-            }
-
-            /**
-             * v2.6: 단일 경로 활성화 (v3.1과 동일)
-             */
-            function drawSingleRoute(type) {
-                clearNavMapObjects();
-                const bounds = new kakao.maps.LatLngBounds();
-                const routeData = allGeneratedRoutes[type];
-                if (!routeData) return;
-
-                document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
-                const card = document.getElementById(`card-${type}`);
-                if(card) card.classList.add('selected');
-
-                const colors = { optimal: '#007bff', 'round-trip': '#17a2b8', scenic: '#28a745' };
                 const path = drawSingleRoutePolyline(routeData, colors[type]);
                 
                 path.forEach(p => bounds.extend(p));
@@ -901,59 +824,48 @@
              * v3.2: 목표 거리에 맞는 왕복 코스 시뮬레이션
              */
             
-            /**
-             * v3.2: 목표 거리에 맞는 왕복 코스 시뮬레이션 (실제 Directions API 사용)
-             *  - 출발지 주변에 임의의 중간 지점을 하나 만들어 [출발 → 중간 → 출발] 루프를 생성합니다.
-             */
-            async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt) {
-                const km = targetDistanceMeters / 1000;
+async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt) {
+    const km = targetDistanceMeters / 1000;
+    const scale = Math.min(Math.max(km / 5, 0.4), 3.0);
+    const dx = 0.01 * scale;
+    const dy = 0.008 * scale;
 
-                // 너무 멀거나 가까운 경우를 막기 위한 스케일 보정 (대략적인 값)
-                const scale = Math.min(Math.max(km / 5, 0.4), 3.0);
-                const dx = 0.01 * scale;
-                const dy = 0.008 * scale;
+    const midPoint = {
+        x: startPoint.x + dx,
+        y: startPoint.y + dy,
+        place_name: startPoint.place_name + " 루프"
+    };
 
-                const midPoint = {
-                    x: startPoint.x + dx,
-                    y: startPoint.y + dy,
-                    place_name: `${startPoint.place_name} 근처`,
-                };
+    const route = await getRoute([startPoint, midPoint, startPoint]);
+    route.waypoints = [startPoint, midPoint, startPoint];
+    return route;
+}
 
-                const route = await getRoute([startPoint, midPoint, startPoint]);
-                route.waypoints = [startPoint, midPoint, startPoint];
-                return route;
-            }
 
             /**
-             * v3.2: 근처 산책로 코스 시뮬레이션 (실제 Directions API 사용)
-             */
-/**
              * v3.2: 근처 산책로 코스 시뮬레이션
              */
             
-            async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt) {
-                const km = targetDistanceMeters / 1000;
-                const scale = Math.min(Math.max(km / 5, 0.4), 3.0);
+async function generateNearbyTrailCourse(startPoint, targetDistanceMeters, attempt) {
+    const km = targetDistanceMeters / 1000;
+    const scale = Math.min(Math.max(km / 5, 0.4), 3.0);
+    const sign = attempt % 2 === 0 ? 1 : -1;
+    const dx = 0.008 * scale * sign;
+    const dy = 0.012 * scale;
 
-                const sign = attempt % 2 === 0 ? 1 : -1; // 시도에 따라 방향을 조금씩 변경
-                const dx = 0.008 * scale * sign;
-                const dy = 0.012 * scale;
+    const midPoint = {
+        x: startPoint.x + dx,
+        y: startPoint.y + dy,
+        place_name: startPoint.place_name + " 산책"
+    };
 
-                const midPoint = {
-                    x: startPoint.x + dx,
-                    y: startPoint.y + dy,
-                    place_name: `${startPoint.place_name} 산책로`,
-                };
+    const route = await getRoute([startPoint, midPoint, startPoint]);
+    route.waypoints = [startPoint, midPoint, startPoint];
+    return route;
+}
 
-                const route = await getRoute([startPoint, midPoint, startPoint]);
-                route.waypoints = [startPoint, midPoint, startPoint];
-                return route;
-            }
 
             /**
-             * v3.4: 코스 재생성 (왕복/산책로)
-             */
-/**
              * v3.4: 코스 재생성 (왕복/산책로)
              */
             async function regenerateRoute(type, loadingSpinner, refreshBtn) {
