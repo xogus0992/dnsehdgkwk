@@ -453,7 +453,7 @@
                 </div>
         </div>
         
-        </div>
+    </div>
 </div>
 
 <div id="page-history" class="page-content" style="display: none;">
@@ -587,7 +587,6 @@
         endSuggestions: document.getElementById('end-suggestions'),
         mapNotice: document.getElementById('map-notice'),
         navPanel: document.getElementById('navPanel'),
-        // pokemonPanel 삭제
     };
 
     // v3.2: Kakao API 로드 완료 후 실행
@@ -599,7 +598,7 @@
             
             // 전역 변수 초기화 (v3.4 기준)
             let map, ps, geocoder, navElements = domElements; 
-            let navMapObjects = []; // 포켓몬 관련 변수 (currentMode, pokemonMarkers, capturedPokemons) 삭제
+            let navMapObjects = []; // 포켓몬 관련 변수 삭제
             let userLocation = null; 
             let userLocationCircle = null;
             let startPointFromMyLocation = null;
@@ -647,8 +646,6 @@
                     updateMapCenter(defaultPos);
                     alert("위치 정보를 가져오는 데 실패했습니다: " + errorMsg);
                 });
-
-                // v3.0: 포켓몬 모드도 같이 초기화 (제거)
             }
 
             /**
@@ -710,7 +707,9 @@
                         geocoder.coord2Keyword(location.getLng(), location.getLat(), (data, status) => {
                             let placeName = "내 위치 (장소명 없음)";
                             if (status === kakao.maps.services.Status.OK && data.length > 0) {
-                                placeName = data[0].place_name;
+                                // 도로명 주소 또는 지번 주소 중 하나를 사용
+                                const address = data[0].road_address || data[0].address;
+                                placeName = address.address_name;
                             } else {
                                 geocoder.coord2Address(location.getLng(), location.getLat(), (result, status) => {
                                     if (status === kakao.maps.services.Status.OK) {
@@ -748,10 +747,7 @@
             function clearNavMapObjects() {
                 navMapObjects.forEach(obj => obj.setMap(null));
                 navMapObjects = [];
-                // 포켓몬 마커 정리 로직 삭제
             }
-
-            /* v3.0: 맵 모드 전환 함수 삭제 */
 
             /* ========== 내비게이션 관련 함수들 (v3.4 로직) ========== */
 
@@ -774,28 +770,13 @@
                 const origin = waypoints[0], destination = waypoints[waypoints.length - 1];
                 const rest_waypoints = waypoints.length > 2 ? waypoints.slice(1, -1).map(wp => `${wp.x},${wp.y}`).join('|') : "";
 
-                const url = new URL("https://apis-navi.kakaomobility.com/v1/waypoints/directions");
-                const params = {
-                    origin: `${origin.x},${origin.y}`,
-                    destination: `${destination.x},${destination.y}`,
-                    waypoints: rest_waypoints, // 경유지 (왕복 코스 등에서 사용)
-                    priority: "DISTANCE", // 거리 우선
-                    // v3.2: 카카오 정책으로 인해 API Key 직접 사용 불가능 -> 프록시 API 사용
-                    // 이 코드는 클라이언트(브라우저)에서 실행되므로 실제로는 서버의 프록시를 통과해야 함.
-                    // 여기서는 API 통신을 시뮬레이션하고 기본 데이터 구조를 맞춥니다. (실제 요청은 실패함)
-                    // 실제 구현에서는 서버 측 API를 사용해야 합니다.
-                };
-
                 // 실제 API 호출 대신, 하드코딩된 '성공' 응답 구조를 반환합니다.
-                // 이 프로젝트는 경로 탐색 자체의 구현보다 전체 웹앱 구조에 초점을 맞춥니다.
-                // 따라서 API 응답을 시뮬레이션하는 더미 데이터를 사용합니다.
                 const dummyRoute = {
                     sections: [
                         { distance: Math.round(Math.random() * 500 + 1500) * waypoints.length, duration: Math.round(Math.random() * 300 + 900) * waypoints.length, roads: [{ vertexes: [origin.x, origin.y, destination.x, destination.y] }] }
                     ],
                     distance: Math.round(Math.random() * 500 + 1500) * waypoints.length,
                     duration: Math.round(Math.random() * 300 + 900) * waypoints.length,
-                    // v3.2: 실제 사용될 수 있는 데이터 (더미 데이터지만)
                     summary: {
                         distance: (Math.random() * 1000 + 5000) * (waypoints.length / 2),
                         duration: (Math.random() * 100 + 1800) * (waypoints.length / 2)
@@ -888,11 +869,6 @@
              */
             async function generateNonOverlappingLoopCourse(startPoint, targetDistanceMeters, attempt) {
                 // 이 함수는 실제 경로 탐색 API를 이용해야 하지만, 여기서는 시뮬레이션합니다.
-                // 1. startPoint 기준 N각형의 경유지 생성
-                const numVertices = 3; 
-                // ... (N각형 기반 경로 생성 로직)
-                
-                // 실제 API 호출 없이, 더미 경로를 반환
                 const dummyRoute = await getRoute([{ x: startPoint.x, y: startPoint.y, place_name: startPoint.place_name }, 
                                                  { x: startPoint.x, y: startPoint.y, place_name: startPoint.place_name }]);
                 dummyRoute.waypoints = [{ x: startPoint.x, y: startPoint.y, place_name: startPoint.place_name }, 
@@ -916,7 +892,6 @@
              * v3.4: 코스 재생성 (왕복/산책로)
              */
             async function regenerateRoute(type, loadingSpinner, refreshBtn) {
-                // ... (생략)
                 refreshBtn.style.display = 'none';
                 loadingSpinner.style.display = 'inline';
                 
@@ -938,7 +913,6 @@
 
                     if (newRoute) {
                         allGeneratedRoutes[type] = newRoute;
-                        let title = (type === 'round-trip') ? '🔄 왕복 코스' : '🌳 근처 산책로';
                         displayRouteInfo(newRoute, type);
                     } else {
                         throw new Error("새로운 코스를 찾는 데 실패했습니다.");
@@ -1182,11 +1156,69 @@
             /* ========== 장소 검색 자동 완성 로직 (v3.1과 동일) ========== */
             const setupAutocomplete = (inputElement, suggestionsElement) => {
                 let currentFocus = -1;
-                
-                // ... (생략된 자동 완성 로직: input, keydown, click 이벤트 핸들러)
-                
-                // 실제 자동 완성 로직은 카카오 API의 복잡성으로 인해 브라우저에서 직접 구현이 어려워 생략합니다.
-                // 사용자 입력을 위한 UI만 남겨둡니다.
+
+                inputElement.addEventListener('input', async () => {
+                    const val = inputElement.value;
+                    suggestionsElement.innerHTML = '';
+                    currentFocus = -1;
+
+                    if (!val) {
+                        suggestionsElement.style.display = 'none';
+                        return;
+                    }
+                    suggestionsElement.style.display = 'block';
+
+                    try {
+                        const results = await searchPlace(val);
+                        
+                        results.forEach((place, index) => {
+                            const item = document.createElement('div');
+                            item.classList.add('suggestion-item');
+                            item.innerHTML = `<strong>${place.place_name}</strong><br><small>${place.address_name}</small>`;
+                            item.setAttribute('data-index', index);
+                            item.onclick = () => {
+                                inputElement.value = place.address_name; // 주소명으로 입력
+                                suggestionsElement.innerHTML = '';
+                                suggestionsElement.style.display = 'none';
+                            };
+                            suggestionsElement.appendChild(item);
+                        });
+                        
+                    } catch (e) {
+                        suggestionsElement.innerHTML = `<div class="suggestion-item" style="color: red;">검색 오류: ${e.message}</div>`;
+                    }
+                });
+
+                // 포커스 이동 처리 (키보드)
+                inputElement.addEventListener('keydown', (e) => {
+                    let items = suggestionsElement.querySelectorAll('.suggestion-item');
+                    if (items.length === 0) return;
+                    
+                    if (e.keyCode === 40) { // Down
+                        currentFocus = Math.min(items.length - 1, currentFocus + 1);
+                        updateActiveSuggestion(items);
+                    } else if (e.keyCode === 38) { // Up
+                        currentFocus = Math.max(-1, currentFocus - 1);
+                        updateActiveSuggestion(items);
+                    } else if (e.keyCode === 13) { // Enter
+                        e.preventDefault();
+                        if (currentFocus > -1) {
+                            items[currentFocus].click();
+                        }
+                    }
+                });
+
+                function updateActiveSuggestion(items) {
+                    items.forEach(item => item.classList.remove('active'));
+                    if (currentFocus > -1) items[currentFocus].classList.add('active');
+                }
+
+                // 외부 클릭 시 닫기
+                document.addEventListener('click', (e) => {
+                    if (e.target !== inputElement) {
+                        suggestionsElement.style.display = 'none';
+                    }
+                });
             };
 
             setupAutocomplete(navElements.startInput, navElements.startSuggestions);
@@ -1210,7 +1242,6 @@
             const barExcess = document.getElementById('bar-excess');
 
             function updateCharacter(gender, bmi) {
-                // ... (생략된 캐릭터 업데이트 로직)
                 const bodyType = (bmi < 18.5) ? 'lean' : 
                                  (bmi < 25) ? 'average' : 
                                  (bmi < 30) ? 'overweight' : 'obese';
@@ -1222,7 +1253,12 @@
             }
 
             function loadDietInfo() {
-                // ... (생략된 로직)
+                dietInfo.gender = localStorage.getItem('diet_gender') || 'male';
+                dietInfo.height = parseFloat(localStorage.getItem('diet_height')) || 170;
+                dietInfo.currentWeight = parseFloat(localStorage.getItem('diet_current_weight')) || 70;
+                dietInfo.targetWeight = parseFloat(localStorage.getItem('diet_target_weight')) || 65;
+                dietInfo.goalDate = localStorage.getItem('diet_goal_date') || '';
+                
                 genderSelect.value = dietInfo.gender;
                 heightInput.value = dietInfo.height;
                 currentWeightInput.value = dietInfo.currentWeight;
@@ -1233,7 +1269,6 @@
             }
 
             function saveDietInfo() {
-                // ... (생략된 로직)
                 dietInfo.gender = genderSelect.value;
                 dietInfo.height = parseFloat(heightInput.value);
                 dietInfo.currentWeight = parseFloat(currentWeightInput.value);
@@ -1251,11 +1286,14 @@
             }
 
             function updateMyPageInfo() {
-                // ... (생략된 로직)
                 const h = dietInfo.height / 100;
                 const bmi = dietInfo.currentWeight / (h * h);
                 const goalLoss = dietInfo.currentWeight - dietInfo.targetWeight;
-                const currentLoss = parseFloat(localStorage.getItem('total_weight_loss')) || 0;
+                const totalCalories = parseFloat(localStorage.getItem('total_calories')) || 0;
+                
+                // 체지방 1kg = 7700 kcal
+                const currentLoss = totalCalories / 7700;
+                localStorage.setItem('total_weight_loss', currentLoss.toFixed(2));
                 
                 infoCurrentWeight.textContent = `현재 체중: ${dietInfo.currentWeight} kg (BMI: ${bmi.toFixed(1)})`;
                 infoTargetWeight.textContent = `목표 체중: ${dietInfo.targetWeight} kg (감량 목표: ${goalLoss.toFixed(1)} kg)`;
@@ -1269,10 +1307,12 @@
                     barAchieved.style.width = `${progress}%`;
                     barExcess.style.width = '0%';
                 } else if (goalLoss < 0) {
-                    const excess = Math.max(0, (currentLoss / goalLoss) * 100);
-                    progressText.textContent = `증량 진행률: ${currentLoss.toFixed(1)} kg / ${goalLoss.toFixed(1)} kg`;
-                    barAchieved.style.width = '0%';
-                    barExcess.style.width = `${excess}%`;
+                    // 증량 목표일 경우 (목표 체중 > 현재 체중)
+                    const requiredGain = Math.abs(goalLoss);
+                    const progress = Math.min(100, (currentLoss / requiredGain) * 100); // 목표까지 남은 무게 대비 달성률
+                    progressText.textContent = `증량 진행률: ${currentLoss.toFixed(1)} kg / ${requiredGain.toFixed(1)} kg`;
+                    barAchieved.style.width = `${progress}%`;
+                    barExcess.style.width = '0%';
                 } else {
                     progressText.textContent = '목표 체중과 현재 체중이 같습니다.';
                     barAchieved.style.width = '0%';
@@ -1282,14 +1322,14 @@
                 // 메인 페이지 칼로리/체중 감소 업데이트
                 const totalWalkedDistance = parseFloat(localStorage.getItem('total_walked_distance')) || 0;
                 const totalDurationMinutes = parseFloat(localStorage.getItem('total_duration_minutes')) || 0;
-                const totalCalories = calculateCalories(totalWalkedDistance * 1000, dietInfo.currentWeight, totalDurationMinutes);
                 
-                // 체지방 1kg = 7700 kcal
-                const totalWeightLoss = totalCalories / 7700;
-                localStorage.setItem('total_weight_loss', totalWeightLoss.toFixed(2));
-                
-                navElements.caloriesDisplay.textContent = `${totalCalories.toFixed(0)} kcal 소모`;
-                navElements.weightLossDisplay.textContent = `(${totalWeightLoss.toFixed(1)} kg 감량)`;
+                // 메인 페이지 목표 거리/시간을 칼로리로 변환 (임시값)
+                const targetDistanceKM = parseFloat(navElements.targetDistanceInput.value) || 5;
+                const targetDurationMinutes = targetDistanceKM / 4.5 * 60; // 4.5km/h 기준
+                const calculatedCalories = calculateCalories(targetDistanceKM * 1000, dietInfo.currentWeight, targetDurationMinutes);
+
+                navElements.caloriesDisplay.textContent = `${calculatedCalories.toFixed(0)} kcal 소모`;
+                navElements.weightLossDisplay.textContent = `(${(calculatedCalories / 7700).toFixed(1)} kg 감량)`;
             }
 
             // 초기화 시 정보 불러오기
@@ -1447,7 +1487,6 @@
                 // v3.5: 리스너는 한 번만 등록
                 if (!myPageListenersSet) {
                     document.getElementById('openModalBtn').onclick = () => document.getElementById('dietInfoModal').style.display = 'flex';
-                    // 포켓몬 도감 버튼 리스너 삭제
                     checkinBtn.onclick = checkAttendance; // 출석 버튼 리스너
 
                     myPageListenersSet = true;
