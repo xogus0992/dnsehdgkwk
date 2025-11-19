@@ -127,15 +127,15 @@ body {
 
 /* Modal */
 .modal-overlay {
-    position: relative!important;
+    position: fixed;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.6);
-    display: block!important;
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 50;
     padding: 16px;
-    opacity: 1!important;
+    opacity: 0;
     transition: opacity 0.2s ease-in-out;
 }
 .modal-overlay[aria-hidden="false"] {
@@ -484,5 +484,3 @@ body {
     border: 1px solid #e2e8f0;
     flex-shrink: 0;
 }
-
-
