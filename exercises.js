@@ -17,7 +17,7 @@ const exercisesData = {
         { name: "펙 덱 플라이", image: null },
         { name: "덤벨 플라이", image: null },
         { name: "케이블 크로스 오버", image: null },
-        { name: "딥스", image: "images/arms.png" },
+        { name: "딥스", image: null },
         { name: "푸시업", image: null },
         { name: "스미스머신 벤치 프레스", image: null }
     ],
@@ -82,4 +82,5 @@ const exercisesData = {
         { name: "시티드 니업", image: null },
         { name: "바이시클 크런치", image: null }
     ]
+
 };
