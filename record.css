@@ -130,7 +130,7 @@ body {
     position: fixed;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.6);
-    display: none;
+    display: block!important;
     align-items: center;
     justify-content: center;
     z-index: 50;
@@ -484,3 +484,4 @@ body {
     border: 1px solid #e2e8f0;
     flex-shrink: 0;
 }
+
