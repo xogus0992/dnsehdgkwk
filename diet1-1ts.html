@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>다이어트 내비게이션 - Kakao 길찾기 버전</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+  
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --danger: #ef4444;
+      --success: #10b981;
+      
+      /* 인스타 스타일 변수 추가 */
+      --insta-story-ring: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column;
+    }
+
+    .app-header {
+      padding: 16px; background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      text-align: center; font-weight: 700; font-size: 1.1rem;
+      position: sticky; top: 0; z-index: 50;
+    }
+
+    .app-main { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
+
+    /* 기존 카드 스타일 유지 */
+    .card {
+      background: var(--card-bg); border-radius: 12px; padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;
+    }
+    .card-title { font-weight: 700; margin-bottom: 12px; font-size: 1rem; display:flex; justify-content:space-between; align-items:center; }
+
+    /* 입력 폼 스타일 유지 */
+    .input-group { margin-bottom: 12px; }
+    .input-label { display: block; font-size: 0.85rem; color: var(--text-sub); margin-bottom: 4px; }
+    .form-input {
+      width: 100%; padding: 10px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.95rem; outline: none;
+    }
+    .form-input:focus { border-color: var(--primary); }
+    
+    .btn-row { display: flex; gap: 8px; }
+    .btn {
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      font-weight: 600; cursor: pointer; font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text-main); }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* 탭 네비게이션 유지 */
+    .tab-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--card-bg); border-top: 1px solid var(--border);
+      display: flex; height: 60px; z-index: 100;
+    }
+    .tab-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--text-sub); font-size: 0.75rem; gap: 4px;
+      cursor: pointer;
+    }
+    .tab-item.active { color: var(--primary); font-weight: 600; }
+    .tab-icon { font-size: 1.4rem; }
+
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    #map { width: 100%; height: 300px; background: #eee; border-radius: 8px; margin-bottom: 12px; }
+    
+    .message { font-size: 0.9rem; padding: 10px; border-radius: 8px; background: #eef2ff; color: #333; margin-top: 10px; }
+    .message.error { background: #fee2e2; color: #b91c1c; }
+
+    /* ------------------------------------------------------- */
+    /* [NEW] 인스타그램 스타일 프로필 CSS (여기가 추가된 부분) */
+    /* ------------------------------------------------------- */
+    .insta-profile-header {
+      display: flex; align-items: center; margin-bottom: 20px;
+    }
+    .insta-avatar-wrap {
+      position: relative; margin-right: 20px;
+    }
+    .insta-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--insta-story-ring);
+      padding: 2px; /* 링 두께 */
+    }
+    .insta-avatar img, .insta-avatar-placeholder {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 2px solid #fff;
+      background: #f0f0f0; object-fit: cover;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+    }
+    .insta-stats {
+      flex: 1; display: flex; justify-content: space-around; text-align: center;
+    }
+    .insta-stat-item { display: flex; flex-direction: column; }
+    .insta-stat-num { font-weight: 700; font-size: 1.1rem; color: var(--text-main); }
+    .insta-stat-label { font-size: 0.8rem; color: var(--text-main); }
+
+    .insta-bio { margin-bottom: 16px; padding-left: 4px; }
+    .insta-bio-name { font-weight: 700; font-size: 0.95rem; }
+    .insta-bio-text { font-size: 0.9rem; white-space: pre-wrap; margin-top: 4px; }
+    .insta-bio-link { color: #00376b; text-decoration: none; font-size: 0.9rem; }
+
+    .insta-actions { display: flex; gap: 8px; margin-bottom: 20px; }
+    .insta-btn {
+      flex: 1; background: #efefef; border: none; border-radius: 6px;
+      padding: 6px 0; font-weight: 600; font-size: 0.9rem;
+      color: var(--text-main); cursor: pointer;
+    }
+
+    /* 하이라이트 (배지) */
+    .insta-highlights {
+      display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px;
+      scrollbar-width: none; margin-bottom: 10px;
+    }
+    .insta-highlights::-webkit-scrollbar { display: none; }
+    .highlight-item { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+    .highlight-circle {
+      width: 56px; height: 56px; border-radius: 50%; border: 1px solid #dbdbdb;
+      padding: 2px; margin-bottom: 4px;
+    }
+    .highlight-inner {
+      width: 100%; height: 100%; border-radius: 50%; background: #fafafa;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+    .highlight-text { font-size: 0.75rem; color: var(--text-main); }
+
+    /* 그래프 컨테이너 */
+    .chart-wrapper {
+      background: #fff; border-radius: 12px; padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;
+      border: 1px solid #efefef;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    러닝 내비게이션
+  </header>
+
+  <main class="app-main">
+    <div id="page-home" class="page active">
+      <div class="card">
+        <div class="card-title">러닝 코스 생성</div>
+        
+        <div class="input-group">
+          <label class="input-label">출발지</label>
+          <input type="text" id="start-input" class="form-input" placeholder="예: 강남역, 한강공원" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">도착지 (선택)</label>
+          <input type="text" id="end-input" class="form-input" placeholder="비워두면 출발지로 돌아옴 (왕복)" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">목표 거리 (km) / 왕복 시</label>
+          <input type="number" id="loop-distance" class="form-input" value="3" step="0.5" />
+        </div>
+
+        <div class="btn-row">
+          <button id="btn-search-route" class="btn btn-primary">경로 찾기</button>
+          <button id="btn-loop-route" class="btn btn-secondary">랜덤 루프</button>
+        </div>
+        <div id="route-msg" class="message" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>지도 미리보기</span>
+          <span id="map-info" style="font-size:0.8rem; color:var(--primary); font-weight:400;"></span>
+        </div>
+        <div id="map"></div>
+        <button id="btn-save-route" class="btn btn-primary" style="width:100%;" disabled>
+          이 코스 저장하기
+        </button>
+      </div>
+    </div>
+
+    <div id="page-history" class="page">
+      <div class="card">
+        <div class="card-title">저장된 코스 목록</div>
+        <ul id="history-list" style="padding-left: 20px; margin: 0; color: var(--text-sub);">
+          <li>저장된 기록이 없습니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="page-group" class="page">
+      <div class="card">
+        <div class="card-title">러닝 크루 랭킹</div>
+        <div id="group-list"></div>
+      </div>
+    </div>
+
+    <div id="page-me" class="page">
+      <div class="card" style="border:none; box-shadow:none; background:transparent; padding:0;">
+        <div class="insta-profile-header">
+          <div class="insta-avatar-wrap">
+            <div class="insta-avatar">
+              <div class="insta-avatar-placeholder">🏃</div>
+            </div>
+          </div>
+          <div class="insta-stats">
+            <div class="insta-stat-item">
+              <span class="insta-stat-num" id="profile-total-run">0</span>
+              <span class="insta-stat-label">러닝 횟수</span>
+            </div>
+            <div class="insta-stat-item">
+              <span class="insta-stat-num" id="profile-total-km">0.0</span>
+              <span class="insta-stat-label">누적 km</span>
+            </div>
+            <div class="insta-stat-item">
+              <span class="insta-stat-num" id="profile-saved-count">0</span>
+              <span class="insta-stat-label">저장 코스</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="insta-bio">
+          <div class="insta-bio-name">나만의 러닝 기록 🚩</div>
+          <div class="insta-bio-text">오늘도 달리는 중 🏃‍♂️💨
+목표: 이번 달 50km 달성하기!
+#오운완 #러닝스타그램</div>
+        </div>
+
+        <div class="insta-actions">
+          <button class="insta-btn" onclick="alert('프로필 편집 기능 준비 중')">프로필 편집</button>
+          <button class="insta-btn" onclick="alert('공유 기능 준비 중')">프로필 공유</button>
+        </div>
+
+        <div class="insta-highlights">
+          <div class="highlight-item">
+            <div class="highlight-circle"><div class="highlight-inner">🔥</div></div>
+            <span class="highlight-text">연속 3일</span>
+          </div>
+          <div class="highlight-item">
+            <div class="highlight-circle"><div class="highlight-inner">👟</div></div>
+            <span class="highlight-text">새 신발</span>
+          </div>
+          <div class="highlight-item">
+            <div class="highlight-circle"><div class="highlight-inner">🥇</div></div>
+            <span class="highlight-text">첫 10K</span>
+          </div>
+          <div class="highlight-item">
+            <div class="highlight-circle"><div class="highlight-inner">⛰️</div></div>
+            <span class="highlight-text">등산</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrapper">
+        <div class="card-title" style="margin-bottom:16px;">📊 주간 활동 그래프</div>
+        <div style="height: 200px;">
+          <canvas id="activityChart"></canvas>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <button id="btn-reset-stats" class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; color: var(--danger); border-color: var(--danger);">
+          데이터 초기화
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <nav class="tab-nav">
+    <div class="tab-item active" data-target="page-home">
+      <span class="tab-icon">🏠</span>
+      <span>홈</span>
+    </div>
+    <div class="tab-item" data-target="page-history">
+      <span class="tab-icon">📝</span>
+      <span>기록</span>
+    </div>
+    <div class="tab-item" data-target="page-group">
+      <span class="tab-icon">👥</span>
+      <span>크루</span>
+    </div>
+    <div class="tab-item" data-target="page-me">
+      <span class="tab-icon">👤</span>
+      <span>내 정보</span>
+    </div>
+  </nav>
+
+  <script>
+    // ============================================================
+    //  기존 로직 (지도, 길찾기, 저장) - 건드리지 않음
+    // ============================================================
+    const KAKAO_API_KEY = "c96c999113980d67c697b2f5a3d385f1"; 
+    let map, ps, geocoder;
+    let currentPolyline = null;
+    let currentMarkers = [];
+    let routeHistory = []; // 저장된 코스 데이터
+    let currentRouteData = null; // 현재 보고있는 경로 정보
+
+    function initMap() {
+      const container = document.getElementById('map');
+      const options = { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 5 };
+      map = new kakao.maps.Map(container, options);
+      ps = new kakao.maps.services.Places();
+      geocoder = new kakao.maps.services.Geocoder();
+    }
+
+    function clearMap() {
+      if (currentPolyline) { currentPolyline.setMap(null); currentPolyline = null; }
+      currentMarkers.forEach(mk => mk.setMap(null));
+      currentMarkers = [];
+    }
+
+    // 길찾기 버튼 핸들러
+    async function handleSearchRoute() {
+      const startVal = document.getElementById('start-input').value;
+      const endVal = document.getElementById('end-input').value;
+      const msgEl = document.getElementById('route-msg');
+      
+      if (!startVal) { alert("출발지를 입력해주세요."); return; }
+      
+      msgEl.style.display = "block";
+      msgEl.textContent = "경로를 검색 중입니다...";
+      msgEl.className = "message";
+
+      try {
+        // 1. 출발지 좌표 찾기
+        const startCoord = await searchPlace(startVal);
+        let endCoord = null;
+
+        if (endVal) {
+          // 2. 도착지 좌표 찾기
+          endCoord = await searchPlace(endVal);
+        } else {
+          // 3. 도착지 없으면 루프 모드 로직 (여기서는 간단히 근처 임의 지점으로 시뮬레이션)
+          // 실제로는 복잡한 알고리즘이 필요하나, UI 데모용으로 직선거리 + @ 처리
+          alert("도착지가 없어 왕복 코스로 설정합니다.");
+          endCoord = startCoord; // 일단 시작점으로
+        }
+
+        // 카카오 모빌리티 API 호출 시늉 (SDK로는 직접 경로 못그림, 직선만 그림)
+        // 실제 구현 시에는 REST API 호출 필요. 여기서는 시각적 예시로 직선 연결
+        drawPath([startCoord, endCoord]);
+        
+        const dist = Math.round(getDistance(startCoord, endCoord) * 1.2); // 실제 도로 굴곡 감안
+        const time = Math.round(dist / 67); // 분 (약 4km/h)
+
+        msgEl.innerHTML = `예상 거리: <b>${(dist/1000).toFixed(2)}km</b> <br> 예상 소요시간: <b>${time}분</b>`;
+        
+        // 저장할 데이터 준비
+        currentRouteData = {
+          id: Date.now(),
+          title: `${startVal} -> ${endVal || '왕복'}`,
+          distance: dist, // meter
+          date: new Date().toLocaleDateString()
+        };
+        document.getElementById('btn-save-route').disabled = false;
+
+      } catch (err) {
+        msgEl.textContent = "장소를 찾을 수 없습니다.";
+        msgEl.className = "message error";
+        console.error(err);
+      }
+    }
+
+    // 랜덤 루프 핸들러 (간이)
+    function handleLoopRoute() {
+      // 기존 로직 유지 혹은 확장 가능
+      alert("랜덤 루프 기능: 현재 위치 주변의 추천 코스를 불러옵니다. (구현 예시)");
+    }
+
+    // 장소 검색 Promise
+    function searchPlace(keyword) {
+      return new Promise((resolve, reject) => {
+        ps.keywordSearch(keyword, (data, status) => {
+          if (status === kakao.maps.services.Status.OK) {
+            resolve({ lat: parseFloat(data[0].y), lng: parseFloat(data[0].x) });
+          } else {
+            reject("검색 실패");
+          }
+        });
+      });
+    }
+
+    // 지도 그리기
+    function drawPath(pathCoords) {
+      clearMap();
+      const linePath = pathCoords.map(c => new kakao.maps.LatLng(c.lat, c.lng));
+      
+      currentPolyline = new kakao.maps.Polyline({
+        path: linePath, strokeWeight: 5, strokeColor: '#2563eb', strokeOpacity: 0.8, strokeStyle: 'solid'
+      });
+      currentPolyline.setMap(map);
+      
+      // 마커
+      pathCoords.forEach(c => {
+        const mk = new kakao.maps.Marker({ position: new kakao.maps.LatLng(c.lat, c.lng) });
+        mk.setMap(map);
+        currentMarkers.push(mk);
+      });
+
+      // 범위 재설정
+      const bounds = new kakao.maps.LatLngBounds();
+      linePath.forEach(p => bounds.extend(p));
+      map.setBounds(bounds);
+    }
+
+    // 거리 계산 (Haversine)
+    function getDistance(c1, c2) {
+      const R = 6371e3; 
+      const φ1 = c1.lat * Math.PI/180, φ2 = c2.lat * Math.PI/180;
+      const Δφ = (c2.lat-c1.lat) * Math.PI/180, Δλ = (c2.lng-c1.lng) * Math.PI/180;
+      const a = Math.sin(Δφ/2)*Math.sin(Δφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)*Math.sin(Δλ/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // 코스 저장
+    function saveCurrentRoute() {
+      if (!currentRouteData) return;
+      routeHistory.push(currentRouteData);
+      updateHistoryUI();
+      
+      // [NEW] 프로필 통계 업데이트 호출
+      updateProfileStats(); 
+      
+      alert("코스가 저장되었습니다!");
+      document.getElementById('btn-save-route').disabled = true;
+    }
+
+    function updateHistoryUI() {
+      const list = document.getElementById('history-list');
+      if (routeHistory.length === 0) return;
+      
+      list.innerHTML = "";
+      routeHistory.forEach(item => {
+        const li = document.createElement('li');
+        li.style.marginBottom = "8px";
+        li.innerHTML = `<strong>${item.title}</strong> <span style="font-size:0.8rem; color:#666;">(${(item.distance/1000).toFixed(1)}km)</span>`;
+        list.appendChild(li);
+      });
+    }
+
+    function resetStats() {
+      if(confirm("모든 기록을 초기화 하시겠습니까?")) {
+        routeHistory = [];
+        updateHistoryUI();
+        updateProfileStats();
+        alert("초기화되었습니다.");
+      }
+    }
+
+    // ============================================================
+    //  [NEW] 프로필 및 차트 로직 (여기가 추가된 부분)
+    // ============================================================
+    let myChart = null;
+
+    function initProfileChart() {
+      const ctx = document.getElementById('activityChart').getContext('2d');
+      
+      myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['월', '화', '수', '목', '금', '토', '일'],
+          datasets: [{
+            label: '러닝 거리 (km)',
+            data: [0, 0, 0, 0, 0, 0, 0], // 초기값 0
+            backgroundColor: 'rgba(37, 99, 235, 0.7)', // var(--primary)
+            borderRadius: 5,
+            barThickness: 15
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false } // 범례 숨김
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { display: true, borderDash: [4, 4] } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function updateProfileStats() {
+      // 1. 텍스트 통계 계산
+      const count = routeHistory.length;
+      const totalMeters = routeHistory.reduce((acc, cur) => acc + cur.distance, 0);
+      const totalKm = (totalMeters / 1000).toFixed(1);
+
+      // 2. 화면 업데이트
+      document.getElementById('profile-total-run').textContent = count;
+      document.getElementById('profile-total-km').textContent = totalKm;
+      document.getElementById('profile-saved-count').textContent = count;
+
+      // 3. 차트 업데이트 (더미 데이터 시뮬레이션)
+      // 실제로는 날짜별로 데이터를 집계해야 하지만, 여기서는 
+      // 방금 저장한 코스 거리를 '오늘(일요일이라 가정)'이나 마지막 막대에 더하는 식으로 연출
+      if (myChart && count > 0) {
+        const lastRunKm = routeHistory[routeHistory.length-1].distance / 1000;
+        
+        // 예시: 임의의 요일에 데이터 추가 (시각적 효과용)
+        // 실제 앱: new Date().getDay() 등을 사용해 해당 인덱스에 더함
+        const currentData = myChart.data.datasets[0].data;
+        // 막대 그래프가 조금씩 차오르는 효과
+        currentData[6] += lastRunKm; 
+        
+        myChart.update();
+      } else if (myChart && count === 0) {
+        // 초기화 시
+        myChart.data.datasets[0].data = [0,0,0,0,0,0,0];
+        myChart.update();
+      }
+    }
+
+
+    // ============================================================
+    //  초기화 실행
+    // ============================================================
+    document.addEventListener("DOMContentLoaded", function () {
+      kakao.maps.load(function () {
+        initMap();
+      });
+
+      // 탭 전환 로직
+      const tabs = document.querySelectorAll('.tab-item');
+      const pages = document.querySelectorAll('.page');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // 모든 탭 비활성
+          tabs.forEach(t => t.classList.remove('active'));
+          pages.forEach(p => p.classList.remove('active'));
+
+          // 클릭한 탭 활성
+          tab.classList.add('active');
+          const targetId = tab.dataset.target;
+          document.getElementById(targetId).classList.add('active');
+          
+          // 만약 지도 페이지라면 사이즈 재조정 (깨짐 방지)
+          if (targetId === 'page-home' && map) {
+            setTimeout(() => map.relayout(), 0);
+          }
+        });
+      });
+
+      // 버튼 이벤트 연결
+      document.getElementById('btn-search-route').addEventListener('click', handleSearchRoute);
+      document.getElementById('btn-loop-route').addEventListener('click', handleLoopRoute);
+      document.getElementById('btn-save-route').addEventListener('click', saveCurrentRoute);
+      document.getElementById('btn-reset-stats').addEventListener('click', resetStats);
+
+      // 그룹 데모 데이터
+      const groupList = document.getElementById('group-list');
+      groupList.innerHTML = `
+        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
+          <span>🥇 새벽러닝클럽</span> <span style="color:blue; font-weight:bold;">1,204km</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
+          <span>🥈 직장인 달리기</span> <span style="color:blue; font-weight:bold;">890km</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:10px;">
+          <span>🥉 다이어트 팟</span> <span style="color:blue; font-weight:bold;">450km</span>
+        </div>
+      `;
+
+      // 차트 초기화
+      initProfileChart();
+      
+      // 차트에 초기 더미 데이터 좀 넣어두기 (심심하니까)
+      if(myChart) {
+        myChart.data.datasets[0].data = [2, 0, 3.5, 1, 0, 5, 0];
+        myChart.update();
+      }
+    });
+  </script>
+</body>
+</html>
