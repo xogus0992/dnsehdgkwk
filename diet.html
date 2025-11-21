@@ -1,103 +1,146 @@
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>러닝 코스 생성 · 거리 측정</title>
-  <!-- Leaflet CSS -->
+  <title>Diet · 러닝 루트</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="diet.css" />
+  <!-- Leaflet -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
-  <link rel="stylesheet" href="diet.css" />
-</head>
-<body>
-  <div class="app-root">
-    <aside class="sidebar">
-      <header class="app-header">
-        <h1 class="app-title">러닝 코스 플래너</h1>
-        <p class="app-subtitle">지도에서 코스를 만들고, 실제로 걸은 거리를 확인해 보세요.</p>
-      </header>
-
-      <section class="panel">
-        <h2>내 위치 · 기본 설정</h2>
-        <div class="row">
-          <button id="myLocationBtn" class="primary">내 위치로 이동</button>
-        </div>
-        <p class="hint">페이지를 열면 GPS 추적이 자동으로 시작됩니다. 브라우저에서 위치 권한을 허용해주세요.</p>
-        <p class="status-row">현재 위치: <span id="gpsStatus">대기 중...</span></p>
-        <p class="status-row">실제 이동 거리: <span id="gpsDistance">0.00</span> km</p>
-      </section>
-
-      <section class="panel">
-        <h2>경로 생성</h2>
-        <div class="row">
-          <label class="field-label" for="startInput">출발지</label>
-          <div class="field-group">
-            <input id="startInput" class="text-input" placeholder="예: 서울역" />
-            <button id="startSearchBtn" class="secondary">검색</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label class="field-label" for="endInput">목적지 (선택)</label>
-          <div class="field-group">
-            <input id="endInput" class="text-input" placeholder="예: 시청" />
-            <button id="endSearchBtn" class="secondary">검색</button>
-          </div>
-        </div>
-
-        <div class="row small-text">
-          <p>· 지도 위를 클릭해서도 출발/도착을 지정할 수 있습니다.<br />
-             · 첫 번째 클릭: 출발지, 두 번째 클릭: 목적지</p>
-        </div>
-
-        <div class="row">
-          <button id="clearRouteBtn" class="ghost full">경로 초기화</button>
-        </div>
-
-        <div class="row inline">
-          <span>현재 코스 거리:</span>
-          <strong id="routeDistance">- km</strong>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>목표 거리 코스</h2>
-        <div class="row">
-          <label class="field-label" for="targetKmInput">목표 거리 (km)</label>
-          <input
-            id="targetKmInput"
-            type="number"
-            min="0.5"
-            step="0.5"
-            class="text-input"
-            placeholder="예: 4 (사각 루프 기준)"
-          />
-        </div>
-        <div class="row small-text">
-          <p>
-            · 출발지만 있을 때: 출발지에서 시작해서 다시 출발로 돌아오는 <b>사각 루프</b> 코스를 만듭니다.<br />
-            · 출발지와 목적지가 있을 때: 두 지점을 포함하면서 목표 거리에 가깝게 <b>빙빙 도는 코스</b>를 시도합니다 (휴리스틱).
-          </p>
-        </div>
-        <div class="row">
-          <button id="generateTargetRouteBtn" class="primary full">목표 거리 코스 생성</button>
-        </div>
-      </section>
-    </aside>
-
-    <main class="map-wrapper">
-      <div id="map"></div>
-    </main>
-  </div>
-
-  <!-- Leaflet JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="diet.js"></script>
+  <!-- Kakao Maps JS (반드시 JavaScript 키 사용) -->
+  <script
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"
+    defer
+  ></script>
+  <script defer src="diet.js"></script>
+</head>
+<body>
+  <div class="app-root">
+    <header class="app-header">
+      <div class="app-header-left">
+        <button class="back-button" type="button">← 뒤로가기</button>
+        <h1 class="app-title">나의 운동 기록 · 러닝 루트</h1>
+      </div>
+      <div class="app-header-right">
+        <div class="stats-pill">
+          오늘 이동 거리
+          <span id="liveDistance">0.00 km</span>
+        </div>
+        <div class="stats-pill">
+          현재 코스 거리
+          <span id="routeDistance">0.00 km</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="map-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot"></span>
+            루트 지도
+          </div>
+          <div class="panel-actions">
+            <button id="btnLocate" class="btn-secondary" type="button">내 위치로 이동</button>
+            <div class="map-style-toggle">
+              <button data-style="light" class="style-chip style-chip-active" type="button">라이트</button>
+              <button data-style="osm" class="style-chip" type="button">기본</button>
+            </div>
+          </div>
+        </div>
+        <div id="map" class="map-container"></div>
+      </section>
+
+      <section class="control-panel">
+        <div class="card-group">
+          <div class="card">
+            <div class="card-header">
+              <h2>출발지 · 목적지</h2>
+              <span class="card-tag">주소 자동완성</span>
+            </div>
+            <div class="field-group">
+              <label class="field-label">출발지</label>
+              <div class="autocomplete-wrap">
+                <input id="start-input" class="text-input" type="text" placeholder="예: 서울역" autocomplete="off" />
+                <ul id="start-suggestions" class="suggest-list"></ul>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">도착지 (선택)</label>
+              <div class="autocomplete-wrap">
+                <input id="end-input" class="text-input" type="text" placeholder="입력 안 하면 왕복 사각 루트" autocomplete="off" />
+                <ul id="end-suggestions" class="suggest-list"></ul>
+              </div>
+            </div>
+            <div class="field-inline">
+              <div class="field-group small">
+                <label class="field-label">목표 거리 (왕복 기준, km)</label>
+                <input id="target-distance" class="text-input" type="number" min="1" step="0.5" value="5" />
+              </div>
+              <div class="field-group small">
+                <label class="field-label">루트 타입</label>
+                <div class="pill-switch">
+                  <button type="button" class="pill-option pill-option-active" data-mode="auto">자동</button>
+                  <button type="button" class="pill-option" data-mode="loop">사각 루프</button>
+                  <button type="button" class="pill-option" data-mode="oneway">일자 루트</button>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <button id="btnGenerate" class="btn-primary" type="button">코스 생성</button>
+              <button id="btnRegenerate" class="btn-ghost" type="button">다른 코스 추천</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>현재 코스 정보</h2>
+            </div>
+            <div class="info-row">
+              <span>코스 총 거리</span>
+              <strong id="info-distance">0.00 km</strong>
+            </div>
+            <div class="info-row">
+              <span>루트 유형</span>
+              <strong id="info-type">-</strong>
+            </div>
+            <div class="info-row">
+              <span>포인트 수</span>
+              <strong id="info-points">0</strong>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>실시간 GPS 추적</h2>
+              <span class="card-tag green">페이지 진입 시 자동 시작</span>
+            </div>
+            <p class="card-help">
+              이동 경로는 기기 GPS를 사용해 자동으로 기록됩니다.<br />
+              실제 이동 거리와 추천 루트 거리를 비교해 보세요.
+            </p>
+            <div class="info-row">
+              <span>현재 위치</span>
+              <strong id="info-location">위치 확인 중...</strong>
+            </div>
+            <div class="info-row">
+              <span>실시간 이동 거리</span>
+              <strong id="info-live-distance">0.00 km</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 </body>
 </html>
