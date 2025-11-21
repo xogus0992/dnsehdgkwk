@@ -1,0 +1,172 @@
+:root {
+  --bg: #0f172a;
+  --bg-panel: #111827;
+  --border-subtle: #1f2933;
+  --accent: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.15);
+  --text-main: #e5e7eb;
+  --text-dim: #9ca3af;
+  --danger: #f97373;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+}
+
+.app-root {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 340px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, #020617 0%, #020617 40%, #020617 100%);
+  overflow-y: auto;
+}
+
+.map-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+.app-header {
+  margin-bottom: 12px;
+}
+
+.app-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.app-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.panel {
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-subtle);
+  padding: 10px 10px 8px;
+  margin-bottom: 10px;
+}
+
+.panel h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.row {
+  margin-bottom: 8px;
+}
+
+.row.inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-row {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.field-group {
+  display: flex;
+  gap: 4px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: #020617;
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.text-input::placeholder {
+  color: #4b5563;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1120;
+}
+
+button.secondary {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+button.ghost {
+  background: transparent;
+  border-color: var(--border-subtle);
+  color: var(--text-dim);
+}
+
+button.full {
+  width: 100%;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 2px 0 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.small-text {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Leaflet 기본 컨트롤 위치 조금 띄우기 */
+.leaflet-top.leaflet-left {
+  margin-top: 8px;
+}
