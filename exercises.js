@@ -82,5 +82,4 @@ const exercisesData = {
         { name: "시티드 니업", image: null },
         { name: "바이시클 크런치", image: null }
     ]
-
 };

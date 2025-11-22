@@ -83,10 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentDate = new Date();
     let selectedDate = null;
-    let workoutLogs = {}; 
+    let workoutLogs = {};
     let routineTemplates = {};
     let exerciseDB = {};
-    let prRecords = {}; 
+    let prRecords = {};
 
     let currentSession = {
         date: null,
@@ -99,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
         exercises: []
     };
     let currentEditingTemplateExerciseId = null;
-    let currentEditingExerciseInSessionId = null; 
-    let lastSelectedBodyPart = null; 
-    let editingLogIndex = null; 
+    let currentEditingExerciseInSessionId = null;
+    let lastSelectedBodyPart = null;
+    let editingLogIndex = null;
 
     const bodyPartImages = {
         "가슴": "images/chest.png",
@@ -125,7 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let statsChart = null;
     let confirmCallback = null;
-    let choiceCallbacks = { onOverwrite: null, onAppend: null, onCancel: null };
+    let choiceCallbacks = {
+        onOverwrite: null,
+        onAppend: null,
+        onCancel: null
+    };
 
     const DATA_VERSION = "v21";
     const LOG_KEY = `workoutLogs_${DATA_VERSION}`;
@@ -143,10 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
         workoutLogs = JSON.parse(localStorage.getItem(LOG_KEY)) || {};
         routineTemplates = JSON.parse(localStorage.getItem(TEMPLATE_KEY)) || {};
         prRecords = JSON.parse(localStorage.getItem(PR_KEY)) || {};
-        
+
         const storedExerciseDB = JSON.parse(localStorage.getItem(EXERCISE_DB_KEY));
         if (!storedExerciseDB || Object.keys(storedExerciseDB).length === 0) {
-            exerciseDB = { ...exercisesData };
+            exerciseDB = {
+                ...exercisesData
+            };
             saveExerciseDB();
         } else {
             exerciseDB = storedExerciseDB;
@@ -154,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Object.keys(workoutLogs).forEach(date => {
             if (!Array.isArray(workoutLogs[date])) {
-                workoutLogs[date] = [ workoutLogs[date] ];
+                workoutLogs[date] = [workoutLogs[date]];
             }
         });
 
@@ -171,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         migrateKey(exerciseDB, "복근/코어", "복근");
         migrateKey(exerciseDB, "코어", "복근");
         migrateKey(exerciseDB, "다리", "하체");
-        
+
         if (dataChanged) saveExerciseDB();
 
         dataChanged = false;
@@ -193,16 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dataChanged = false;
         Object.keys(routineTemplates).forEach(id => {
-             routineTemplates[id].exercises.forEach(ex => {
-                  if (ex.part === "복근/코어" || ex.part === "코어") {
-                        ex.part = "복근";
-                        dataChanged = true;
-                  }
-                  if (ex.part === "다리") {
-                        ex.part = "하체";
-                        dataChanged = true;
-                  }
-             });
+            routineTemplates[id].exercises.forEach(ex => {
+                if (ex.part === "복근/코어" || ex.part === "코어") {
+                    ex.part = "복근";
+                    dataChanged = true;
+                }
+                if (ex.part === "다리") {
+                    ex.part = "하체";
+                    dataChanged = true;
+                }
+            });
         });
         if (dataChanged) saveTemplates();
     };
@@ -210,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveData = (key, data) => {
         localStorage.setItem(key, JSON.stringify(data));
     };
-    
+
     const saveLogs = () => saveData(LOG_KEY, workoutLogs);
     const saveTemplates = () => saveData(TEMPLATE_KEY, routineTemplates);
     const saveExerciseDB = () => saveData(EXERCISE_DB_KEY, exerciseDB);
@@ -220,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.calendarBody.innerHTML = '';
         const year = date.getFullYear();
         const month = date.getMonth();
-        
+
         elements.calendarTitle.textContent = `${year}년 ${month + 1}월`;
 
         const firstDay = new Date(year, month, 1).getDay();
         const lastDate = new Date(year, month + 1, 0).getDate();
-        
+
         const todayStr = getLocalToday();
-        
+
         const prevLastDate = new Date(year, month, 0).getDate();
         for (let i = firstDay - 1; i >= 0; i--) {
             elements.calendarBody.appendChild(createDayCell(prevLastDate - i, 'other-month', null, todayStr));
@@ -238,10 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const classes = [];
             if (dateStr === todayStr) classes.push('today');
             if (dateStr === selectedDate) classes.push('selected-day');
-            
+
             elements.calendarBody.appendChild(createDayCell(day, classes.join(' '), dateStr, todayStr));
         }
-        
+
         const nextDays = (7 - (firstDay + lastDate) % 7) % 7;
         for (let day = 1; day <= nextDays; day++) {
             elements.calendarBody.appendChild(createDayCell(day, 'other-month', null, todayStr));
@@ -251,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createDayCell = (day, classes, dateStr, todayStr) => {
         const dayCell = document.createElement('div');
         dayCell.className = `calendar-day ${classes}`;
-        
+
         const dayNumber = document.createElement('div');
         dayNumber.className = 'day-number';
         dayNumber.textContent = day;
@@ -261,14 +267,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const logsForDay = workoutLogs[dateStr];
             const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
             const partsSet = new Set();
-            let totalVolume = 0; 
+            let totalVolume = 0;
 
             logsArray.forEach(log => {
                 log.exercises.forEach(ex => {
                     const partKey = ex.part.toLowerCase().replace('/', '-').split(' ')[0];
                     partsSet.add(partKey);
                     ex.sets.forEach(s => {
-                        if(s.completed) totalVolume += (s.weight * s.reps);
+                        if (s.completed) totalVolume += (s.weight * s.reps);
                     });
                 });
             });
@@ -285,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
             partsSet.forEach(part => {
                 const partSpan = document.createElement('span');
                 let className = `part-${part}`;
-                if(part === '복근') className = 'part-abs';
+                if (part === '복근') className = 'part-abs';
                 const partSpanEl = document.createElement('span');
                 partSpanEl.className = className;
                 partSpanEl.textContent = part.charAt(0).toUpperCase() + part.slice(1);
@@ -307,10 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        
+
         return dayCell;
     };
-    
+
     const handleDayClick = (dateStr, dayCell) => {
         const oldSelected = elements.calendarBody.querySelector('.selected-day');
         if (oldSelected) {
@@ -345,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'template-details';
-        
+
         const nameP = document.createElement('p');
         nameP.className = 'template-name editable';
         nameP.textContent = template.name;
@@ -365,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const controlsDiv = document.createElement('div');
         controlsDiv.className = 'template-controls flex gap-2';
-        
+
         const startBtn = document.createElement('button');
         startBtn.textContent = '실행';
         startBtn.className = 'start-btn';
@@ -373,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             startWorkoutFromTemplate(id);
         };
-        
+
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '삭제';
         deleteBtn.className = 'delete-btn';
@@ -388,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         controlsDiv.appendChild(startBtn);
         controlsDiv.appendChild(deleteBtn);
-        
+
         card.addEventListener('click', (e) => {
             if (e.target === card || e.target === infoDiv || e.target === partsP || e.target === detailsDiv) {
                 startWorkoutFromTemplate(id);
@@ -397,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.appendChild(infoDiv);
         card.appendChild(controlsDiv);
-        
+
         return card;
     };
 
@@ -406,10 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('운동을 시작할 날짜를 캘린더에서 먼저 선택하세요.');
             return;
         }
-        
+
         const template = routineTemplates[templateId];
         if (!template) return;
-        
+
         const templateExercises = template.exercises.map(ex => ({
             id: `ex_${Date.now()}_${Math.random()}`,
             name: ex.name,
@@ -430,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             startSession(template.name, templateExercises);
         }
     };
-    
+
     const startSession = (name, exercises) => {
         editingLogIndex = null;
         currentSession.date = selectedDate;
@@ -460,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalStack = modalStack.filter(m => m !== modalEl);
         }, 200);
     };
-    
+
     const customConfirm = (message, onOk) => {
         elements.confirmMessage.textContent = message;
         confirmCallback = onOk;
@@ -487,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectEl.disabled = true;
         }
     };
-    
+
     const populateCategorySelect = (selectEl) => {
         selectEl.innerHTML = '<option value="">부위 선택</option>';
         Object.keys(exerciseDB).forEach(part => {
@@ -509,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const openAddExerciseModal = () => {
         populateCategorySelect(elements.newExercisePart);
-        if(lastSelectedBodyPart) {
+        if (lastSelectedBodyPart) {
             elements.newExercisePart.value = lastSelectedBodyPart;
         }
         elements.newExerciseName.value = '';
@@ -524,26 +530,29 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('부위와 운동 이름을 모두 입력하세요.');
             return;
         }
-        
-        lastSelectedBodyPart = part; 
+
+        lastSelectedBodyPart = part;
 
         if (!exerciseDB[part]) exerciseDB[part] = [];
-        
+
         if (exerciseDB[part].some(ex => ex.name === name)) {
             alert('이미 존재하는 운동 이름입니다.');
             return;
         }
-        
-        exerciseDB[part].push({ name: name, pr: 0 });
+
+        exerciseDB[part].push({
+            name: name,
+            pr: 0
+        });
         saveExerciseDB();
-        
+
         populateCategorySelect(elements.exerciseCategorySelect);
         elements.exerciseCategorySelect.value = part;
         populateExerciseSelect(elements.exerciseListSelect, part);
         elements.exerciseListSelect.value = name;
-        
+
         populateCategorySelect(elements.sessionCategorySelect);
-        
+
         closeModal(elements.addExerciseModal);
     };
 
@@ -562,17 +571,17 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.templateModalTitle.textContent = "새 루틴 만들기";
             elements.templateTitleInput.value = "";
         }
-        
+
         currentEditingTemplateExerciseId = null;
         elements.addUpdateExerciseBtn.textContent = "운동 추가";
-        
+
         populateCategorySelect(elements.exerciseCategorySelect);
         populateExerciseSelect(elements.exerciseListSelect, "");
-        
+
         elements.templateWeightInput.value = "";
         elements.templateRepsInput.value = "";
         elements.templateSetsInput.value = "";
-        
+
         renderTemplateExerciseList();
         openModal(elements.templateEditorModal);
     };
@@ -583,12 +592,12 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.templateExerciseList.innerHTML = "<p class='text-gray-500 text-center'>운동을 추가하세요.</p>";
             return;
         }
-        
+
         currentTemplate.exercises.forEach(ex => {
             const item = document.createElement('div');
             item.className = 'template-exercise-item';
             item.dataset.id = ex.id;
-            
+
             item.innerHTML = `
                 <div>
                     <p class="template-exercise-name">${ex.name} (${ex.part})</p>
@@ -599,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="template-exercise-delete p-2 text-red-500">삭제</button>
                 </div>
             `;
-            
+
             item.querySelector('.template-exercise-edit').addEventListener('click', () => {
                 currentEditingTemplateExerciseId = ex.id;
                 elements.exerciseCategorySelect.value = ex.part;
@@ -610,15 +619,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.templateSetsInput.value = ex.sets;
                 elements.addUpdateExerciseBtn.textContent = "운동 수정";
             });
-            
+
             item.querySelector('.template-exercise-delete').addEventListener('click', () => {
                 currentTemplate.exercises = currentTemplate.exercises.filter(e => e.id !== ex.id);
                 renderTemplateExerciseList();
             });
-            
+
             elements.templateExerciseList.appendChild(item);
         });
-        
+
         new Sortable(elements.templateExerciseList, {
             animation: 150,
             onEnd: (evt) => {
@@ -639,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('부위, 운동, 세트 수를 모두 입력하세요.');
             return;
         }
-        
+
         if (currentEditingTemplateExerciseId) {
             const ex = currentTemplate.exercises.find(e => e.id === currentEditingTemplateExerciseId);
             if (ex) {
@@ -652,10 +661,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentTemplate.exercises.push({
                 id: `template_ex_${Date.now()}`,
-                part, name, weight, reps, sets
+                part,
+                name,
+                weight,
+                reps,
+                sets
             });
         }
-        
+
         renderTemplateExerciseList();
         currentEditingTemplateExerciseId = null;
         elements.addUpdateExerciseBtn.textContent = "운동 추가";
@@ -666,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleSaveTemplate = () => {
         let name = elements.templateTitleInput.value.trim();
-        
+
         if (currentTemplate.exercises.length === 0) {
             alert('적어도 하나의 운동을 추가하세요.');
             return;
@@ -676,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const parts = new Set(currentTemplate.exercises.map(ex => ex.part));
             name = `${Array.from(parts).join('/')} 루틴`;
         }
-        
+
         currentTemplate.name = name;
         routineTemplates[currentTemplate.id] = currentTemplate;
         saveTemplates();
@@ -691,12 +704,12 @@ document.addEventListener('DOMContentLoaded', () => {
         startSessionTimers();
         openModal(elements.workoutSessionModal);
     };
-    
+
     const closeWorkoutSessionModal = () => {
         stopSessionTimers(true);
         closeModal(elements.workoutSessionModal);
     };
-    
+
     const getSessionData = () => currentSession;
 
     const renderWorkoutSessionList = () => {
@@ -705,11 +718,11 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.workoutSessionList.innerHTML = "<p class='text-gray-500 text-center py-10'>'운동 추가' 버튼으로 운동을 추가하세요.</p>";
             return;
         }
-        
+
         currentSession.exercises.forEach(ex => {
             elements.workoutSessionList.appendChild(createExerciseCard(ex));
         });
-        
+
         new Sortable(elements.workoutSessionList, {
             animation: 150,
             handle: '.exercise-header',
@@ -727,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const exerciseHeader = document.createElement('div');
         exerciseHeader.className = 'exercise-header';
-        
+
         const imgUrl = bodyPartImages[exercise.part] || bodyPartImages["가슴"];
         const headerLeft = document.createElement('div');
         headerLeft.className = 'flex items-center gap-2';
@@ -741,10 +754,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const controlsWrapper = document.createElement('div');
         controlsWrapper.className = 'flex items-center gap-2';
-        
+
         const setControlsDiv = document.createElement('div');
         setControlsDiv.className = 'flex items-center gap-1';
-        
+
         const removeSetBtn = document.createElement('button');
         removeSetBtn.className = 'adjust-set-btn-small';
         removeSetBtn.textContent = '–';
@@ -759,7 +772,10 @@ document.addEventListener('DOMContentLoaded', () => {
         addSetBtn.className = 'adjust-set-btn-small';
         addSetBtn.textContent = '+';
         addSetBtn.onclick = () => {
-            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: 0, reps: 0 };
+            const lastSet = exercise.sets[exercise.sets.length - 1] || {
+                weight: 0,
+                reps: 0
+            };
             exercise.sets.push({
                 id: `set_${Date.now()}_${Math.random()}`,
                 weight: lastSet.weight,
@@ -768,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             renderWorkoutSessionList();
         };
-        
+
         setControlsDiv.appendChild(removeSetBtn);
         setControlsDiv.appendChild(addSetBtn);
 
@@ -785,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
         controlsWrapper.appendChild(setControlsDiv);
         controlsWrapper.appendChild(completeAllBtn);
         controlsWrapper.appendChild(deleteBtn);
-        
+
         exerciseHeader.appendChild(headerLeft);
         exerciseHeader.appendChild(controlsWrapper);
         card.appendChild(exerciseHeader);
@@ -850,8 +866,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const repsInput = setItem.querySelector('.reps-input');
         const setCheckbox = setItem.querySelector('.set-checkbox');
 
-        weightInput.addEventListener('change', () => { set.weight = parseFloat(weightInput.value) || 0; });
-        repsInput.addEventListener('change', () => { set.reps = parseInt(repsInput.value) || 0; });
+        weightInput.addEventListener('change', () => {
+            set.weight = parseFloat(weightInput.value) || 0;
+        });
+        repsInput.addEventListener('change', () => {
+            set.reps = parseInt(repsInput.value) || 0;
+        });
 
         const setupStepper = (input, type) => {
             const wrapper = input.closest('.stepper-input-wrapper');
@@ -860,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.dispatchEvent(new Event('change'));
             });
             wrapper.querySelector('.down').addEventListener('click', () => {
-                if(input.value > 0) {
+                if (input.value > 0) {
                     input.value = Number(input.value) - 1;
                     input.dispatchEvent(new Event('change'));
                 }
@@ -868,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setupStepper(weightInput, 'weight');
         setupStepper(repsInput, 'reps');
-        
+
         setCheckbox.addEventListener('change', () => {
             handleSetComplete(setCheckbox, setItem, exercise.id, set.id, true);
         });
@@ -887,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const session = getSessionData();
         const exercise = session.exercises.find(ex => ex.id === exerciseId);
         const set = exercise.sets.find(s => s.id === setId);
-        
+
         if (setCheckbox.checked) {
             setItem.classList.add('set-completed');
             set.completed = true;
@@ -905,18 +925,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = elements.addToSessionModal;
         const title = modal.querySelector('#add-to-session-modal-title');
         const saveBtn = modal.querySelector('#save-to-session-btn');
-        
+
         elements.sessionCategorySelect.value = "";
         elements.sessionExListSelect.innerHTML = "<option value=''>운동 선택</option>";
         elements.sessionExListSelect.disabled = true;
         elements.sessionWeightInput.value = "";
         elements.sessionRepsInput.value = "";
         elements.sessionSetsInput.value = "";
-        
-        populateCategorySelect(elements.sessionCategorySelect); 
+
+        populateCategorySelect(elements.sessionCategorySelect);
 
         if (editingExerciseId) {
-            currentEditingExerciseInSessionId = editingExerciseId; 
+            currentEditingExerciseInSessionId = editingExerciseId;
             title.textContent = "세션에서 운동 수정";
             saveBtn.textContent = "수정";
 
@@ -928,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     populateExerciseSelect(elements.sessionExListSelect, category);
                     elements.sessionExListSelect.value = exercise.name;
                 }
-                
+
                 if (exercise.sets.length > 0) {
                     elements.sessionWeightInput.value = exercise.sets[0].weight;
                     elements.sessionRepsInput.value = exercise.sets[0].reps;
@@ -936,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.sessionSetsInput.value = exercise.sets.length;
             }
         } else {
-            currentEditingExerciseInSessionId = null; 
+            currentEditingExerciseInSessionId = null;
             title.textContent = "세션에 운동 추가";
             saveBtn.textContent = "추가";
         }
@@ -961,20 +981,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (exercise) {
                 exercise.name = exerciseName;
                 exercise.part = category;
-                
+
                 const newSets = [];
                 for (let i = 0; i < setCount; i++) {
                     const oldSet = exercise.sets[i];
                     newSets.push({
                         id: oldSet ? oldSet.id : `set_${Date.now()}_${Math.random()}_${i}`,
                         weight: weight,
-                        reps: reps,    
-                        completed: oldSet ? oldSet.completed : false 
+                        reps: reps,
+                        completed: oldSet ? oldSet.completed : false
                     });
                 }
                 exercise.sets = newSets;
             }
-            renderWorkoutSessionList(); 
+            renderWorkoutSessionList();
 
         } else {
             const newExercise = {
@@ -984,20 +1004,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 sets: []
             };
             for (let i = 0; i < setCount; i++) {
-                newExercise.sets.push({ 
-                    id: `${newExercise.id}_set${i+1}`, 
-                    weight: weight, 
-                    reps: reps, 
-                    completed: false 
+                newExercise.sets.push({
+                    id: `${newExercise.id}_set${i+1}`,
+                    weight: weight,
+                    reps: reps,
+                    completed: false
                 });
             }
             addExerciseToSession(newExercise);
         }
 
         closeModal(elements.addToSessionModal);
-        currentEditingExerciseInSessionId = null; 
+        currentEditingExerciseInSessionId = null;
     };
-    
+
     const addExerciseToSession = (exercise) => {
         if (currentSession.exercises.length === 0) {
             elements.workoutSessionList.innerHTML = "";
@@ -1011,26 +1031,26 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('저장할 운동이 없습니다.');
             return;
         }
-        
-        stopSessionTimers(true); 
+
+        stopSessionTimers(true);
 
         const finalLog = {
             routineName: currentSession.routineName,
-            exercises: JSON.parse(JSON.stringify(currentSession.exercises)) 
+            exercises: JSON.parse(JSON.stringify(currentSession.exercises))
         };
 
         if (!workoutLogs[currentSession.date]) {
             workoutLogs[currentSession.date] = [];
         }
-        
+
         if (editingLogIndex !== null && editingLogIndex >= 0) {
-             workoutLogs[currentSession.date][editingLogIndex] = finalLog;
+            workoutLogs[currentSession.date][editingLogIndex] = finalLog;
         } else {
-             workoutLogs[currentSession.date].push(finalLog);
+            workoutLogs[currentSession.date].push(finalLog);
         }
-        
+
         saveLogs();
-        renderCalendar(currentDate); 
+        renderCalendar(currentDate);
         closeWorkoutSessionModal();
         openSummaryModal(finalLog);
         editingLogIndex = null;
@@ -1039,13 +1059,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const startSessionTimers = () => {
         sessionTotalSeconds = 0;
         elements.sessionTotalTimerDisplay.textContent = formatTime(sessionTotalSeconds);
-        
+
         if (sessionTotalTimerInterval) clearInterval(sessionTotalTimerInterval);
         sessionTotalTimerInterval = setInterval(() => {
             sessionTotalSeconds++;
             elements.sessionTotalTimerDisplay.textContent = formatTime(sessionTotalSeconds);
         }, 1000);
-        
+
         sessionRestDefaultSeconds = parseInt(elements.timerInput.value) || 60;
         sessionRestSeconds = sessionRestDefaultSeconds;
         updateRestTimerDisplay();
@@ -1056,14 +1076,14 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(sessionTotalTimerInterval);
             sessionTotalTimerInterval = null;
         }
-        
+
         clearInterval(sessionRestTimerInterval);
         sessionRestTimerInterval = null;
         isRestTimerRunning = false;
-        
+
         sessionRestSeconds = sessionRestDefaultSeconds;
         updateRestTimerDisplay();
-        
+
         elements.floatingTimer.style.display = 'none';
     };
 
@@ -1087,36 +1107,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (sessionRestSeconds <= 0) {
                 stopSessionTimers(false);
-                playRestTimerSound(3); 
+                playRestTimerSound(3);
             }
         }, 1000);
     };
-    
+
     const updateRestTimerDisplay = () => {
         const minutes = Math.floor(sessionRestSeconds / 60);
         const seconds = sessionRestSeconds % 60;
         elements.timerDigitalDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
+
         const total = sessionRestDefaultSeconds > 0 ? sessionRestDefaultSeconds : 60;
         const angle = ((total - sessionRestSeconds) / total) * 360;
         elements.analogClockHand.style.transform = `rotate(${angle}deg)`;
     };
-    
+
     const updateFloatingTimerDisplay = () => {
         if (!isRestTimerRunning) {
             elements.floatingTimer.style.display = 'none';
             return;
         }
-        
+
         elements.floatingTimerDisplay.textContent = `${String(Math.floor(sessionRestSeconds / 60)).padStart(2, '0')}:${String(sessionRestSeconds % 60).padStart(2, '0')}`;
-        
+
         const total = sessionRestDefaultSeconds > 0 ? sessionRestDefaultSeconds : 60;
         const progress = sessionRestSeconds / total;
         const offset = floatingTimerCircumference * (1 - progress);
         elements.floatingTimerProgress.style.strokeDasharray = `${floatingTimerCircumference}`;
         elements.floatingTimerProgress.style.strokeDashoffset = offset;
     };
-    
+
     const adjustRestTimer = (seconds) => {
         sessionRestSeconds = Math.max(0, sessionRestSeconds + seconds);
         updateRestTimerDisplay();
@@ -1124,11 +1144,11 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFloatingTimerDisplay();
         }
     };
-    
+
     const playRestTimerSound = (count) => {
-        if (Date.now() - lastRestAudioTime < 1000) return; 
+        if (Date.now() - lastRestAudioTime < 1000) return;
         lastRestAudioTime = Date.now();
-        
+
         restTimerAudio.currentTime = 0;
         let played = 0;
         const playCount = () => {
@@ -1147,15 +1167,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const seconds = totalSeconds % 60;
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
-    
+
     const checkPR = (exerciseName, weight, reps) => {
-        const currentPR = prRecords[exerciseName] || { weight: 0, reps: 0 };
-        
+        const currentPR = prRecords[exerciseName] || {
+            weight: 0,
+            reps: 0
+        };
+
         const estimated1RM = weight * (1 + reps / 30);
         const current1RM = currentPR.weight * (1 + currentPR.reps / 30);
 
         if (estimated1RM > current1RM) {
-            const newPR = { weight, reps, date: currentSession.date };
+            const newPR = {
+                weight,
+                reps,
+                date: currentSession.date
+            };
             prRecords[exerciseName] = newPR;
             savePRs();
 
@@ -1192,15 +1219,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const openSummaryModal = (log) => {
         elements.summaryContent.innerHTML = "";
-        
+
         let totalVolume = 0;
         let totalSets = 0;
-        
+
         log.exercises.forEach(ex => {
             const imgUrl = bodyPartImages[ex.part] || bodyPartImages["가슴"];
 
             const hasCompletedSets = ex.sets.some(s => s.completed);
-            if(!hasCompletedSets) return;
+            if (!hasCompletedSets) return;
 
             const exWrap = document.createElement('div');
             exWrap.className = 'summary-exercise-item';
@@ -1215,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const setsList = document.createElement('ul');
             setsList.className = 'list-disc list-inside text-gray-700';
-            
+
             const setsMap = new Map();
             ex.sets.forEach(set => {
                 if (set.completed) {
@@ -1245,12 +1272,12 @@ document.addEventListener('DOMContentLoaded', () => {
             exWrap.appendChild(exDiv);
             elements.summaryContent.appendChild(exWrap);
         });
-        
+
         const summaryText = document.createElement('p');
         summaryText.className = 'mt-4 pt-4 border-t font-bold';
         summaryText.textContent = `총 볼륨: ${totalVolume.toLocaleString()}kg | 총 세트: ${totalSets}세트`;
         elements.summaryContent.prepend(summaryText);
-        
+
         if (elements.prList.children.length > 0) {
             openModal(elements.prCelebrationModal);
         } else {
@@ -1266,24 +1293,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const logsArray = Array.isArray(logs) ? logs : [logs];
-        
+
         elements.dailyLogModalTitle.textContent = `${dateStr} 운동 기록`;
         elements.dailyLogModalList.innerHTML = "";
-        
+
         logsArray.forEach((log, index) => {
             const logWrapper = document.createElement('div');
             logWrapper.className = 'mb-4 pb-4 border-b';
-            
+
             const headerDiv = document.createElement('div');
             headerDiv.className = 'flex justify-between items-center mb-2';
-            
+
             const logTitle = document.createElement('h3');
             logTitle.className = 'text-xl font-bold text-blue-600';
             logTitle.textContent = `[운동 ${index + 1}] ${log.routineName}`;
-            
+
             const btnGroup = document.createElement('div');
             btnGroup.className = 'flex gap-2';
-            
+
             const editBtn = document.createElement('button');
             editBtn.className = 'text-sm bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded';
             editBtn.textContent = '수정';
@@ -1302,17 +1329,17 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.onclick = () => {
                 customConfirm("이 운동 기록을 정말 삭제하시겠습니까?", () => {
                     workoutLogs[dateStr].splice(index, 1);
-                    if(workoutLogs[dateStr].length === 0) delete workoutLogs[dateStr];
+                    if (workoutLogs[dateStr].length === 0) delete workoutLogs[dateStr];
                     saveLogs();
                     renderCalendar(currentDate);
                     closeModal(elements.dailyLogModal);
-                    if(workoutLogs[dateStr]) openDailyLogModal(dateStr);
+                    if (workoutLogs[dateStr]) openDailyLogModal(dateStr);
                 });
             };
 
             btnGroup.appendChild(editBtn);
             btnGroup.appendChild(deleteBtn);
-            
+
             headerDiv.appendChild(logTitle);
             headerDiv.appendChild(btnGroup);
             logWrapper.appendChild(headerDiv);
@@ -1321,7 +1348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const imgUrl = bodyPartImages[ex.part] || bodyPartImages["가슴"];
 
                 const hasCompletedSets = ex.sets.some(s => s.completed);
-                if(!hasCompletedSets) return;
+                if (!hasCompletedSets) return;
 
                 const exWrap = document.createElement('div');
                 exWrap.className = 'summary-exercise-item mb-2';
@@ -1371,33 +1398,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             elements.dailyLogModalList.appendChild(logWrapper);
         });
-        
+
         openModal(elements.dailyLogModal);
     };
-    
+
     const openStatsModal = () => {
-        const today = new Date(); 
+        const today = new Date();
         const endStr = getLocalToday();
-        
+
         const end = new Date(endStr);
         const start = new Date(end);
         start.setDate(start.getDate() - 6);
 
         elements.statsStartDateInput.value = start.toISOString().split('T')[0];
         elements.statsEndDateInput.value = endStr;
-        
+
         elements.statsPartSelector.innerHTML = "";
         const allBtn = createPartBtn('전체');
         allBtn.classList.add('selected');
         elements.statsPartSelector.appendChild(allBtn);
-        
+
         Object.keys(exerciseDB).forEach(part => {
             elements.statsPartSelector.appendChild(createPartBtn(part));
         });
-        
+
         updateStatsExerciseSelect('전체');
         updateStatsChart();
-        
+
         openModal(elements.statsModal);
     };
 
@@ -1414,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return btn;
     };
-    
+
     const updateStatsExerciseSelect = (part) => {
         elements.statsExerciseSelect.innerHTML = '<option value="전체">모든 운동</option>';
         if (part === '전체') {
@@ -1427,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
-    
+
     const getRandomColor = () => {
         const letters = '0123456789ABCDEF';
         let color = '#';
@@ -1442,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const endDate = elements.statsEndDateInput.value;
         const part = elements.statsPartSelector.querySelector('.part-btn.selected').dataset.part;
         const exercise = elements.statsExerciseSelect.value;
-        
+
         const dates = [];
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -1450,26 +1477,30 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             dates.push(d.toISOString().split('T')[0]);
         }
-        
+
         let datasets = [];
 
         if (part === '전체') {
             const bodyParts = Object.keys(bodyPartImages);
             const partColors = {
-                "가슴": '#ff6384', "등": '#36a2eb', "하체": '#cc65fe',
-                "어깨": '#ffce56', "팔": '#4bc0c0', "복근": '#9966ff'
+                "가슴": '#ff6384',
+                "등": '#36a2eb',
+                "하체": '#cc65fe',
+                "어깨": '#ffce56',
+                "팔": '#4bc0c0',
+                "복근": '#9966ff'
             };
 
             datasets = bodyParts.map(bp => {
                 return {
                     label: bp,
                     backgroundColor: partColors[bp] || '#999',
-                    stack: 'combined', 
+                    stack: 'combined',
                     data: dates.map(date => {
                         const logsForDay = workoutLogs[date];
                         if (!logsForDay) return 0;
                         const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
-                        
+
                         let vol = 0;
                         logsArray.forEach(log => {
                             log.exercises.forEach(ex => {
@@ -1513,7 +1544,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const logsForDay = workoutLogs[date];
                         if (!logsForDay) return 0;
                         const logsArray = Array.isArray(logsForDay) ? logsForDay : [logsForDay];
-                        
+
                         let vol = 0;
                         logsArray.forEach(log => {
                             log.exercises.forEach(ex => {
@@ -1533,26 +1564,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredDatasets = datasets.filter(ds => ds.data.some(v => v > 0));
 
         if (statsChart) statsChart.destroy();
-        
+
         statsChart = new Chart(elements.statsChartCanvas, {
             type: 'bar',
             data: {
                 labels: dates.map(d => d.slice(5)),
-                datasets: filteredDatasets.length > 0 ? filteredDatasets : [{label:'데이터 없음', data:[], stack:'combined'}]
+                datasets: filteredDatasets.length > 0 ? filteredDatasets : [{
+                    label: '데이터 없음',
+                    data: [],
+                    stack: 'combined'
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { stacked: true },
-                    y: { 
-                        stacked: true, 
-                        beginAtZero: true, 
-                        title: { display: true, text: '볼륨 (kg)' } 
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '볼륨 (kg)'
+                        }
                     }
                 },
                 plugins: {
-                    datalabels: { display: false },
+                    datalabels: {
+                        display: false
+                    },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -1564,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
-    
+
     const resetStatsDate = () => {
         const endStr = getLocalToday();
         const end = new Date(endStr);
@@ -1575,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.statsEndDateInput.value = endStr;
         updateStatsChart();
     };
-    
+
     const addEnterNavigation = (inputs) => {
         inputs.forEach((input, index) => {
             input.addEventListener('keydown', (e) => {
@@ -1583,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     if (input.tagName === 'BUTTON') {
                         input.click();
-                        return; 
+                        return;
                     }
                     const nextInput = inputs[index + 1];
                     if (nextInput) {
@@ -1633,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderCalendar(currentDate);
             }
         });
-        
+
         elements.createNewTemplateBtn.addEventListener('click', () => openTemplateEditorModal());
         elements.openStatsModalBtn.addEventListener('click', openStatsModal);
         elements.backBtn.addEventListener('click', () => {
@@ -1655,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         elements.addUpdateExerciseBtn.addEventListener('click', handleAddOrUpdateExerciseInTemplate);
         elements.saveTemplateBtn.addEventListener('click', handleSaveTemplate);
-        
+
         addEnterNavigation([
             elements.templateTitleInput,
             elements.exerciseCategorySelect,
@@ -1668,14 +1710,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         elements.saveNewExerciseBtn.addEventListener('click', handleSaveNewExercise);
         elements.cancelAddExerciseBtn.addEventListener('click', () => closeModal(elements.addExerciseModal));
-        
+
         addEnterNavigation([
             elements.newExercisePart,
             elements.newExerciseName,
             elements.saveNewExerciseBtn
         ]);
 
-        elements.addExerciseToSessionBtn.addEventListener('click', () => openAddToSessionModal()); 
+        elements.addExerciseToSessionBtn.addEventListener('click', () => openAddToSessionModal());
         elements.saveSessionBtn.addEventListener('click', handleSaveSession);
 
         elements.hideSessionBtn.addEventListener('click', (e) => {
@@ -1692,11 +1734,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         elements.saveToSessionBtn.addEventListener('click', handleSaveToSession);
-        
+
         elements.sessionCategorySelect.addEventListener('change', (e) => {
             populateExerciseSelect(elements.sessionExListSelect, e.target.value);
         });
-        
+
         addEnterNavigation([
             elements.sessionCategorySelect,
             elements.sessionExListSelect,
@@ -1717,13 +1759,13 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.timerPlus30Btn.addEventListener('click', () => adjustRestTimer(30));
         elements.timerMinus10Btn.addEventListener('click', () => adjustRestTimer(-10));
         elements.timerPlus10Btn.addEventListener('click', () => adjustRestTimer(10));
-        
+
         elements.floatingTimer.addEventListener('click', () => {
             elements.floatingTimer.style.display = 'none';
             elements.workoutSessionModal.style.display = 'flex';
-            openModal(elements.workoutSessionModal); 
+            openModal(elements.workoutSessionModal);
         });
-        
+
         elements.closeFloatingTimer.addEventListener('click', (e) => {
             e.stopPropagation();
             customConfirm("운동 세션을 종료하시겠습니까?\n저장되지 않은 기록은 사라집니다.", () => {
@@ -1741,10 +1783,10 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.statsEndDateInput.addEventListener('change', updateStatsChart);
         elements.statsExerciseSelect.addEventListener('change', updateStatsChart);
         elements.statsResetBtn.addEventListener('click', resetStatsDate);
-        
+
         elements.closePrModalBtn.addEventListener('click', () => {
             closeModal(elements.prCelebrationModal);
-            openModal(elements.summaryModal); 
+            openModal(elements.summaryModal);
         });
         elements.closeSummaryBtn.addEventListener('click', () => closeModal(elements.summaryModal));
 
@@ -1757,17 +1799,17 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmCallback = null;
             closeModal(elements.confirmModal);
         });
-        
+
         elements.choiceOverwriteBtn.addEventListener('click', () => {
-            if(choiceCallbacks.onOverwrite) choiceCallbacks.onOverwrite();
+            if (choiceCallbacks.onOverwrite) choiceCallbacks.onOverwrite();
             closeModal(elements.choiceModal);
         });
         elements.choiceAppendBtn.addEventListener('click', () => {
-            if(choiceCallbacks.onAppend) choiceCallbacks.onAppend();
+            if (choiceCallbacks.onAppend) choiceCallbacks.onAppend();
             closeModal(elements.choiceModal);
         });
         elements.choiceCancelBtn.addEventListener('click', () => {
-            if(choiceCallbacks.onCancel) choiceCallbacks.onCancel();
+            if (choiceCallbacks.onCancel) choiceCallbacks.onCancel();
             closeModal(elements.choiceModal);
         });
 
@@ -1790,13 +1832,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (modal) closeModal(modal);
             });
         });
-        
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 let topModal = null;
                 let maxZ = 0;
                 const visibleModals = document.querySelectorAll('.modal-overlay[style*="display: flex"]');
-                
+
                 visibleModals.forEach(modal => {
                     const z = parseInt(window.getComputedStyle(modal).zIndex) || 0;
                     if (z > maxZ) {
@@ -1816,14 +1858,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', e => e.preventDefault());
         });
-        
+
         document.querySelectorAll('input, textarea, select').forEach(el => {
             if (el.type !== 'checkbox' && el.type !== 'radio') {
-                 el.style.fontSize = '16px';
+                el.style.fontSize = '16px';
             }
         });
     };
