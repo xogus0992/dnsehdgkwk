@@ -1,185 +1,293 @@
+/* =====================================================
+   전역 설정
+===================================================== */
 let map;
 let kakaoPlaces;
-let startCoord = null;
-let endCoord = null;
-let lastGps = null;
+let myLat = null;
+let myLng = null;
 
-window.addEventListener("DOMContentLoaded", () => {
-  initMap();
-  initGps(); // 초기 한 번 위치 확인해서 텍스트 갱신
-  kakao.maps.load(() => initKakaoAutocomplete());
-  bindUI();
-});
+// 반경 제한 5km
+const RADIUS_LIMIT = 5000;
 
-/* 지도 초기화 */
+/* =====================================================
+   지도 초기화
+===================================================== */
 function initMap() {
-  const mapEl = document.getElementById("map");
-  if (!mapEl) return;
-
-  map = L.map("map").setView([37.5665, 126.978], 13);
+  map = L.map("map").setView([37.5665, 126.9780], 13);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19
   }).addTo(map);
 }
 
-/* GPS 초기화 - 현재 위치 한 번 가져와서 표시 */
-function initGps() {
+/* =====================================================
+   GPS 초기화
+===================================================== */
+function initMyLocation() {
   if (!navigator.geolocation) return;
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      const { latitude, longitude, altitude } = pos.coords;
-      lastGps = { lat: latitude, lng: longitude, alt: altitude };
-      updateGpsDisplay(latitude, longitude, altitude);
-
-      // 시작 시 출발지 없으면 현재 위치로 지도 세팅
-      if (!startCoord && map) {
-        map.setView([latitude, longitude], 15);
-      }
+      myLat = pos.coords.latitude;
+      myLng = pos.coords.longitude;
     },
-    () => {
-      // 실패 시 굳이 알람은 안 띄움
+    (err) => {
+      console.log("GPS 실패:", err);
     },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    { enableHighAccuracy: true, timeout: 15000 }
   );
 }
 
-/* GPS 텍스트 박스 갱신 */
-function updateGpsDisplay(lat, lng, alt) {
-  const latEl = document.getElementById("gps-lat");
-  const lngEl = document.getElementById("gps-lng");
-  const altEl = document.getElementById("gps-alt");
-
-  if (latEl) latEl.textContent = lat != null ? lat.toFixed(5) : "-";
-  if (lngEl) lngEl.textContent = lng != null ? lng.toFixed(5) : "-";
-  if (altEl) altEl.textContent =
-    alt != null && !Number.isNaN(alt) ? `${alt.toFixed(1)} m` : "-";
-}
-
-/* 카카오 자동완성 초기화 */
-function initKakaoAutocomplete() {
-  kakaoPlaces = new kakao.maps.services.Places();
-
-  setupAutocomplete("start-input", "start-suggestions", (coord) => {
-    startCoord = coord;
-    if (map) {
-      map.setView([coord.lat, coord.lng], 16);
-    }
-  });
-
-  setupAutocomplete("end-input", "end-suggestions", (coord) => {
-    endCoord = coord;
-    if (map) {
-      map.setView([coord.lat, coord.lng], 16);
-    }
+/* =====================================================
+   Kakao Places 초기화
+===================================================== */
+function initKakaoPlaces() {
+  kakao.maps.load(() => {
+    kakaoPlaces = new kakao.maps.services.Places();
   });
 }
 
-/* 자동완성 공통 로직 */
-function setupAutocomplete(inputId, listId, onSelect) {
-  const input = document.getElementById(inputId);
-  const list = document.getElementById(listId);
-  if (!input || !list) return;
+/* =====================================================
+   Haversine 거리 계산
+===================================================== */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = (deg) => (deg * Math.PI) / 180;
 
-  let timer = null;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
 
-  input.addEventListener("input", () => {
-    const keyword = input.value.trim();
-    if (timer) clearTimeout(timer);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) ** 2;
 
-    if (!keyword) {
-      list.innerHTML = "";
-      list.style.display = "none";
-      return;
-    }
-
-    timer = setTimeout(() => {
-      kakaoPlaces.keywordSearch(keyword, (results, status) => {
-        if (
-          status !== kakao.maps.services.Status.OK ||
-          !results.length
-        ) {
-          list.innerHTML = "";
-          list.style.display = "none";
-          return;
-        }
-
-        list.innerHTML = "";
-        results.slice(0, 8).forEach((r) => {
-          const li = document.createElement("li");
-          li.className = "suggest-item";
-          li.textContent =
-            r.place_name +
-            (r.road_address_name ? ` · ${r.road_address_name}` : "");
-
-          li.addEventListener("click", () => {
-            input.value = r.place_name;
-            list.innerHTML = "";
-            list.style.display = "none";
-
-            const coord = { lat: Number(r.y), lng: Number(r.x) };
-            onSelect(coord);
-          });
-
-          list.appendChild(li);
-        });
-
-        list.style.display = "block";
-      });
-    }, 220);
-  });
-
-  /* 입력창 바깥 클릭 시 자동완성 닫기 */
-  document.addEventListener("click", (e) => {
-    if (!list.contains(e.target) && e.target !== input) {
-      list.style.display = "none";
-    }
-  });
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/* UI 이벤트 바인딩 */
-function bindUI() {
-  const myLocationBtn = document.getElementById("btn-my-location");
-  if (myLocationBtn) {
-    myLocationBtn.addEventListener("click", handleMyLocationClick);
+/* =====================================================
+   랜드마크 우선 정렬
+===================================================== */
+function getMatchedLandmarks(keyword) {
+  if (typeof LANDMARKS === "undefined") {
+    console.error("LANDMARKS 없음: landmarks.js 확인 필요");
+    return [];
   }
 
-  // 코스 생성 버튼은 나중에 로직 붙일 예정
-  const generateBtn = document.getElementById("btn-generate");
-  if (generateBtn) {
-    generateBtn.addEventListener("click", () => {
-      // TODO: 나중에 ORS 기반 코스 생성 로직 연결
-      alert("코스 생성 로직은 나중에 붙일 예정입니다.");
+  const key = keyword.trim().toLowerCase();
+  if (!key) return [];
+
+  const hasLoc = myLat != null && myLng != null;
+
+  const matched = LANDMARKS.filter((lm) => {
+    const matchName = lm.name.toLowerCase().includes(key);
+    const matchKeyword =
+      Array.isArray(lm.keywords) &&
+      lm.keywords.some((k) => k.toLowerCase().includes(key));
+
+    return matchName || matchKeyword;
+  })
+    .map((lm) => {
+      let dist = null;
+      if (hasLoc) dist = haversine(myLat, myLng, lm.lat, lm.lng);
+      return {
+        place_name: lm.name,
+        x: lm.lng,
+        y: lm.lat,
+        distance: dist,
+        __isLandmark: true
+      };
+    })
+    .filter((e) => {
+      if (!hasLoc) return true;
+      if (e.distance == null) return true;
+      return e.distance <= RADIUS_LIMIT;
     });
-  }
+
+  // 거리순 정렬
+  matched.sort((a, b) => {
+    if (a.distance == null && b.distance == null) return 0;
+    if (a.distance == null) return 1;
+    if (b.distance == null) return -1;
+    return a.distance - b.distance;
+  });
+
+  return matched;
 }
 
-/* 내 위치 버튼 클릭: 현재 GPS 기준으로 지도 이동(B 선택) */
-function handleMyLocationClick() {
-  if (!navigator.geolocation) {
-    alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+/* =====================================================
+   카카오 검색 + 거리 필터 + 랜드마크 병합
+===================================================== */
+function searchPlace(keyword, callback) {
+  if (!kakaoPlaces) {
+    callback(getMatchedLandmarks(keyword));
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const { latitude, longitude, altitude } = pos.coords;
-      lastGps = { lat: latitude, lng: longitude, alt: altitude };
-      updateGpsDisplay(latitude, longitude, altitude);
+  const hasLoc = myLat != null && myLng != null;
+  const options = hasLoc
+    ? { location: new kakao.maps.LatLng(myLat, myLng) }
+    : {};
 
-      if (map) {
-        map.setView([latitude, longitude], 16);
-      }
+  kakaoPlaces.keywordSearch(
+    keyword,
+    (result, status) => {
+      let kakaoList = [];
+
+      if (status === kakao.maps.services.Status.OK)
+        kakaoList = result || [];
+
+      // 거리 계산
+      kakaoList.forEach((p) => {
+        const lat = Number(p.y);
+        const lng = Number(p.x);
+
+        if (hasLoc && !p.distance) {
+          p.distance = haversine(myLat, myLng, lat, lng);
+        } else if (typeof p.distance === "string") {
+          p.distance = Number(p.distance);
+        }
+      });
+
+      // 반경 필터
+      let filtered = kakaoList.filter((p) => {
+        if (!hasLoc) return true;
+        if (p.distance == null) return true;
+        return p.distance <= RADIUS_LIMIT;
+      });
+
+      if (filtered.length === 0) filtered = kakaoList;
+
+      // 거리순 정렬
+      filtered.sort((a, b) => {
+        if (a.distance == null && b.distance == null) return 0;
+        if (a.distance == null) return 1;
+        if (b.distance == null) return -1;
+        return a.distance - b.distance;
+      });
+
+      // 랜드마크 우선
+      const landmarkList = getMatchedLandmarks(keyword);
+      const used = new Set(landmarkList.map((e) => e.place_name));
+
+      const merged = [
+        ...landmarkList,
+        ...filtered.filter((e) => !used.has(e.place_name))
+      ];
+
+      callback(merged);
     },
-    () => {
-      // 실패 시 출발지 좌표라도 있으면 그쪽으로 이동
-      if (startCoord && map) {
-        map.setView([startCoord.lat, startCoord.lng], 16);
-      } else if (map) {
-        alert("현재 위치를 가져오지 못했습니다.");
-      }
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    options
   );
 }
+
+/* =====================================================
+   자동완성 UI 출력
+===================================================== */
+function showSuggestions(wrapper, items, targetInput) {
+  wrapper.innerHTML = "";
+  wrapper.style.display = items.length ? "block" : "none";
+
+  items.slice(0, 8).forEach((place) => {
+    const li = document.createElement("li");
+    li.className = "suggest-item";
+
+    let dText = "";
+    if (place.distance != null && !Number.isNaN(place.distance)) {
+      const d = place.distance;
+      dText = d < 1000 ? `${Math.round(d)}m` : `${(d / 1000).toFixed(1)}km`;
+    }
+
+    li.textContent = dText
+      ? `${place.place_name} · ${dText}`
+      : place.place_name;
+
+    li.onclick = () => {
+      targetInput.value = place.place_name;
+      wrapper.style.display = "none";
+    };
+
+    wrapper.appendChild(li);
+  });
+}
+
+/* =====================================================
+   입력창 자동완성 연결
+===================================================== */
+function setupAutocomplete() {
+  const startInput = document.getElementById("start-input");
+  const endInput = document.getElementById("end-input");
+  const startSug = document.getElementById("start-suggestions");
+  const endSug = document.getElementById("end-suggestions");
+
+  // 출발지
+  startInput.addEventListener("input", () => {
+    const key = startInput.value.trim();
+    if (!key) return (startSug.style.display = "none");
+
+    searchPlace(key, (list) => {
+      showSuggestions(startSug, list, startInput);
+    });
+  });
+
+  // 도착지
+  endInput.addEventListener("input", () => {
+    const key = endInput.value.trim();
+    if (!key) return (endSug.style.display = "none");
+
+    searchPlace(key, (list) => {
+      showSuggestions(endSug, list, endInput);
+    });
+  });
+
+  // 외부 클릭 시 숨김
+  document.addEventListener("click", (e) => {
+    if (e.target !== startInput && !startSug.contains(e.target))
+      startSug.style.display = "none";
+
+    if (e.target !== endInput && !endSug.contains(e.target))
+      endSug.style.display = "none";
+  });
+}
+
+/* =====================================================
+   내 위치 버튼
+===================================================== */
+function setupMyLocationBtn() {
+  const btn = document.getElementById("btn-my-location");
+  if (!btn) return;
+
+  btn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      alert("GPS를 지원하지 않는 기기입니다.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        myLat = pos.coords.latitude;
+        myLng = pos.coords.longitude;
+
+        map.setView([myLat, myLng], 16);
+        L.marker([myLat, myLng])
+          .addTo(map)
+          .bindPopup("현재 위치")
+          .openPopup();
+      },
+      () => alert("현재 위치를 가져올 수 없습니다."),
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  });
+}
+
+/* =====================================================
+   초기 실행
+===================================================== */
+window.onload = () => {
+  initMap();
+  initMyLocation();
+  initKakaoPlaces();
+  setupAutocomplete();
+  setupMyLocationBtn();
+};
