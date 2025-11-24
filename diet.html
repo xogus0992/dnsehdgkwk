@@ -1,118 +1,105 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>나의 코스 만들기</title>
 
-  <link rel="stylesheet" href="diet.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet -->
+  <!-- Leaflet CSS (지도용) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Kakao Places -->
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&autoload=false&libraries=services"></script>
+  <!-- 메인 CSS -->
+  <link rel="stylesheet" href="diet.css" />
 </head>
+
 <body>
+  <header>
+    <div class="title">나의 코스 만들기</div>
+  </header>
 
-<header class="app-header">
-  <div class="header-inner">
-    <button class="header-back-btn">← 뒤로가기</button>
-    <h1 class="header-title">나의 코스 만들기</h1>
-    <div class="header-right-space"></div>
-  </div>
-</header>
-
-<main class="app-main">
-  <div class="course-card">
-
-    <!-- 좌측 지도 영역 -->
-    <div class="map-section">
-      <div class="map-frame">
+  <main>
+    <div class="layout">
+      <!-- 지도 카드 -->
+      <section class="card map-card">
         <div id="map"></div>
-      </div>
-    </div>
+      </section>
 
-    <!-- 우측 패널 영역 -->
-    <div class="panel-section">
-
-      <div class="panel-title-row">
-        <div class="panel-title-left">
-          <span class="panel-title-icon">🚩</span>
-          <h2 class="panel-title">코스 설정</h2>
+      <!-- 코스 설정 패널 -->
+      <section class="card panel-card">
+        <div class="panel-header">
+          <div class="panel-title">🚩 코스 설정</div>
+          <button id="btn-my-location" class="btn btn-outline">내 위치</button>
         </div>
 
-        <button id="btn-my-location" class="panel-icon-btn">내 위치</button>
-      </div>
-
-      <!-- 입력폼 -->
-      <div class="panel-inputs">
-        <label class="field-label">출발지</label>
-        <div class="field-wrapper">
-          <input id="start-input" type="text" class="text-input" placeholder="출발지 (예: 서울역)" autocomplete="off">
+        <div class="field-group">
+          <div class="field-label">출발지</div>
+          <input
+            id="start-input"
+            type="text"
+            class="text-input"
+            placeholder="출발지 (예: 서울역)"
+            autocomplete="off"
+          />
           <ul id="start-suggestions" class="suggest-list"></ul>
         </div>
 
-        <label class="field-label">도착지</label>
-        <div class="field-wrapper">
-          <input id="end-input" type="text" class="text-input" placeholder="도착지 (예: 한강공원)" autocomplete="off">
+        <div class="field-group">
+          <div class="field-label">도착지</div>
+          <input
+            id="end-input"
+            type="text"
+            class="text-input"
+            placeholder="도착지 (예: 여의도한강공원)"
+            autocomplete="off"
+          />
           <ul id="end-suggestions" class="suggest-list"></ul>
         </div>
 
-        <label class="field-label">목표 거리</label>
-        <div class="field-wrapper field-inline">
-          <input id="target-km" type="number" value="5" class="text-input" min="1" step="0.5">
-          <div class="field-suffix">km</div>
-        </div>
-      </div>
-
-      <!-- 버튼 -->
-      <div class="panel-actions">
-        <button id="btn-generate" class="btn-primary">코스 생성하기</button>
-      </div>
-
-      <!-- 상태 -->
-      <div class="panel-status">
-        <div class="status-row">
-          <span class="status-label">목표 달성률</span>
-          <span id="status-progress-label" class="status-value">0%</span>
-        </div>
-        <div class="progress-bar">
-          <div id="status-progress-fill" class="progress-fill"></div>
-        </div>
-
-        <div class="status-grid">
-          <div>
-            <span class="status-label">코스 거리</span>
-            <span id="status-route-km" class="status-value">0.00 km</span>
-          </div>
-          <div>
-            <span class="status-label">목표 거리</span>
-            <span id="status-target-km" class="status-value">0.00 km</span>
-          </div>
-          <div>
-            <span class="status-label">차이</span>
-            <span id="status-diff" class="status-value">0.00 km</span>
+        <div class="field-group">
+          <div class="field-label">목표 거리</div>
+          <div class="inline-row">
+            <input
+              id="distance-input"
+              type="number"
+              min="1"
+              step="0.5"
+              class="text-input"
+              placeholder="예: 5"
+            />
+            <span class="unit-text">km</span>
           </div>
         </div>
-      </div>
 
-      <div class="panel-gps">
-        <div class="gps-row"><span>위도</span><span id="gps-lat">-</span></div>
-        <div class="gps-row"><span>경도</span><span id="gps-lng">-</span></div>
-        <div class="gps-row"><span>고도</span><span id="gps-alt">-</span></div>
-      </div>
+        <button id="btn-generate-course" class="btn btn-primary">
+          코스 생성하기
+        </button>
 
-      <div class="panel-save">
-        <button class="btn-outline">코스 저장하기</button>
-      </div>
-
+        <div class="status-box">
+          <div class="status-line" id="status-gps">GPS: 위치 정보 없음</div>
+          <div class="status-line" id="status-summary">
+            코스를 생성하면 정보가 표시됩니다.
+          </div>
+        </div>
+      </section>
     </div>
-  </div>
-</main>
+  </main>
 
-<script src="landmarks.js"></script>
-<script src="diet.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Kakao Maps JS (장소 검색용) : APPKEY 부분을 실제 키로 교체 -->
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services"></script>
+
+  <!-- ES Module: stations + campus + diet.js 연결 -->
+  <script type="module">
+    import { STATIONS } from "./stations.js";
+    import { CAMPUSES } from "./campus.js";
+    import { initApp } from "./diet.js";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initApp({ STATIONS, CAMPUSES });
+    });
+  </script>
 </body>
 </html>
