@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
+    /* CSS 스타일은 그대로 유지합니다 */
     :root {
       --primary-green: #4caf50;
       --primary-blue: #2196f3;
@@ -22,21 +23,18 @@
       position: relative;
     }
 
-    /* [배경] 밝고 평화로운 숲/들판 */
     .bg-layer {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: url('https://img.freepik.com/free-photo/anime-landscape-canyon-bridge_23-2152016894.jpg?semt=ais_incoming&w=740&q=80') no-repeat center bottom/cover;
       z-index: -5;
     }
 
-    /* [효과] 햇살 느낌 */
     .sun-light {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 40%);
       z-index: -4; pointer-events: none;
     }
 
-    /* --- 헤더 --- */
     header {
       padding: 15px 20px; text-align: center;
       background: rgba(255, 255, 255, 0.85);
@@ -60,26 +58,23 @@
     }
     .btn-back:hover { background: var(--primary-blue); color: #fff; }
 
-    /* --- 메인 스테이지 --- */
     .stage-container {
       flex: 1;
       display: flex; justify-content: center; align-items: flex-end;
-      padding-bottom: 100px; /* 바닥 위치 */
-      gap: 60px; /* 간격 넓게 */
+      padding-bottom: 100px;
+      gap: 60px;
       position: relative; z-index: 1;
       perspective: 1000px;
     }
 
-    /* 포켓몬 슬롯 */
     .pkm-slot {
-      width: 250px; /* 슬롯 너비 여유 있게 */
-      height: 350px; /* 슬롯 높이 여유 있게 */
+      width: 250px;
+      height: 350px;
       position: relative;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; /* 발바닥 기준 정렬 */
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
       transition: transform 0.3s;
     }
     
-    /* [발판] 깔끔한 원형 */
     .platform {
       position: absolute; bottom: 20px;
       width: 180px; height: 60px;
@@ -97,36 +92,23 @@
       box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
     }
 
-    /* [핵심 수정] 포켓몬 이미지 스타일 */
     .pkm-sprite {
-      /* 크기 강제 고정 해제 -> 원본 비율 유지 */
       width: auto; 
       height: auto;
-      
-      /* 너무 커지는 것만 방지 */
       max-width: 250px; 
       max-height: 280px;
-      
-      /* 중요: 선명하게 렌더링 (도트/픽셀 깨짐 방지) */
-      image-rendering: pixelated; 
-      image-rendering: -moz-crisp-edges;
-      image-rendering: crisp-edges;
-
+      image-rendering: auto; 
       z-index: 5;
-      /* 그림자는 바닥에 깔리게 */
       filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3)); 
-      
       cursor: pointer;
       transition: transform 0.3s;
-      
-      /* 약간의 스케일업 (원본이 너무 작을 수 있어서 1.5배 키우되 선명도 유지) */
-      transform: scale(1.5);
-      transform-origin: bottom center; /* 발바닥 기준으로 커짐 */
-      margin-bottom: 30px; /* 발판 위에 올라가도록 위치 조정 */
+      /* XYani 스프라이트 크기에 맞춰 조정 */
+      transform: scale(1.6); 
+      transform-origin: bottom center;
+      margin-bottom: 30px;
     }
-    .pkm-sprite:hover { transform: scale(1.7) translateY(-5px); }
+    .pkm-sprite:hover { transform: scale(1.8) translateY(-5px); } 
 
-    /* 빈 슬롯 (+) */
     .empty-slot {
       width: 90px; height: 90px;
       background: rgba(255, 255, 255, 0.5);
@@ -145,7 +127,6 @@
       color: var(--primary-blue); border-color: var(--primary-blue);
     }
 
-    /* 이름 태그 */
     .name-tag {
       background: #fff; color: #333;
       padding: 6px 18px; border-radius: 20px;
@@ -153,11 +134,10 @@
       margin-top: 0px; 
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       z-index: 6; 
-      transform: translateY(15px); /* 발판 아래로 */
+      transform: translateY(15px);
       border: 1px solid #eee;
     }
 
-    /* 제거 버튼 */
     .btn-remove {
       position: absolute; top: 0; right: 0;
       background: #fff; color: #ff5252;
@@ -171,8 +151,6 @@
     .pkm-slot:hover .btn-remove { transform: scale(1.1); }
     .btn-remove:hover { background: #ff5252; color: #fff; }
 
-
-    /* --- 하단 바 --- */
     .footer-bar {
       height: 120px;
       display: flex; justify-content: center; align-items: center;
@@ -199,8 +177,6 @@
       background: #b0bec5; border-color: #eceff1; cursor: not-allowed; box-shadow: none;
     }
 
-
-    /* --- 모달 --- */
     #selection-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.5); z-index: 9999;
@@ -256,7 +232,6 @@
       border: none; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.2s;
     }
     .btn-go-shop:hover { background: #1976d2; }
-
   </style>
 </head>
 <body>
@@ -288,7 +263,42 @@
   </div>
 
   <script>
-    let myInventory = JSON.parse(localStorage.getItem('myInventory')) || [];
+    // === Showdown API용 포켓몬 ID와 영어 이름 매핑 ===
+    // Showdown의 고화질 애니메이션을 위해 필수적입니다.
+    const ID_TO_ENG_NAME = {
+      // 1세대 스타팅 및 인기 포켓몬
+      6: 'charizard', 
+      3: 'venusaur', 
+      9: 'blastoise', 
+      149: 'dragonite', 
+      130: 'gyarados', 
+      150: 'mewtwo', 
+      25: 'pikachu', 
+      13: 'weedle',
+      1: 'bulbasaur', 
+      4: 'charmander', 
+      7: 'squirtle',
+      12: 'butterfree', 
+      // 매핑에 필요한 포켓몬이 있다면 여기에 계속 추가해야 합니다.
+      // 폼 체인지가 있는 포켓몬은 이름이 달라질 수 있습니다. (예: 593: jellicent-f)
+    };
+    // ====================================================================
+
+    // 임시 인벤토리 데이터 (localStorage에 'myInventory'가 없는 경우를 대비한 목업 데이터)
+    let MOCK_INVENTORY = [
+      { id: 6, name: '리자몽', rank: 'S', total: 600, uid: 6, img: 'mock_charizard.png' },
+      { id: 3, name: '이상해꽃', rank: 'A', total: 550, uid: 3, img: 'mock_venusaur.png' },
+      { id: 9, name: '거북왕', rank: 'A', total: 560, uid: 9, img: 'mock_blastoise.png' },
+      { id: 149, name: '망나뇽', rank: 'S', total: 600, uid: 149, img: 'mock_dragonite.png' },
+      { id: 130, name: '갸라도스', rank: 'A', total: 540, uid: 130, img: 'mock_gyarados.png' },
+      { id: 150, name: '뮤츠', rank: 'S', total: 680, uid: 150, img: 'mock_mewtwo.png' },
+      { id: 25, name: '피카츄', rank: 'B', total: 400, uid: 25, img: 'mock_pikachu.png' },
+      { id: 13, name: '뿔충이', rank: 'D', total: 195, uid: 13, img: 'mock_weedle.png' },
+    ];
+    
+    let myInventory = JSON.parse(localStorage.getItem('myInventory')) || MOCK_INVENTORY;
+    if (myInventory.length === 0) myInventory = MOCK_INVENTORY;
+
     let teamSlots = [null, null, null];
     let currentTargetSlot = -1; 
 
@@ -297,7 +307,7 @@
     const modalEl = document.getElementById('selection-modal');
     const invListEl = document.getElementById('inventory-list');
 
-    renderStage();
+    document.addEventListener('DOMContentLoaded', renderStage);
 
     function renderStage() {
       stageEl.innerHTML = '';
@@ -306,6 +316,7 @@
       teamSlots.forEach((pkm, index) => {
         const slotDiv = document.createElement('div');
         slotDiv.className = pkm ? 'pkm-slot filled' : 'pkm-slot';
+        slotDiv.onclick = () => openModal(index);
 
         if (pkm) {
           filledCount++;
@@ -321,15 +332,45 @@
           const img = document.createElement('img');
           img.className = 'pkm-sprite';
           
-          // [Showdown] 움직이는 3D GIF 사용
-          const animatedUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
-          img.src = animatedUrl;
+          // ============================================
+          // [핵심 수정] 2단계 애니메이션 폴백 로직 적용
+          // ============================================
+          const pkmEngName = ID_TO_ENG_NAME[pkm.id];
           
-          // GIF 없으면 공식 아트워크 (선명한 정지 화상)
+          // --- 1단계: Showdown XYani (고화질 애니메이션) 시도 ---
+          if (pkmEngName) {
+              img.src = `https://play.pokemonshowdown.com/sprites/xyani/${pkmEngName}.gif`;
+          } else {
+              // 매핑된 이름이 없으면 2단계로 바로 이동
+              img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pkm.id}.gif`;
+              img.style.transform = 'scale(2.0)'; // 도트 스프라이트 크기 조정
+          }
+          
           img.onerror = function() {
-             this.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+              // XYani GIF (1단계) 로딩 실패 시
+              if (this.src.includes('xyani') && !pkmEngName) {
+                  // 이미 ID_TO_ENG_NAME에 없으므로 (pkmEngName 없음), 이 분기는 타지 않습니다.
+                  // 하지만 안전을 위해, 다시 한번 도트 GIF를 시도
+                  this.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pkm.id}.gif`;
+                  this.style.transform = 'scale(2.0)'; // 도트 스프라이트 크기 조정
+              } else if (this.src.includes('xyani')) {
+                  // ID_TO_ENG_NAME에 이름은 있지만, Showdown 서버에 파일이 없는 경우
+                  // --> 2단계: PokeAPI 도트 GIF (움직임 보장) 시도
+                  this.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pkm.id}.gif`;
+                  this.style.transform = 'scale(2.0)'; // 도트 스프라이트 크기 조정
+              } else if (this.src.includes('animated')) {
+                  // 2단계 도트 GIF도 로딩 실패한 경우 (드문 경우)
+                  // --> 3단계: 공식 아트워크 PNG (최종 고화질 정지)로 대체
+                  this.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+                  this.style.transform = 'scale(1.2)'; // PNG는 크기 다시 조정
+              } else {
+                  // 최종적으로 모든 이미지 로딩 실패 (Mock data 이미지 사용)
+                  this.src = pkm.img;
+                  this.style.transform = 'scale(1.2)';
+              }
           };
-          
+          // ============================================
+
           const platform = document.createElement('div');
           platform.className = 'platform';
 
@@ -346,7 +387,6 @@
           const emptyBtn = document.createElement('div');
           emptyBtn.className = 'empty-slot';
           emptyBtn.innerText = '+';
-          emptyBtn.onclick = () => openModal(index);
           
           const platform = document.createElement('div');
           platform.className = 'platform';
@@ -381,12 +421,7 @@
       const selectedUids = teamSlots.filter(p => p !== null).map(p => p.uid);
 
       if (myInventory.length === 0) {
-        invListEl.innerHTML = `
-          <div class="empty-msg">
-            보유한 포켓몬이 없습니다.<br>
-            <button class="btn-go-shop" onclick="location.href='shop.html'">상점으로 가기</button>
-          </div>
-        `;
+        invListEl.innerHTML = `<div class="empty-msg">보유한 포켓몬이 없습니다.<br><button class="btn-go-shop" onclick="location.href='shop.html'">상점으로 가기</button></div>`;
         invListEl.style.display = 'flex';
         invListEl.style.justifyContent = 'center';
         invListEl.style.alignItems = 'center';
@@ -440,16 +475,27 @@
       renderStage();
     }
 
+    // ===============================================
+    // [핵심 연결] 팀 정보를 Battle 파일로 안전하게 전달
+    // ===============================================
     function startBattle() {
       if (teamSlots.includes(null)) {
         alert("3마리를 모두 선택해야 합니다!");
         return;
       }
       
-      const teamNames = teamSlots.map(p => p.name).join(', ');
-      alert(`[${teamNames}] 출격합니다!\n(배틀 페이지 연결 준비 완료)`);
-      localStorage.setItem('battleTeam', JSON.stringify(teamSlots));
+      const battleTeamData = teamSlots.map(p => ({ 
+          id: p.id, 
+          name: p.name 
+      }));
+
+      // 로컬 스토리지에 'battleTeam' 이름으로 ID 목록 저장 (Battle 파일이 읽을 데이터)
+      localStorage.setItem('battleTeam', JSON.stringify(battleTeamData));
+      
+      // Battle 페이지로 리다이렉션 (파일명 일치 중요)
+      window.location.href = 'PK 3-2 ㅇ.html';
     }
+    // ===============================================
 
   </script>
 </body>

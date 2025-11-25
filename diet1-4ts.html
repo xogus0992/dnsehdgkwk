@@ -2,930 +2,725 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>RunMate : Diet & Social</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>다이어트 내비게이션 Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
   
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
-
+  
   <style>
-    /* =========================================
-       [1번 디자인 베이스] : 전체 테마 및 레이아웃
-       ========================================= */
+    /* --- 공통 변수 및 Reset (diet1 기반) --- */
     :root {
-      --bg-main: #f4f7ff;
-      --bg-card: #ffffff;
-      --accent: #2f6bff; /* 메인 블루 */
-      --accent-soft: rgba(47, 107, 255, 0.12);
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
       --text-main: #111827;
       --text-sub: #6b7280;
-      --border-soft: #e5e7eb;
-      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.08);
-      --radius-lg: 18px;
-      --radius-pill: 999px;
-      
-      /* 인스타 스타일 추가 변수 */
-      --story-ring: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-      --chat-me: #2f6bff;
-      --chat-other: #efefef;
-      --danger: #ed4956;
+      --danger: #ef4444;
+      --success: #22c55e;
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: "Noto Sans KR", sans-serif;
+      background: var(--bg); color: var(--text-main);
+    }
+    body { display: flex; flex-direction: column; }
 
-    body {
-      margin: 0;
-      font-family: 'Noto Sans KR', sans-serif;
-      background: radial-gradient(circle at top left, #e0ebff, #f8f9ff 40%, #eef3ff 70%, #e5ecff);
-      color: var(--text-main);
-      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    /* --- 레이아웃 컨테이너 --- */
+    .app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 600px; /* 모바일 뷰 최적화 */
+      margin: 0 auto;
+      width: 100%;
+      padding: 12px 12px 80px; /* 하단 탭바 공간 확보 */
+      overflow-y: auto;
     }
 
-    /* 헤더 */
-    .app-header {
-      height: 60px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(90deg, #2f6bff, #4f8dff); color: #fff;
-      box-shadow: 0 4px 20px rgba(47, 107, 255, 0.25); z-index: 50; flex-shrink: 0;
-    }
-    .app-title { font-size: 18px; font-weight: 700; }
-    .header-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; }
-
-    /* 메인 컨텐츠 영역 */
-    .app-main { flex: 1; overflow-y: auto; padding-bottom: 70px; position: relative; }
-    
-    .page { display: none; padding: 20px; animation: fadeIn 0.3s ease; height: 100%; overflow-y: auto; }
+    .page { display: none; animation: fadeIn 0.2s; }
     .page.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* 카드 스타일 (1번 디자인) */
-    .card {
-      background: var(--bg-card); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-soft); padding: 20px; margin-bottom: 20px;
-      border: 1px solid rgba(255,255,255,0.6);
+    /* --- 카드 스타일 (diet1) --- */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
     }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .card-title { font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
-    .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+    .section-title {
+      margin: 0 0 12px; font-size: 1.1rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
 
-    /* 입력 폼 */
-    .text-input {
-      width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-soft);
-      background: #f9fafb; outline: none; font-size: 14px; transition: 0.2s;
+    /* --- 지도 관련 (diet1) --- */
+    #map {
+      width: 100%; height: 360px;
+      border-radius: 12px; border: 1px solid var(--border);
+      background: #eee; /* 로딩 전 배경 */
     }
-    .text-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
-    .btn-primary {
-      background: linear-gradient(135deg, #2563eb, #4f46e5); color: white;
-      border: none; padding: 12px; border-radius: var(--radius-pill);
-      width: 100%; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .input-group { flex: 1; }
+    label.input-label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 4px; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 10px; border-radius: 10px;
+      border: 1px solid var(--border); font-size: 0.9rem;
+      background: #f9fafb; outline: none;
     }
+    input:focus { border-color: var(--primary); background: #fff; }
+
+    /* --- 버튼 (diet1) --- */
+    .btn {
+      border: none; border-radius: 10px; padding: 10px 14px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #111827; }
+    .btn-ghost { background: #f9fafb; color: var(--text-sub); border: 1px dashed var(--border); }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; border-radius: 999px; }
+
+    /* --- 경로 정보 뱃지 --- */
+    .route-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .pill {
+      padding: 4px 10px; border-radius: 999px; background: #f3f4f6;
+      font-size: 0.75rem; color: #4b5563;
+    }
+    .message { font-size: 0.85rem; margin-top: 8px; }
+    .message.error { color: var(--danger); }
+    .message.info { color: var(--text-sub); }
+
+    /* --- 하단 탭바 (diet1 스타일 유지) --- */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+      background: #fff; border-top: 1px solid var(--border);
+      display: flex; z-index: 100; max-width: 600px; margin: 0 auto;
+    }
+    .nav-btn {
+      flex: 1; border: none; background: transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; font-size: 0.7rem; color: var(--text-sub); cursor: pointer;
+    }
+    .nav-btn .icon { font-size: 1.4rem; }
+    .nav-btn.active { color: var(--primary); }
+
+    /* --- diet1-4ts 스타일 통합 (피드, 프로필) --- */
     
-    /* =========================================
-       [2번 & 3번 기능 통합] : 소셜, 프로필, 피드
-       ========================================= */
-    
-    /* 탭 바 (하단 네비게이션) */
-    .tab-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 65px;
-      background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-around;
-      align-items: center; z-index: 100; padding-bottom: 5px;
+    /* 피드 카드 */
+    .feed-item {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px; margin-bottom: 16px;
     }
-    .tab-item {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      color: #9ca3af; cursor: pointer; flex: 1;
+    .feed-item:last-child { border-bottom: none; margin-bottom: 0; }
+    .feed-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .feed-avatar { 
+      width: 32px; height: 32px; border-radius: 50%; background: #ddd; 
+      object-fit: cover;
     }
-    .tab-item svg { width: 24px; height: 24px; stroke-width: 2; }
-    .tab-item.active { color: var(--accent); }
-    .tab-label { font-size: 10px; font-weight: 600; }
+    .feed-user { font-weight: 600; font-size: 0.9rem; }
+    .feed-img { width: 100%; border-radius: 12px; margin-bottom: 8px; object-fit: cover; aspect-ratio: 16/9; }
+    .feed-text { font-size: 0.9rem; line-height: 1.4; }
 
-    /* 프로필 (인스타 스타일 + 1번 디자인 터치) */
-    .profile-header-wrap { display: flex; align-items: center; margin-bottom: 20px; }
-    .avatar-wrap { position: relative; margin-right: 20px; cursor: pointer; }
+    /* 랭킹 리스트 */
+    .rank-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px dashed var(--border);
+    }
+    .rank-item:last-child { border-bottom: none; }
+    .rank-badge { font-size: 1.2rem; margin-right: 8px; }
+
+    /* 프로필 상단 */
+    .profile-header { text-align: center; padding: 10px 0 20px; }
     .avatar-ring {
-      width: 88px; height: 88px; border-radius: 50%; padding: 3px;
-      background: var(--story-ring);
+      width: 100px; height: 100px; border-radius: 50%; overflow: hidden;
+      margin: 0 auto 12px; border: 3px solid var(--primary-soft);
     }
-    .avatar-img {
-      width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fff;
-      object-fit: cover; background: #eee;
-    }
-    .stats-row { flex: 1; display: flex; justify-content: space-around; text-align: center; }
-    .stat-num { font-size: 18px; font-weight: 700; color: var(--text-main); }
-    .stat-lbl { font-size: 12px; color: var(--text-sub); }
-
-    .bio-section { margin-bottom: 20px; padding: 0 5px; }
-    .bio-name { font-weight: 700; font-size: 15px; }
-    .bio-text { font-size: 14px; color: #374151; white-space: pre-line; margin-top: 4px; }
-
-    .action-btns { display: flex; gap: 10px; margin-bottom: 20px; }
-    .btn-soft {
-      flex: 1; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px;
-      font-weight: 600; color: #374151; cursor: pointer; font-size: 13px;
-    }
-
-    /* 하이라이트 */
-    .highlights-scroll {
-      display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px;
-      scrollbar-width: none;
-    }
-    .hl-item { display: flex; flex-direction: column; align-items: center; min-width: 64px; cursor: pointer; }
-    .hl-circle {
-      width: 60px; height: 60px; border-radius: 50%; border: 1px solid #e5e7eb;
-      padding: 2px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center;
-      background: #fff; font-size: 24px;
-    }
-    .hl-text { font-size: 11px; color: var(--text-main); }
-
-    /* 그리드 & 탭 */
-    .profile-tabs { display: flex; border-bottom: 1px solid var(--border-soft); margin-bottom: 2px; }
-    .p-tab { flex: 1; text-align: center; padding: 12px; cursor: pointer; color: #9ca3af; }
-    .p-tab.active { border-bottom: 2px solid var(--text-main); color: var(--text-main); }
+    .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-stats-row { display: flex; justify-content: space-around; margin-bottom: 16px; }
+    .p-stat-num { font-size: 1.1rem; font-weight: 700; }
+    .p-stat-label { font-size: 0.75rem; color: var(--text-sub); }
     
-    .grid-view { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-    .grid-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; cursor: pointer; position: relative; }
-    .grid-icon { position: absolute; top: 5px; right: 5px; color: white; font-size: 12px; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
-
-    /* 피드 스타일 */
-    .feed-item { background: #fff; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid #eee; overflow: hidden; }
-    .feed-header { padding: 12px 15px; display: flex; align-items: center; gap: 10px; }
-    .feed-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-    .feed-user { font-weight: 600; font-size: 14px; }
-    .feed-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
-    .feed-actions { padding: 12px 15px 5px; display: flex; gap: 15px; font-size: 22px; }
-    .feed-content { padding: 0 15px 15px; font-size: 14px; line-height: 1.5; }
-    .course-pill { 
-      display: inline-block; background: var(--accent-soft); color: var(--accent);
-      padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-top: 8px; cursor: pointer;
+    /* 통계 카드 그리드 (diet1) */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
     }
-    .hashtag { color: #00376b; cursor: pointer; }
-
-    /* 지도 (Leaflet - 1번 소스) */
-    .map-wrapper { height: 400px; border-radius: 16px; overflow: hidden; position: relative; z-index: 1; margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
-    #map { width: 100%; height: 100%; }
-
-    /* 채팅방 */
-    .chat-room { display: flex; flex-direction: column; height: 100%; background: #fff; }
-    .chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #f9fafb; }
-    .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; word-break: break-word; }
-    .msg.me { align-self: flex-end; background: var(--chat-me); color: white; border-bottom-right-radius: 4px; }
-    .msg.other { align-self: flex-start; background: var(--chat-other); color: #111; border-bottom-left-radius: 4px; }
-    .chat-input-bar { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 8px; background: #fff; }
-
-    /* 모달 (글쓰기, 릴스) */
-    .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: #fff; z-index: 200; flex-direction: column;
+    .stat-card {
+      background: #f9fafb; border-radius: 12px; padding: 12px;
+      border: 1px solid var(--border); text-align: center;
     }
-    .modal-dark { background: #000; color: #fff; }
-    .modal-header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #eee; font-weight: 700; }
-    
-    /* 파일 인풋 숨김 */
-    #file-input, #post-file-input { display: none; }
+    .stat-value { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+
+    /* 프로필 탭 및 그리드 (diet1-4ts) */
+    .profile-tabs {
+      display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    .p-tab {
+      flex: 1; text-align: center; padding: 12px; cursor: pointer; font-size: 1.2rem;
+      color: var(--text-sub);
+    }
+    .p-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .grid-view {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 2px;
+    }
+    .grid-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; cursor: pointer; background: #eee; }
+
+    /* 기록 리스트 */
+    .history-item {
+      padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+      margin-bottom: 8px; background: #fff;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+    .badge-loop { background: #e0f2fe; color: #0369a1; }
+    .badge-normal { background: #f3f4f6; color: #4b5563; }
+
   </style>
 </head>
 <body>
 
-  <header class="app-header">
-    <button class="header-btn" id="back-btn" style="display:none; font-size:18px;">←</button>
-    <div class="app-title" id="header-title">RunMate</div>
-    <button class="header-btn" id="write-btn" style="display:none;">+ 게시물</button>
-  </header>
-
-  <main class="app-main">
+  <div class="app-container">
     
     <div id="page-home" class="page active">
-      <div style="display:flex; background:#fff; padding:5px; border-radius:12px; margin-bottom:15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-        <button class="btn-soft" onclick="switchHomeView('map')" id="btn-view-map" style="background:var(--accent); color:#fff;">🗺️ 코스 찾기</button>
-        <button class="btn-soft" onclick="switchHomeView('feed')" id="btn-view-feed" style="background:transparent;">📱 피드</button>
-      </div>
-
-      <div id="view-map">
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title"><span class="dot"></span>러닝 코스 생성</h2>
+      <div class="section-card">
+        <h2 class="section-title">🗺️ 경로 검색</h2>
+        
+        <div class="form-row">
+          <div class="input-group">
+            <label class="input-label">출발지</label>
+            <input type="text" id="start-input" placeholder="예: 서울역" />
           </div>
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <input type="text" id="start-input" class="text-input" placeholder="출발지 검색 (예: 여의도 한강공원)" />
-            <div style="display:flex; gap:10px;">
-              <input type="number" id="target-distance" class="text-input" value="3" placeholder="목표 km" style="flex:1;" />
-              <select id="route-mode" class="text-input" style="flex:1;">
-                <option value="loop">왕복 루프</option>
-                <option value="one-way">일자 코스</option>
-              </select>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:5px;">
-              <button id="btn-gen-route" class="btn-primary">코스 생성</button>
-              <button id="btn-save-route" class="btn-soft" disabled style="flex:1; background:#e0f2fe; color:#0095f6;">코스 저장</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="map-wrapper">
-          <div id="map"></div>
+          <button id="btn-my-location" class="btn btn-secondary" style="align-self: flex-end;">
+            📍 내 위치
+          </button>
         </div>
         
-        <div class="card" id="route-info-card" style="display:none;">
-          <div class="card-title">코스 정보</div>
-          <div style="display:flex; justify-content:space-between; margin-top:10px;">
-            <span>총 거리: <b id="info-dist">0km</b></span>
-            <span>예상 시간: <b id="info-time">0분</b></span>
+        <div class="form-row">
+          <div class="input-group">
+            <label class="input-label">도착지</label>
+            <input type="text" id="end-input" placeholder="예: 남산타워 (루프 생성시 생략)" />
           </div>
+        </div>
+
+        <div class="form-row">
+          <div class="input-group">
+            <label class="input-label">목표 거리 (km, 루프용)</label>
+            <input type="number" id="loop-distance" min="1" max="50" value="3" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <button id="btn-search-route" class="btn btn-primary" style="flex: 1;">
+            🚶 길찾기
+          </button>
+          <button id="btn-loop-route" class="btn btn-ghost">
+            🔄 왕복 코스
+          </button>
+        </div>
+
+        <div class="route-summary" id="route-summary"></div>
+        <div class="message info" id="route-message">출발지를 입력하고 경로를 검색해보세요.</div>
+        
+        <div style="margin-top: 10px; text-align: right;">
+          <button id="btn-save-route" class="btn btn-sm btn-secondary" disabled>💾 기록 저장</button>
         </div>
       </div>
 
-      <div id="view-feed" style="display:none;">
-        <div id="feed-list">
-          </div>
+      <div class="section-card" style="padding: 0; overflow: hidden;">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <div id="page-history" class="page">
+      <div class="section-card">
+        <h2 class="section-title">📚 나의 운동 기록</h2>
+        <p class="text-sub" style="font-size: 0.9rem; margin-bottom: 12px;">
+          저장된 코스 목록입니다.
+        </p>
+        <div id="history-list"></div>
+        <div id="history-empty" class="text-sub" style="text-align: center; padding: 20px;">
+          아직 저장된 기록이 없습니다.
+        </div>
       </div>
     </div>
 
     <div id="page-group" class="page">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title"><span class="dot"></span>러닝 파티</h2>
-          <button class="btn-soft" style="width:auto; padding:5px 12px;" onclick="createParty()">+ 파티 만들기</button>
+      <div class="section-card">
+        <h2 class="section-title">🔥 인기 러닝 크루</h2>
+        <div class="rank-item">
+          <div><span class="rank-badge">🥇</span> 서울 강북 러닝크루</div>
+          <span class="badge badge-loop">4,920명</span>
         </div>
-        <div id="party-list" style="display:flex; flex-direction:column; gap:10px;">
-          </div>
+        <div class="rank-item">
+          <div><span class="rank-badge">🥈</span> 여의도 한강 Runners</div>
+          <span class="badge badge-loop">3,410명</span>
+        </div>
+        <div class="rank-item">
+          <div><span class="rank-badge">🥉</span> 잠실 탄천 Crew</div>
+          <span class="badge badge-loop">2,880명</span>
+        </div>
       </div>
-      
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title"><span class="dot"></span>인기 크루 랭킹</h2>
+
+      <div class="section-card">
+        <h2 class="section-title">📢 실시간 피드</h2>
+        
+        <div class="feed-item">
+          <div class="feed-header">
+            <img class="feed-avatar" src="https://picsum.photos/50/50?random=1" />
+            <div class="feed-user">형림</div>
+            <span class="text-sub" style="font-size:0.8rem; margin-left:auto;">10분 전</span>
+          </div>
+          <img class="feed-img" src="https://picsum.photos/500/280?random=10" />
+          <div class="feed-text">오늘 한강 7km 뛰고 왔다! 날씨 너무 좋음 🔥 #오운완</div>
         </div>
-        <div style="font-size:13px; color:#666;">
-          <div style="padding:8px 0; border-bottom:1px dashed #eee;">🥇 새벽 러닝반 (1,204km)</div>
-          <div style="padding:8px 0; border-bottom:1px dashed #eee;">🥈 퇴근 후 3km (890km)</div>
-          <div style="padding:8px 0;">🥉 주말 등산러 (540km)</div>
+
+        <div class="feed-item">
+          <div class="feed-header">
+            <img class="feed-avatar" src="https://picsum.photos/50/50?random=2" />
+            <div class="feed-user">Runner_J</div>
+            <span class="text-sub" style="font-size:0.8rem; margin-left:auto;">1시간 전</span>
+          </div>
+          <div class="feed-text">새로운 기록 도전중 🏃‍♂️ 5km 20분 컷 가능할까?</div>
         </div>
       </div>
     </div>
 
     <div id="page-me" class="page">
-      <div class="card">
-        <div class="profile-header-wrap">
-          <div class="avatar-wrap" onclick="document.getElementById('file-input').click()">
-            <div class="avatar-ring">
-              <img id="profile-img" src="https://via.placeholder.com/150?text=ME" class="avatar-img" />
-            </div>
-            <div style="position:absolute; bottom:0; right:0; background:var(--accent); color:white; width:24px; height:24px; border-radius:50%; text-align:center; line-height:22px; border:2px solid #fff;">+</div>
+      <div class="section-card">
+        <div class="profile-header">
+          <div class="avatar-ring">
+            <img class="avatar-img" src="https://via.placeholder.com/150" alt="Profile" />
           </div>
-          <div class="stats-row">
-            <div><div class="stat-num" id="stat-posts">0</div><div class="stat-lbl">게시물</div></div>
-            <div><div class="stat-num" id="stat-km">0.0</div><div class="stat-lbl">총 km</div></div>
-            <div><div class="stat-num">128</div><div class="stat-lbl">팔로워</div></div>
+          <h3 style="margin: 8px 0;">다이어터 101</h3>
+          <p class="text-sub" style="margin: 0 0 16px;">달리기 좋아하는 개발자 🏃‍♂️</p>
+          
+          <div class="profile-stats-row">
+            <div><div class="p-stat-num" id="ui-total-routes">0</div><div class="p-stat-label">코스</div></div>
+            <div><div class="p-stat-num">128</div><div class="p-stat-label">팔로워</div></div>
+            <div><div class="p-stat-num">96</div><div class="p-stat-label">팔로잉</div></div>
           </div>
         </div>
-        
-        <div class="bio-section">
-          <div class="bio-name" id="profile-name">러닝하는 개발자</div>
-          <div class="bio-text" id="profile-bio">오늘도 달린다... 🏃‍♂️💨<br>#오운완 #러닝스타그램</div>
+
+        <h4 style="margin: 0 0 8px; font-size: 0.9rem;">📊 나의 활동 통계</h4>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="p-stat-label">누적 거리</div>
+            <div class="stat-value" id="stat-total-distance">0 km</div>
+          </div>
+          <div class="stat-card">
+            <div class="p-stat-label">누적 시간</div>
+            <div class="stat-value" id="stat-total-time">0 분</div>
+          </div>
         </div>
 
-        <div class="action-btns">
-          <button class="btn-soft" onclick="editProfile()">프로필 편집</button>
-          <button class="btn-soft" onclick="alert('링크 복사됨')">프로필 공유</button>
+        <div style="text-align: center;">
+          <button id="btn-reset-stats" class="btn btn-ghost btn-sm">통계 초기화</button>
         </div>
 
-        <div class="highlights-scroll" id="highlight-list">
-          <div class="hl-item" onclick="addHighlight()">
-            <div class="hl-circle" style="border:1px dashed #ccc;">+</div>
-            <span class="hl-text">신규</span>
-          </div>
-          </div>
-      </div>
-
-      <div class="card" style="padding:0; overflow:hidden;">
         <div class="profile-tabs">
-          <div class="p-tab active" onclick="switchProfileTab('grid', this)">📸</div>
-          <div class="p-tab" onclick="switchProfileTab('reels', this)">🎬</div>
-          <div class="p-tab" onclick="switchProfileTab('stats', this)">📊</div>
+          <div id="tab-posts" class="p-tab active" onclick="switchProfileTab('posts')">📷</div>
+          <div id="tab-saved" class="p-tab" onclick="switchProfileTab('saved')">🔖</div>
         </div>
 
-        <div id="tab-grid" class="grid-view" style="padding:2px;">
-          </div>
-        <div id="tab-reels" class="grid-view" style="display:none; padding:2px;">
-          </div>
-        <div id="tab-stats" style="display:none; padding:20px;">
-          <canvas id="activityChart"></canvas>
-          <div style="margin-top:20px;">
-            <h4>📍 저장된 코스</h4>
-            <ul id="saved-courses-list" style="padding-left:20px; font-size:13px; color:#555;"></ul>
-          </div>
-          <button class="btn-soft" style="width:100%; margin-top:15px; color:var(--danger);" onclick="resetData()">데이터 초기화</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="page-chat-room" class="page" style="padding:0; background:#fff; z-index:60;">
-      <div class="chat-room">
-        <div class="chat-msgs" id="chat-msgs-container"></div>
-        
-        <div id="course-share-panel" style="display:none; padding:10px; background:#f0f9ff; border-top:1px solid #eee;">
-          <div style="font-size:12px; color:#666; margin-bottom:5px;">공유할 코스 선택:</div>
-          <div id="chat-course-list" style="display:flex; gap:10px; overflow-x:auto;"></div>
+        <div id="profile-posts" class="grid-view">
+          <img class="grid-img" src="https://picsum.photos/300?random=3" />
+          <img class="grid-img" src="https://picsum.photos/300?random=4" />
+          <img class="grid-img" src="https://picsum.photos/300?random=5" />
+          <img class="grid-img" src="https://picsum.photos/300?random=6" />
+          <img class="grid-img" src="https://picsum.photos/300?random=7" />
+          <img class="grid-img" src="https://picsum.photos/300?random=8" />
         </div>
 
-        <div class="chat-input-bar">
-          <button class="header-btn" style="background:#eee; color:#333;" onclick="toggleCourseShare()">📍</button>
-          <input type="text" id="chat-input" class="text-input" style="border-radius:20px; padding:8px 15px;" placeholder="메시지 입력..." />
-          <button class="btn-primary" style="width:auto; padding:8px 15px; margin:0;" onclick="sendMsg()">전송</button>
+        <div id="profile-saved" class="grid-view" style="display:none;">
+          <img class="grid-img" src="https://picsum.photos/300?random=11" />
+          <img class="grid-img" src="https://picsum.photos/300?random=12" />
+          <img class="grid-img" src="https://picsum.photos/300?random=13" />
         </div>
       </div>
     </div>
 
-  </main>
-
-  <div id="post-modal" class="modal-overlay">
-    <div class="modal-header">
-      <span onclick="closePostModal()" style="cursor:pointer;">취소</span>
-      <span>새 게시물</span>
-      <span onclick="submitPost()" style="color:var(--accent); cursor:pointer;">공유</span>
-    </div>
-    <div style="padding:20px;">
-      <div style="width:100%; aspect-ratio:1/1; background:#f3f4f6; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer;" onclick="document.getElementById('post-file-input').click()">
-        <img id="post-preview" style="width:100%; height:100%; object-fit:cover; display:none;" />
-        <div id="post-placeholder" style="color:#999;">📸 사진 선택 (갤러리)</div>
-      </div>
-      <textarea id="post-caption" class="text-input" rows="4" style="margin-top:15px;" placeholder="문구 입력... #오운완"></textarea>
-      
-      <div style="margin-top:15px;">
-        <label style="font-size:13px; font-weight:600;">코스 태그</label>
-        <select id="post-course-select" class="text-input" style="margin-top:5px;">
-          <option value="">선택 안 함</option>
-        </select>
-      </div>
-    </div>
   </div>
 
-  <div id="reels-modal" class="modal-overlay modal-dark">
-    <div style="position:absolute; top:15px; left:15px; font-size:24px; cursor:pointer; z-index:210;" onclick="closeReels()">✕</div>
-    <iframe id="reels-iframe" width="100%" height="100%" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-  </div>
-
-  <input type="file" id="file-input" accept="image/*" onchange="handleProfileImg(this)" />
-  <input type="file" id="post-file-input" accept="image/*" onchange="handlePostImg(this)" />
-
-  <nav class="tab-nav" id="main-nav">
-    <div class="tab-item active" onclick="goPage('home')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-      <span class="tab-label">홈</span>
-    </div>
-    <div class="tab-item" onclick="goPage('group')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-      <span class="tab-label">그룹</span>
-    </div>
-    <div class="tab-item" onclick="goPage('me')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      <span class="tab-label">마이</span>
-    </div>
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-target="home">
+      <span class="icon">🗺️</span>
+      <span>홈</span>
+    </button>
+    <button class="nav-btn" data-target="history">
+      <span class="icon">📚</span>
+      <span>기록</span>
+    </button>
+    <button class="nav-btn" data-target="group">
+      <span class="icon">👥</span>
+      <span>그룹</span>
+    </button>
+    <button class="nav-btn" data-target="me">
+      <span class="icon">👤</span>
+      <span>내 정보</span>
+    </button>
   </nav>
 
   <script>
-    // ==================================================
-    // [전역 설정 및 데이터 상태]
-    // ==================================================
-    const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0="; 
-    
-    // 사용자 데이터 (로컬스토리지 시뮬레이션)
-    let user = {
-      name: "러닝하는 개발자",
-      bio: "오늘도 달린다... 🏃‍♂️💨\n#오운완 #러닝스타그램",
-      img: null, 
-      totalKm: 0,
-      posts: []
-    };
-    
-    // 저장된 코스 데이터
-    let savedCourses = [];
-    // 전체 피드 데이터
-    let feeds = [];
-    // 채팅 메시지
-    let chatMsgs = [];
+    // --- [설정] 카카오 API 키 ---
+    const KAKAO_REST_API_KEY = "71b46fcb7202af130ab7c6c18bf5163a"; // REST API 키 (길찾기용)
 
-    let map, routeLayer;
-    let currentRouteGeoJSON = null;
-    let currentRouteSummary = null; // {dist, time}
+    // --- [전역 변수] ---
+    let map;
+    let placesService;
+    let geocoder;
+    let currentRoute = null;
+    let routeOverlays = [];
+    let routeHistory = [];
 
-    // ==================================================
-    // [지도 로직] - 1번 소스 (Leaflet + ORS) 활용
-    // ==================================================
+    // --- 1. 지도 및 길찾기 로직 (diet1) ---
+
     function initMap() {
-      // Leaflet 지도 생성
-      map = L.map("map", { zoomControl: false }).setView([37.5665, 126.9780], 14);
+      const container = document.getElementById("map");
+      const center = new kakao.maps.LatLng(37.5665, 126.9780);
+      const options = { center, level: 5 };
+      map = new kakao.maps.Map(container, options);
+      placesService = new kakao.maps.services.Places();
+      geocoder = new kakao.maps.services.Geocoder();
+
+      // 초기 마커
+      new kakao.maps.Marker({ position: center, map: map });
+    }
+
+    function clearRouteOverlays() {
+      routeOverlays.forEach(o => o.setMap && o.setMap(null));
+      routeOverlays = [];
+    }
+
+    // Haversine 공식 (거리 계산)
+    function haversineDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000; 
+      const toRad = v => (v * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function searchPlacePromise(query) {
+      return new Promise((resolve, reject) => {
+        if (!query.trim()) return reject(new Error("검색어를 입력하세요."));
+        placesService.keywordSearch(query, (data, status) => {
+          if (status === kakao.maps.services.Status.OK && data.length > 0) resolve(data[0]);
+          else reject(new Error(`'${query}' 검색 결과가 없습니다.`));
+        }, { size: 1 });
+      });
+    }
+
+    async function getCurrentLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("위치 정보를 사용할 수 없습니다."));
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => reject(new Error("위치 정보를 가져오지 못했습니다."))
+        );
+      });
+    }
+
+    async function callKakaoDirections(origin, destination) {
+      const params = new URLSearchParams({
+        origin: origin.join(","),
+        destination: destination.join(","),
+        priority: "TIME",
+        car_fuel: "GASOLINE",
+        alternatives: "false"
+      });
+
+      const res = await fetch(`https://apis-navi.kakaomobility.com/v1/directions?${params}`, {
+        headers: { Authorization: `KakaoAK ${KAKAO_REST_API_KEY}` }
+      });
       
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; OpenStreetMap, &copy; CARTO'
-      }).addTo(map);
+      if (!res.ok) throw new Error("길찾기 API 오류");
+      const data = await res.json();
+      if (!data.routes || data.routes.length === 0) throw new Error("경로를 찾을 수 없습니다.");
+      return data.routes[0];
+    }
 
-      routeLayer = L.geoJSON(null, {
-        style: { color: "#2f6bff", weight: 5, opacity: 0.8 }
-      }).addTo(map);
+    function drawRouteOnMap(route, labelOptions) {
+      clearRouteOverlays();
+      const bounds = new kakao.maps.LatLngBounds();
+      const path = [];
 
-      // 내 위치 가져오기 시도
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const { latitude, longitude } = pos.coords;
-          map.setView([latitude, longitude], 15);
-          // 역지오코딩은 생략하고 시작 위치 마커 표시 가능
+      route.sections.forEach(section => {
+        section.roads.forEach(road => {
+          road.vertexes.forEach((v, i) => {
+            if (i % 2 === 0) {
+              const pt = new kakao.maps.LatLng(road.vertexes[i+1], road.vertexes[i]);
+              path.push(pt);
+              bounds.extend(pt);
+            }
+          });
         });
-      }
-    }
-
-    // 카카오 장소 검색 + ORS 경로 생성
-    document.getElementById("btn-gen-route").addEventListener("click", async () => {
-      const startVal = document.getElementById("start-input").value;
-      const distVal = parseFloat(document.getElementById("target-distance").value);
-      const mode = document.getElementById("route-mode").value;
-
-      if (!startVal) return alert("출발지를 입력하세요.");
-      if (!distVal) return alert("목표 거리를 입력하세요.");
-
-      // 1. 카카오 API로 출발지 좌표 얻기
-      const ps = new kakao.maps.services.Places();
-      ps.keywordSearch(startVal, async (data, status) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const startLat = parseFloat(data[0].y);
-          const startLng = parseFloat(data[0].x);
-          
-          map.setView([startLat, startLng], 15);
-
-          // 2. ORS API로 경로 생성 (랜덤 루프 로직 간소화: 사각형 포인트 생성)
-          try {
-            const points = generateLoopPoints(startLat, startLng, distVal, mode);
-            const geojson = await fetchORSRoute(points);
-            
-            // 지도에 표시
-            routeLayer.clearLayers();
-            routeLayer.addData(geojson);
-            map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
-
-            // 정보 표시
-            const props = geojson.features[0].properties;
-            const distKm = (props.summary.distance / 1000).toFixed(2);
-            const timeMin = Math.round(props.summary.duration / 60);
-            
-            document.getElementById("route-info-card").style.display = "block";
-            document.getElementById("info-dist").textContent = distKm + "km";
-            document.getElementById("info-time").textContent = timeMin + "분";
-            
-            // 현재 경로 임시 저장
-            currentRouteGeoJSON = geojson;
-            currentRouteSummary = { 
-              title: `${startVal} ${distKm}km 코스`,
-              dist: props.summary.distance,
-              time: timeMin,
-              date: new Date().toLocaleDateString()
-            };
-            document.getElementById("btn-save-route").disabled = false;
-            document.getElementById("btn-save-route").style.background = "#2f6bff";
-            document.getElementById("btn-save-route").style.color = "#fff";
-
-          } catch (e) {
-            console.error(e);
-            alert("경로 생성 실패. 다시 시도해주세요.");
-          }
-        } else {
-          alert("장소를 찾을 수 없습니다.");
-        }
       });
-    });
 
-    // ORS 요청 함수
-    async function fetchORSRoute(points) {
-      const coords = points.map(p => [p.lng, p.lat]);
-      const body = { coordinates: coords };
-      
-      const res = await fetch("https://api.openrouteservice.org/v2/directions/foot-walking/geojson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": ORS_API_KEY },
-        body: JSON.stringify(body)
+      const polyline = new kakao.maps.Polyline({
+        path, strokeWeight: 6, strokeColor: "#2563eb", strokeOpacity: 0.9
       });
-      if (!res.ok) throw new Error("API Error");
-      return await res.json();
+      polyline.setMap(map);
+      routeOverlays.push(polyline);
+
+      // 시작/종료 마커
+      const startM = new kakao.maps.Marker({ position: path[0], map });
+      const endM = new kakao.maps.Marker({ position: path[path.length-1], map });
+      routeOverlays.push(startM, endM);
+
+      map.setBounds(bounds, 50, 50, 50, 50);
     }
 
-    // 간단 좌표 계산 (Loop Points)
-    function generateLoopPoints(lat, lng, km, mode) {
-      if (mode === 'one-way') {
-        // 일자의 경우 임의의 북동쪽 지점으로 (단순화)
-        const offset = km / 111; 
-        return [{lat, lng}, {lat: lat + offset/1.5, lng: lng + offset/1.5}];
-      }
-      // 사각형 루프
-      const side = (km / 4) / 111; // 대략적 도 단위 변환
-      return [
-        {lat, lng},
-        {lat: lat + side, lng},
-        {lat: lat + side, lng: lng + side},
-        {lat, lng: lng + side},
-        {lat, lng}
-      ];
+    function updateRouteUI(route, type, label) {
+      const distM = route.summary ? route.summary.distance : route.sections[0].distance;
+      const durSec = route.summary ? route.summary.duration : route.sections[0].duration;
+      const distKm = (distM / 1000).toFixed(2);
+      const durMin = Math.round(durSec / 60);
+
+      const summaryEl = document.getElementById("route-summary");
+      summaryEl.innerHTML = `
+        <span class="pill"><strong>${label}</strong></span>
+        <span class="pill">거리: <strong>${distKm} km</strong></span>
+        <span class="pill">시간: <strong>${durMin} 분</strong></span>
+      `;
+
+      const msgEl = document.getElementById("route-message");
+      msgEl.textContent = "경로가 표시되었습니다.";
+      msgEl.className = "message info";
+      
+      document.getElementById("btn-save-route").disabled = false;
+
+      currentRoute = {
+        type, label, distance: distM, duration: durSec, createdAt: new Date()
+      };
+      updateStats();
     }
 
-    // 코스 저장 버튼
-    document.getElementById("btn-save-route").addEventListener("click", () => {
-      if (!currentRouteSummary) return;
-      
-      savedCourses.push(currentRouteSummary);
-      user.totalKm += (currentRouteSummary.dist / 1000);
-      
-      alert("코스가 저장되었습니다! 마이페이지나 피드에서 확인하세요.");
-      document.getElementById("btn-save-route").disabled = true;
-      document.getElementById("btn-save-route").style.background = "#e0f2fe";
-      document.getElementById("btn-save-route").style.color = "#0095f6";
-      
-      updateProfileUI();
-    });
+    // 이벤트: 일반 길찾기
+    async function handleSearchRoute() {
+      const startTxt = document.getElementById("start-input").value;
+      const endTxt = document.getElementById("end-input").value;
+      const msgEl = document.getElementById("route-message");
 
-    // ==================================================
-    // [소셜 & 피드 로직] - 3번 소스 통합
-    // ==================================================
-    
-    // 홈 뷰 전환 (지도 vs 피드)
-    function switchHomeView(view) {
-      if(view === 'map') {
-        document.getElementById('view-map').style.display = 'block';
-        document.getElementById('view-feed').style.display = 'none';
-        document.getElementById('btn-view-map').style.background = 'var(--accent)';
-        document.getElementById('btn-view-map').style.color = '#fff';
-        document.getElementById('btn-view-feed').style.background = 'transparent';
-        document.getElementById('btn-view-feed').style.color = '#333';
-        if(map) map.invalidateSize();
-      } else {
-        document.getElementById('view-map').style.display = 'none';
-        document.getElementById('view-feed').style.display = 'block';
-        document.getElementById('btn-view-feed').style.background = 'var(--accent)';
-        document.getElementById('btn-view-feed').style.color = '#fff';
-        document.getElementById('btn-view-map').style.background = 'transparent';
-        document.getElementById('btn-view-map').style.color = '#333';
-        renderFeeds();
-      }
-    }
-
-    // 피드 렌더링
-    function renderFeeds() {
-      const list = document.getElementById('feed-list');
-      list.innerHTML = "";
-      
-      // 최신순 정렬
-      const allFeeds = [...feeds].reverse();
-      
-      // 데이터가 없으면 더미 하나 보여주기
-      if(allFeeds.length === 0) {
-        list.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">아직 게시물이 없습니다.<br>첫 게시물을 올려보세요!</div>`;
+      if (!startTxt || !endTxt) {
+        msgEl.textContent = "출발지와 도착지를 모두 입력하세요.";
+        msgEl.className = "message error";
         return;
       }
 
-      allFeeds.forEach(feed => {
-        const courseHTML = feed.course ? `<div class="course-pill">📍 ${feed.course.title}</div>` : '';
-        const captionHTML = feed.caption.replace(/#(\S+)/g, '<span class="hashtag">#$1</span>');
-        const userImg = feed.user.img || "https://via.placeholder.com/50?text=U";
-
-        const html = `
-          <div class="feed-item">
-            <div class="feed-header">
-              <img src="${userImg}" class="feed-avatar">
-              <div class="feed-user">${feed.user.name}</div>
-            </div>
-            <img src="${feed.img}" class="feed-img">
-            <div class="feed-actions">
-              <span>❤️</span> <span>💬</span> <span>✈️</span>
-            </div>
-            <div class="feed-content">
-              <div><b>${feed.user.name}</b> ${captionHTML}</div>
-              ${courseHTML}
-            </div>
-          </div>
-        `;
-        list.innerHTML += html;
-      });
-    }
-
-    // 게시물 작성 (모달)
-    function openPostModal() {
-      document.getElementById('post-modal').style.display = 'flex';
-      // 코스 선택 셀렉트박스 갱신
-      const sel = document.getElementById('post-course-select');
-      sel.innerHTML = '<option value="">선택 안 함</option>';
-      savedCourses.forEach((c, idx) => {
-        sel.innerHTML += `<option value="${idx}">${c.title}</option>`;
-      });
-    }
-    function closePostModal() { document.getElementById('post-modal').style.display = 'none'; }
-    
-    let postTempImg = null;
-    function handlePostImg(input) {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          postTempImg = e.target.result;
-          document.getElementById('post-preview').src = postTempImg;
-          document.getElementById('post-preview').style.display = 'block';
-          document.getElementById('post-placeholder').style.display = 'none';
-        };
-        reader.readAsDataURL(input.files[0]);
+      try {
+        msgEl.textContent = "경로 검색 중...";
+        const start = await searchPlacePromise(startTxt);
+        const end = await searchPlacePromise(endTxt);
+        
+        const route = await callKakaoDirections([start.x, start.y], [end.x, end.y]);
+        drawRouteOnMap(route);
+        updateRouteUI(route, "normal", "일반 경로");
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className = "message error";
       }
     }
 
-    function submitPost() {
-      if(!postTempImg) return alert("사진을 선택해주세요.");
-      const caption = document.getElementById('post-caption').value;
-      const courseIdx = document.getElementById('post-course-select').value;
-      const course = courseIdx !== "" ? savedCourses[courseIdx] : null;
+    // 이벤트: 루프 코스 생성
+    async function handleLoopRoute() {
+      const startTxt = document.getElementById("start-input").value;
+      const distKm = parseFloat(document.getElementById("loop-distance").value);
+      const msgEl = document.getElementById("route-message");
 
-      const newFeed = {
-        id: Date.now(),
-        user: user,
-        img: postTempImg,
-        caption: caption,
-        course: course,
-        date: new Date()
-      };
+      if (!startTxt) {
+        msgEl.textContent = "출발지를 입력하세요.";
+        msgEl.className = "message error";
+        return;
+      }
 
-      feeds.push(newFeed);
-      user.posts.push(newFeed);
-      
-      closePostModal();
-      // 입력 초기화
-      document.getElementById('post-caption').value = "";
-      postTempImg = null;
-      document.getElementById('post-preview').style.display = 'none';
-      document.getElementById('post-placeholder').style.display = 'block';
-      
-      updateProfileUI();
-      switchHomeView('feed'); // 피드로 이동
-      goPage('home');
-    }
+      try {
+        msgEl.textContent = "코스 생성 중...";
+        const place = await searchPlacePromise(startTxt);
+        const lat = parseFloat(place.y);
+        const lng = parseFloat(place.x);
+        
+        // 간단한 사각형 루프 로직
+        const sideM = (distKm * 1000) / 4;
+        const dLat = sideM / 111000;
+        const dLng = sideM / (111000 * Math.cos(lat * Math.PI/180));
 
-    // ==================================================
-    // [프로필 & 갤러리] - 2번 소스 통합
-    // ==================================================
-    function handleProfileImg(input) {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          user.img = e.target.result;
-          updateProfileUI();
-        };
-        reader.readAsDataURL(input.files[0]);
+        const pts = [
+          {lat: lat + dLat/2, lng: lng - dLng/2},
+          {lat: lat + dLat/2, lng: lng + dLng/2},
+          {lat: lat - dLat/2, lng: lng + dLng/2},
+          {lat: lat - dLat/2, lng: lng - dLng/2},
+          {lat: lat + dLat/2, lng: lng - dLng/2}
+        ];
+
+        const vertexes = [];
+        let totalDist = 0;
+        for(let i=0; i<pts.length; i++) {
+          vertexes.push(pts[i].lng, pts[i].lat);
+          if(i>0) totalDist += haversineDistance(pts[i-1].lat, pts[i-1].lng, pts[i].lat, pts[i].lng);
+        }
+
+        const routeMock = {
+          sections: [{ roads: [{ vertexes }], distance: totalDist, duration: totalDist / 1.2 }] 
+        }; // 대략 1.2m/s 걷기 속도
+
+        drawRouteOnMap(routeMock);
+        updateRouteUI(routeMock, "loop", "왕복 루프");
+
+      } catch (err) {
+        msgEl.textContent = "루프 생성 실패: " + err.message;
+        msgEl.className = "message error";
       }
     }
 
-    function updateProfileUI() {
-      if(user.img) document.getElementById('profile-img').src = user.img;
-      document.getElementById('profile-name').textContent = user.name;
-      document.getElementById('profile-bio').innerHTML = user.bio.replace(/\n/g, '<br>');
-      document.getElementById('stat-posts').textContent = user.posts.length;
-      document.getElementById('stat-km').textContent = user.totalKm.toFixed(1);
-
-      // 저장된 코스 리스트 (Stats 탭)
-      const ul = document.getElementById('saved-courses-list');
-      ul.innerHTML = "";
-      savedCourses.forEach(c => {
-        ul.innerHTML += `<li>${c.title} (${c.date})</li>`;
-      });
-
-      // 그리드 탭 업데이트
-      const grid = document.getElementById('tab-grid');
-      grid.innerHTML = "";
-      [...user.posts].reverse().forEach(p => {
-        grid.innerHTML += `<div class="grid-img" style="background-image:url('${p.img}'); background-size:cover;"></div>`;
-      });
-    }
-
-    function editProfile() {
-      const name = prompt("변경할 닉네임", user.name);
-      if(name) user.name = name;
-      const bio = prompt("변경할 자기소개", user.bio);
-      if(bio) user.bio = bio;
-      updateProfileUI();
-    }
-
-    function switchProfileTab(tab, el) {
-      document.querySelectorAll('.p-tab').forEach(e => e.classList.remove('active'));
-      el.classList.add('active');
+    // 이벤트: 내 위치 찾기
+    async function handleMyLocation() {
+      const btn = document.getElementById("btn-my-location");
+      const msgEl = document.getElementById("route-message");
+      btn.disabled = true;
+      msgEl.textContent = "위치 확인 중...";
       
-      document.getElementById('tab-grid').style.display = 'none';
-      document.getElementById('tab-reels').style.display = 'none';
-      document.getElementById('tab-stats').style.display = 'none';
-      
-      document.getElementById('tab-' + tab).style.display = (tab === 'grid' || tab === 'reels') ? 'grid' : 'block';
-    }
-
-    // 하이라이트 추가
-    function addHighlight() {
-      const name = prompt("하이라이트 이름");
-      if(name) {
-        const hl = document.createElement('div');
-        hl.className = 'hl-item';
-        hl.innerHTML = `<div class="hl-circle">❤️</div><span class="hl-text">${name}</span>`;
-        document.getElementById('highlight-list').appendChild(hl);
-      }
-    }
-
-    // ==================================================
-    // [그룹 & 채팅]
-    // ==================================================
-    let parties = [
-      {id:1, title:"한강 6시 벙개", info:"6명 참여중"},
-      {id:2, title:"주말 10k 챌린지", info:"2명 참여중"}
-    ];
-
-    function renderParties() {
-      const list = document.getElementById('party-list');
-      list.innerHTML = "";
-      parties.forEach(p => {
-        list.innerHTML += `
-          <div style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="enterChat('${p.title}')">
-            <div style="width:40px; height:40px; background:#eee; border-radius:50%; display:flex; align-items:center; justify-content:center;">🏃</div>
-            <div style="margin-left:10px; flex:1;">
-              <div style="font-weight:bold; font-size:14px;">${p.title}</div>
-              <div style="font-size:12px; color:#888;">${p.info}</div>
-            </div>
-            <button class="btn-soft" style="width:auto;">입장</button>
-          </div>
-        `;
-      });
-    }
-
-    function createParty() {
-      const title = prompt("파티 이름");
-      if(title) {
-        parties.push({id:Date.now(), title:title, info:"1명 참여중"});
-        renderParties();
-      }
-    }
-
-    function enterChat(title) {
-      goPage('chat-room');
-      document.getElementById('header-title').textContent = title;
-      document.getElementById('back-btn').style.display = 'block';
-      document.getElementById('main-nav').style.display = 'none'; // 채팅방에선 탭바 숨김
-      
-      // 채팅방 들어오면 기존 메시지 렌더링 (여기선 데모라 리셋 안함)
-    }
-
-    function sendMsg() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if(!text) return;
-      
-      addChatMsg(text, true);
-      input.value = "";
-      
-      // 자동 응답
-      setTimeout(() => {
-        addChatMsg("반갑습니다! 같이 달려요 🔥", false);
-      }, 1000);
-    }
-
-    function addChatMsg(text, isMe, type = 'text') {
-      const container = document.getElementById('chat-msgs-container');
-      const div = document.createElement('div');
-      div.className = `msg ${isMe ? 'me' : 'other'}`;
-      div.innerHTML = text;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function toggleCourseShare() {
-      const panel = document.getElementById('course-share-panel');
-      const list = document.getElementById('chat-course-list');
-      
-      if(panel.style.display === 'none') {
-        if(savedCourses.length === 0) return alert("저장된 코스가 없습니다.");
-        panel.style.display = 'block';
-        list.innerHTML = "";
-        savedCourses.forEach(c => {
-          list.innerHTML += `
-            <div style="min-width:120px; padding:8px; background:#fff; border:1px solid #ddd; border-radius:8px; cursor:pointer;" onclick="shareCourseChat('${c.title}', '${(c.dist/1000).toFixed(1)}km')">
-              <div style="font-weight:bold; font-size:12px;">${c.title}</div>
-              <div style="font-size:11px; color:#666;">${(c.dist/1000).toFixed(1)}km</div>
-            </div>
-          `;
+      try {
+        const loc = await getCurrentLocation();
+        const coord = new kakao.maps.LatLng(loc.lat, loc.lng);
+        map.panTo(coord);
+        new kakao.maps.Marker({ position: coord, map });
+        
+        geocoder.coord2Address(loc.lng, loc.lat, (res, status) => {
+          if (status === kakao.maps.services.Status.OK) {
+            document.getElementById("start-input").value = res[0].address.address_name || "내 위치";
+          }
         });
-      } else {
-        panel.style.display = 'none';
+        msgEl.textContent = "현재 위치를 출발지로 설정했습니다.";
+      } catch(err) {
+        msgEl.textContent = err.message;
+      } finally {
+        btn.disabled = false;
       }
     }
 
-    function shareCourseChat(title, dist) {
-      addChatMsg(`<b>🚩 코스 공유</b><br>${title}<br>거리: ${dist}`, true);
-      document.getElementById('course-share-panel').style.display = 'none';
+    // --- 2. 데이터 관리 (History & Stats) ---
+
+    function saveRoute() {
+      if (!currentRoute) return;
+      routeHistory.push(currentRoute);
+      renderHistory();
+      updateStats();
+      document.getElementById("route-message").textContent = "기록이 저장되었습니다.";
     }
 
-    // ==================================================
-    // [릴스 & 차트 & 페이지 이동]
-    // ==================================================
-    
-    // 릴스 더미 데이터
-    const reelIds = ["ZfFvjC-JmXk", "L8H2K5f2Wj8", "S3xL4dK2G-M", "wXk5_8k7h8Q"];
-    function initReels() {
-      const grid = document.getElementById('tab-reels');
-      reelIds.forEach(id => {
-        grid.innerHTML += `
-          <div class="grid-img" style="background-image:url('https://img.youtube.com/vi/${id}/hqdefault.jpg'); background-size:cover;" onclick="openReels('${id}')">
-            <span class="grid-icon">▶</span>
-          </div>
-        `;
-      });
-    }
-    function openReels(id) {
-      document.getElementById('reels-modal').style.display = 'flex';
-      document.getElementById('reels-iframe').src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&loop=1&playlist=${id}`;
-    }
-    function closeReels() {
-      document.getElementById('reels-modal').style.display = 'none';
-      document.getElementById('reels-iframe').src = "";
-    }
-
-    // 차트 초기화
-    let myChart;
-    function initChart() {
-      const ctx = document.getElementById('activityChart').getContext('2d');
-      myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['월','화','수','목','금','토','일'],
-          datasets: [{ label:'km', data:[3,2.5,0,4,1,5,0], backgroundColor:'#2f6bff', borderRadius:4 }]
-        },
-        options: { responsive:true, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}} }
-      });
-    }
-
-    // 네비게이션
-    function goPage(pageId) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById('page-' + pageId).classList.add('active');
+    function renderHistory() {
+      const list = document.getElementById("history-list");
+      const empty = document.getElementById("history-empty");
+      list.innerHTML = "";
       
-      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-      // 탭바 활성화 처리
-      if(pageId === 'home') document.querySelector('.tab-nav div:nth-child(1)').classList.add('active');
-      if(pageId === 'group') document.querySelector('.tab-nav div:nth-child(2)').classList.add('active');
-      if(pageId === 'me') document.querySelector('.tab-nav div:nth-child(3)').classList.add('active');
+      if (routeHistory.length === 0) {
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
 
-      // 헤더 상태 관리
-      const title = document.getElementById('header-title');
-      const writeBtn = document.getElementById('write-btn');
-      const backBtn = document.getElementById('back-btn');
-      const nav = document.getElementById('main-nav');
+      [...routeHistory].reverse().forEach(item => {
+        const date = item.createdAt.toLocaleDateString();
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:600; margin-bottom:4px;">${item.label}</div>
+            <div class="text-sub" style="font-size:0.75rem;">
+              ${(item.distance/1000).toFixed(2)}km · ${Math.round(item.duration/60)}분 · ${date}
+            </div>
+          </div>
+          <span class="badge ${item.type === 'loop' ? 'badge-loop' : 'badge-normal'}">
+            ${item.type === 'loop' ? '루프' : '일반'}
+          </span>
+        `;
+        list.appendChild(div);
+      });
+    }
 
-      backBtn.style.display = 'none';
-      nav.style.display = 'flex';
+    function updateStats() {
+      let totalDist = 0;
+      let totalTime = 0;
+      
+      // 저장된 기록 + 현재 보여지는 경로(저장 안된 경우도 포함하려면 로직 수정 필요, 여기선 저장된 것만)
+      routeHistory.forEach(r => {
+        totalDist += r.distance;
+        totalTime += r.duration;
+      });
 
-      if(pageId === 'home') {
-        title.textContent = "RunMate";
-        writeBtn.style.display = 'block';
-        if(map) map.invalidateSize();
-      } else if(pageId === 'group') {
-        title.textContent = "그룹";
-        writeBtn.style.display = 'none';
-      } else if(pageId === 'me') {
-        title.textContent = user.name;
-        writeBtn.style.display = 'block';
-        if(myChart) myChart.resize();
-      } else if(pageId === 'chat-room') {
-        // 채팅방은 별도 처리
-        writeBtn.style.display = 'none';
+      document.getElementById("stat-total-distance").textContent = (totalDist/1000).toFixed(2) + " km";
+      document.getElementById("stat-total-time").textContent = Math.round(totalTime/60) + " 분";
+      document.getElementById("ui-total-routes").textContent = routeHistory.length;
+    }
+
+    function resetStats() {
+      if(confirm("모든 기록을 초기화하시겠습니까?")) {
+        routeHistory = [];
+        currentRoute = null;
+        renderHistory();
+        updateStats();
+        document.getElementById("route-summary").innerHTML = "";
       }
     }
 
-    // 뒤로가기 버튼 (채팅방에서 나올 때)
-    document.getElementById('back-btn').addEventListener('click', () => {
-      goPage('group');
+    // --- 3. UI 인터랙션 (탭 전환 등) ---
+
+    // 프로필 탭 전환 (diet1-4ts)
+    window.switchProfileTab = function(tabName) {
+      document.getElementById('profile-posts').style.display = tabName === 'posts' ? 'grid' : 'none';
+      document.getElementById('profile-saved').style.display = tabName === 'saved' ? 'grid' : 'none';
+      
+      document.getElementById('tab-posts').classList.toggle('active', tabName === 'posts');
+      document.getElementById('tab-saved').classList.toggle('active', tabName === 'saved');
+    }
+
+    // 메인 탭 네비게이션
+    function initTabs() {
+      const btns = document.querySelectorAll(".nav-btn");
+      const pages = document.querySelectorAll(".page");
+
+      btns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          btns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+
+          const targetId = "page-" + btn.dataset.target;
+          pages.forEach(p => {
+            p.classList.toggle("active", p.id === targetId);
+          });
+
+          // 지도가 포함된 탭이 다시 보일 때 레이아웃 갱신 필요
+          if (targetId === "page-home" && map) {
+            setTimeout(() => map.relayout(), 100);
+          }
+        });
+      });
+    }
+
+    // --- 초기화 ---
+    document.addEventListener("DOMContentLoaded", () => {
+      kakao.maps.load(initMap);
+      initTabs();
+      
+      document.getElementById("btn-search-route").addEventListener("click", handleSearchRoute);
+      document.getElementById("btn-loop-route").addEventListener("click", handleLoopRoute);
+      document.getElementById("btn-my-location").addEventListener("click", handleMyLocation);
+      document.getElementById("btn-save-route").addEventListener("click", saveRoute);
+      document.getElementById("btn-reset-stats").addEventListener("click", resetStats);
     });
 
-    // 글쓰기 버튼
-    document.getElementById('write-btn').addEventListener('click', openPostModal);
-
-    // 초기화
-    window.onload = function() {
-      initMap();
-      initChart();
-      initReels();
-      renderParties();
-      updateProfileUI();
-      
-      // 갤러리 더미 이미지 하나 추가
-      feeds.push({
-        id:999, user:{name:"관리자", img:null},
-        img:"https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=600&q=80",
-        caption:"RunMate에 오신 것을 환영합니다! #첫게시물",
-        course:null, date:new Date()
-      });
-      renderFeeds();
-    };
-
-    function resetData() {
-      if(confirm("초기화하시겠습니까?")) location.reload();
-    }
   </script>
 </body>
 </html>
