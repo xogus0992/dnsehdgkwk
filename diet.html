@@ -108,21 +108,18 @@
     </div>
   </main>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Kakao Maps JS (장소 검색) - appkey 부분을 실제 키로 교체 -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 
-  <!-- 메인 로직 (ES Module) -->
-  <script type="module">
-    import { STATIONS } from "./stations.js";
-    import { CAMPUSES } from "./campus.js";
-    import { initApp } from "./diet.js";
-
-    window.addEventListener("DOMContentLoaded", () => {
-      initApp({ STATIONS, CAMPUSES });
-    });
-  </script>
+<script type="module">
+  // diet.js에서 initApp 함수를 가져와서 실행
+  import { initApp } from './diet.js';
+  
+  // 페이지가 다 로딩되면 실행
+  document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+  });
+</script>
 </body>
 </html>

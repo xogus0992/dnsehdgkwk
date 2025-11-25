@@ -1,13 +1,12 @@
-// diet.js
-// OSRM foot profile 기반 도로 경로 + 3가지 코스 모드
-// - 편도(최단경로)
-// - 사각/왕복 루프
-// - 추천 코스(근처 공원)
-// 🔥 AWS HTTP API 올바른 엔드포인트
-const OSRM_ENDPOINT = "https://o0xor6qm0g.execute-api.ap-northeast-2.amazonaws.com/default/osrm-proxy";
+// diet.js - ORS Advanced Algorithm Version
 
-const RADIUS_METERS = 5000;
+// 🔥 1. API 키 설정
+const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0="; 
+const ORS_ENDPOINT = "https://api.openrouteservice.org/v2/directions/foot-walking/geojson";
 
+// 🔥 2. 글로벌 설정 및 상태
+const DEFAULT_SEARCH_RADIUS = 5000; // 5km
+let loopVariant = 0; // 코스 변형 시드 (누를 때마다 증가)
 
 let map;
 let kakaoPlaces = null;
@@ -22,12 +21,12 @@ let startMarker = null;
 let endMarker = null;
 let routeLayer = null;
 
-let STATIONS_DATA = [];
-let CAMPUSES_DATA = [];
+let STATIONS_DATA = []; // 필요 시 사용
+let CAMPUSES_DATA = []; // 필요 시 사용
 
 export function initApp({ STATIONS = [], CAMPUSES = [] } = {}) {
-  STATIONS_DATA = STATIONS || [];
-  CAMPUSES_DATA = CAMPUSES || [];
+  STATIONS_DATA = STATIONS;
+  CAMPUSES_DATA = CAMPUSES;
 
   initMap();
   initKakaoPlaces();
@@ -37,547 +36,478 @@ export function initApp({ STATIONS = [], CAMPUSES = [] } = {}) {
   setupCourseButton();
 }
 
-// 지도 초기화
+// ---------------------------------------------------------
+// 초기화 함수들
+// ---------------------------------------------------------
 function initMap() {
   map = L.map("map").setView([37.5665, 126.978], 13);
-
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
   }).addTo(map);
 }
 
-// 카카오 장소 검색 초기화
 function initKakaoPlaces() {
-  if (!window.kakao || !kakao.maps || !kakao.maps.load) return;
-
-  kakao.maps.load(() => {
+  if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
     kakaoPlaces = new kakao.maps.services.Places();
-  });
+  } else {
+    console.warn("Kakao Maps SDK Not Found");
+  }
 }
 
-// GPS 초기화
 function initGeolocation() {
-  const statusEl = document.getElementById("status-gps");
-
-  if (!navigator.geolocation) {
-    if (statusEl) statusEl.textContent = "GPS: 지원되지 않는 기기입니다.";
-    return;
-  }
-
+  if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       myLat = pos.coords.latitude;
       myLng = pos.coords.longitude;
-      if (statusEl) {
-        statusEl.textContent = `GPS: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
-      }
-      if (map) {
-        map.setView([myLat, myLng], 15);
+      const btn = document.getElementById("btn-my-location");
+      if (btn) btn.innerText = "내 위치 확보됨";
+      
+      // 앱 시작 시, 출발지가 없으면 내 위치를 자동으로 출발지로 설정 (UX 개선)
+      if (!startPoint) {
+        setStartPoint({ lat: myLat, lng: myLng, name: "내 위치" });
+        map.setView([myLat, myLng], 14);
       }
     },
-    () => {
-      if (statusEl) statusEl.textContent = "GPS: 위치 정보를 가져올 수 없습니다.";
+    (err) => {
+      console.error(err);
     },
-    { enableHighAccuracy: true, timeout: 15000 }
+    { enableHighAccuracy: true }
   );
 }
 
-// haversine 거리(m)
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// 로컬(STATIONS, CAMPUSES) 검색
-function getLocalMatches(keyword) {
-  const key = keyword.trim().toLowerCase();
-  if (!key) return [];
-
-  const hasLoc = myLat != null && myLng != null;
-  const results = [];
-
-  STATIONS_DATA.forEach((st) => {
-    if (!st || !st.name) return;
-    const name = String(st.name).toLowerCase();
-    if (!name.includes(key)) return;
-    let distance = null;
-    if (hasLoc && st.lat && st.lng) {
-      distance = haversine(myLat, myLng, Number(st.lat), Number(st.lng));
-      if (distance > RADIUS_METERS) return;
-    }
-    results.push({
-      place_name: st.name,
-      x: st.lng,
-      y: st.lat,
-      distance,
-      _kind: "station"
-    });
-  });
-
-  CAMPUSES_DATA.forEach((cp) => {
-    if (!cp || !cp.name) return;
-    const name = String(cp.name).toLowerCase();
-    if (!name.includes(key)) return;
-    let distance = null;
-    if (hasLoc && cp.lat && cp.lng) {
-      distance = haversine(myLat, myLng, Number(cp.lat), Number(cp.lng));
-      if (distance > RADIUS_METERS) return;
-    }
-    results.push({
-      place_name: cp.name,
-      x: cp.lng,
-      y: cp.lat,
-      distance,
-      _kind: "campus"
-    });
-  });
-
-  results.sort((a, b) => {
-    if (a.distance == null && b.distance == null) return 0;
-    if (a.distance == null) return 1;
-    if (b.distance == null) return -1;
-    return a.distance - b.distance;
-  });
-
-  return results;
-}
-
-// 카카오 검색
-function searchKakao(keyword, cb) {
-  if (!kakaoPlaces) {
-    cb([]);
-    return;
+// ---------------------------------------------------------
+// 🔥 핵심: ORS API 통신 (옵션 강화)
+// ---------------------------------------------------------
+async function requestOrsRoute(points) {
+  if (!points || points.length < 2) return null;
+  if (!ORS_API_KEY || ORS_API_KEY.includes("여기에")) {
+    alert("API 키를 설정해주세요.");
+    throw new Error("API Key Missing");
   }
-  const hasLoc = myLat != null && myLng != null;
-  const opts = hasLoc
-    ? { location: new kakao.maps.LatLng(myLat, myLng) }
-    : {};
 
-  kakaoPlaces.keywordSearch(
-    keyword,
-    (data, status) => {
-      if (status !== kakao.maps.services.Status.OK) {
-        cb([]);
-        return;
-      }
-      const list = data.map((p) => {
-        let distance = null;
-        if (hasLoc) {
-          distance = haversine(myLat, myLng, Number(p.y), Number(p.x));
-        } else if (p.distance) {
-          distance = Number(p.distance);
-        }
-        return {
-          place_name: p.place_name,
-          x: p.x,
-          y: p.y,
-          distance,
-          _kind: "kakao"
-        };
-      });
-      const filtered = hasLoc
-        ? list.filter((p) => p.distance == null || p.distance <= RADIUS_METERS)
-        : list;
-      filtered.sort((a, b) => {
-        if (a.distance == null && b.distance == null) return 0;
-        if (a.distance == null) return 1;
-        if (b.distance == null) return -1;
-        return a.distance - b.distance;
-      });
-      cb(filtered);
-    },
-    opts
-  );
-}
+  // Leaflet(lat,lng) -> GeoJSON(lng,lat)
+  const coordinates = points.map(p => [p.lng, p.lat]);
 
-// 로컬 + 카카오 결합 검색
-function searchCombined(keyword, cb) {
-  const local = getLocalMatches(keyword);
-  searchKakao(keyword, (remote) => {
-    const used = new Set(local.map((p) => p.place_name));
-    const merged = [
-      ...local,
-      ...remote.filter((p) => !used.has(p.place_name))
-    ];
-    cb(merged);
-  });
-}
-
-// 자동완성 UI
-function setupAutocomplete() {
-  const startInput = document.getElementById("start-input");
-  const endInput = document.getElementById("end-input");
-  const startSug = document.getElementById("start-suggestions");
-  const endSug = document.getElementById("end-suggestions");
-
-  if (!startInput || !endInput) return;
-
-  const makeDistanceText = (d) => {
-    if (d == null || Number.isNaN(d)) return "";
-    if (d < 1000) return `${Math.round(d)}m`;
-    return `${(d / 1000).toFixed(1)}km`;
+  const body = {
+    coordinates: coordinates,
+    instructions: false,
+    elevation: false,
+    // 🔥 도보 최적화 옵션 추가
+    preference: "recommended", // shortest, recommended
+    options: {
+      avoid_features: ["steps"] // 계단 피하기 (러닝에 유리)
+    }
   };
 
-  function renderList(wrapper, items, targetInput, type) {
-    wrapper.innerHTML = "";
-    if (!items.length) {
-      wrapper.style.display = "none";
-      return;
-    }
-    wrapper.style.display = "block";
-
-    items.slice(0, 8).forEach((p) => {
-      const li = document.createElement("li");
-      li.className = "suggest-item";
-
-      let kindText = "";
-      if (p._kind === "station") kindText = "지하철역";
-      else if (p._kind === "campus") kindText = "대학교";
-
-      const distText = makeDistanceText(p.distance);
-      let text = p.place_name;
-      if (kindText) text += ` (${kindText})`;
-      if (distText) text += ` · ${distText}`;
-
-      li.textContent = text;
-      li.addEventListener("click", () => {
-        targetInput.value = p.place_name;
-        wrapper.style.display = "none";
-        const lat = Number(p.y);
-        const lng = Number(p.x);
-        if (type === "start") {
-          startPoint = { lat, lng, name: p.place_name };
-        } else {
-          endPoint = { lat, lng, name: p.place_name };
-        }
-        updateMarkersOnly();
-      });
-
-      wrapper.appendChild(li);
+  try {
+    const res = await fetch(ORS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": ORS_API_KEY,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify(body)
     });
-  }
 
-  startInput.addEventListener("input", () => {
-    const key = startInput.value.trim();
-    if (!key) {
-      startSug.style.display = "none";
-      return;
-    }
-    searchCombined(key, (list) => renderList(startSug, list, startInput, "start"));
-  });
+    if (!res.ok) return null; // 실패 시 조용히 null 반환 (후보군 탈락 처리용)
 
-  endInput.addEventListener("input", () => {
-    const key = endInput.value.trim();
-    if (!key) {
-      endSug.style.display = "none";
-      return;
-    }
-    searchCombined(key, (list) => renderList(endSug, list, endInput, "end"));
-  });
+    const json = await res.json();
+    if (!json.features || json.features.length === 0) return null;
 
-  document.addEventListener("click", (e) => {
-    if (e.target !== startInput && !startSug.contains(e.target)) {
-      startSug.style.display = "none";
-    }
-    if (e.target !== endInput && !endSug.contains(e.target)) {
-      endSug.style.display = "none";
-    }
-  });
-}
+    const feature = json.features[0];
+    const geometry = feature.geometry;
+    const props = feature.properties;
 
-// 마커만 갱신 (경로는 코스 생성 버튼 눌렀을 때)
-function updateMarkersOnly() {
-  if (!map) return;
+    // 결과 파싱
+    const routeCoords = geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    const distanceMeters = props.summary.distance;
 
-  if (startMarker) {
-    map.removeLayer(startMarker);
-    startMarker = null;
-  }
-  if (endMarker) {
-    map.removeLayer(endMarker);
-    endMarker = null;
-  }
+    return { coords: routeCoords, distance: distanceMeters };
 
-  const pts = [];
-  if (startPoint) {
-    startMarker = L.marker([startPoint.lat, startPoint.lng]).addTo(map);
-    pts.push([startPoint.lat, startPoint.lng]);
-  }
-  if (endPoint) {
-    endMarker = L.marker([endPoint.lat, endPoint.lng]).addTo(map);
-    pts.push([endPoint.lat, endPoint.lng]);
-  }
-
-  if (pts.length === 1) {
-    map.setView(pts[0], 15);
-  } else if (pts.length === 2) {
-    const bounds = L.latLngBounds(pts[0], pts[1]).pad(0.25);
-    map.fitBounds(bounds);
+  } catch (err) {
+    console.error("ORS Fetch Error:", err);
+    return null;
   }
 }
 
-// 내 위치 버튼
-function setupMyLocationButton() {
-  const btn = document.getElementById("btn-my-location");
-  const startInput = document.getElementById("start-input");
-  if (!btn || !startInput) return;
 
-  btn.addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      alert("GPS를 지원하지 않는 기기입니다.");
-      return;
+// ---------------------------------------------------------
+// 🧠 알고리즘 1: 스마트 루프 (오차 최소화 & 모양 변형)
+// ---------------------------------------------------------
+async function buildSmartLoopRoute(targetKm) {
+  if (!startPoint) {
+    // 출발지 없으면 내 위치 강제 사용
+    if (myLat && myLng) {
+      setStartPoint({ lat: myLat, lng: myLng, name: "내 위치" });
+    } else {
+      alert("출발지를 설정하거나 GPS를 켜주세요.");
+      return null;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        myLat = pos.coords.latitude;
-        myLng = pos.coords.longitude;
+  }
 
-        const statusEl = document.getElementById("status-gps");
-        if (statusEl) {
-          statusEl.textContent = `GPS: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
-        }
+  updateStatus("최적의 코스를 계산 중입니다... (3개 후보 분석)");
 
-        startInput.value = "현재 위치";
-        startPoint = { lat: myLat, lng: myLng, name: "현재 위치" };
-        updateMarkersOnly();
-      },
-      () => {
-        alert("현재 위치를 가져올 수 없습니다.");
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
+  // 변형 인자: 버튼 누를 때마다 모양/각도가 달라짐
+  const baseAngle = (loopVariant * 45) % 360; 
+  
+  // 후보군 생성 (Candidates)
+  // 목표 거리 맞추기 위해 3가지 스케일/모양을 시도
+  const candidatesParams = [
+    { type: 'square', scale: 1.0, angle: baseAngle },       // 기본
+    { type: 'diamond', scale: 0.9, angle: baseAngle + 15 }, // 조금 작게, 회전
+    { type: 'triangle', scale: 1.1, angle: baseAngle - 15 } // 조금 크게, 삼각형
+  ];
+
+  const promises = candidatesParams.map(param => {
+    // 1. 도형 좌표 계산
+    const waypoints = createPolygonWaypoints(startPoint, targetKm, param.type, param.scale, param.angle);
+    // 2. ORS 경로 요청 (병렬)
+    return requestOrsRoute(waypoints).then(result => ({ ...result, param })); 
   });
+
+  // 모든 후보 경로를 받아옴
+  const results = await Promise.all(promises);
+  
+  // 유효한 결과만 필터링
+  const validResults = results.filter(r => r && r.coords);
+
+  if (validResults.length === 0) {
+    throw new Error("경로 생성에 실패했습니다. (도로가 없는 지역일 수 있습니다)");
+  }
+
+  // 🔥 오차(Error)가 가장 적은 코스 선택
+  const targetMeters = targetKm * 1000;
+  validResults.sort((a, b) => {
+    const diffA = Math.abs(a.distance - targetMeters);
+    const diffB = Math.abs(b.distance - targetMeters);
+    return diffA - diffB;
+  });
+
+  const bestRoute = validResults[0]; // 1등 선택
+  
+  console.log(`선택된 코스: ${bestRoute.param.type}, 오차: ${Math.abs(bestRoute.distance - targetMeters).toFixed(0)}m`);
+  
+  return bestRoute;
 }
 
-// 코스 생성 버튼
+// 다각형 웨이포인트 계산 엔진 (Math)
+function createPolygonWaypoints(center, targetKm, type, scale, rotationDeg) {
+  // 러프하게 계산: 한 변의 길이 ≈ 전체거리 / 변의 개수
+  // 위도 1도 ≈ 111km
+  
+  let sides = 4;
+  if (type === 'triangle') sides = 3;
+  
+  // 반지름(km) 추정: 둘레 공식 역산 (보정계수 포함)
+  // 대략적으로 r = (km / sides) / 1.5 정도가 적당 (직선거리 < 실제도로거리)
+  const radiusKm = (targetKm / sides) / 1.4 * scale; 
+  const radiusDeg = radiusKm / 111; 
+
+  const points = [];
+  
+  // 시작점 추가
+  points.push({ lat: center.lat, lng: center.lng });
+
+  const angleStep = 360 / sides;
+  const startAngle = rotationDeg; // 회전 적용
+
+  for (let i = 1; i < sides; i++) { // 마지막 점은 다시 시작점으로 돌아오므로 i=1부터
+    const deg = startAngle + (angleStep * i);
+    const rad = deg * (Math.PI / 180);
+    
+    // 단순 원형 좌표계 사용 (작은 반경에서는 오차 무시 가능)
+    const lat = center.lat + (radiusDeg * Math.cos(rad));
+    
+    // 경도는 위도에 따라 거리 비율이 다름 (cos(lat) 보정)
+    const lng = center.lng + (radiusDeg * Math.sin(rad) / Math.cos(center.lat * (Math.PI/180)));
+    
+    points.push({ lat, lng });
+  }
+
+  // 다시 시작점으로 닫기
+  points.push({ lat: center.lat, lng: center.lng });
+
+  return points;
+}
+
+
+// ---------------------------------------------------------
+// 🧠 알고리즘 2: 추천 코스 (거리 기반 최적 목적지 선정)
+// ---------------------------------------------------------
+async function buildRecommendRoute(targetKm) {
+  if (!myLat || !myLng) {
+    alert("위치 정보를 가져와야 합니다.");
+    return null;
+  }
+  
+  // 내 위치를 출발지로 강제
+  setStartPoint({ lat: myLat, lng: myLng, name: "현재 위치" });
+
+  if (!kakaoPlaces) return null;
+
+  updateStatus("거리(@ " + targetKm + "km)에 맞는 랜드마크 검색 중...");
+
+  // 검색 카테고리: 지하철(SW8), 학교(SC4), 관광명소(AT4), 공원(keyword)
+  const categories = ["SW8", "SC4", "AT4"]; 
+  const keyword = "공원";
+
+  // 후보지 수집
+  let candidates = [];
+
+  // 1. 카테고리 검색 (병렬 처리)
+  const searchPromises = categories.map(code => 
+    new Promise(resolve => {
+      kakaoPlaces.categorySearch(code, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) resolve(data);
+        else resolve([]);
+      }, { location: new kakao.maps.LatLng(myLat, myLng), radius: DEFAULT_SEARCH_RADIUS });
+    })
+  );
+  
+  // 2. 키워드 검색 (공원)
+  searchPromises.push(new Promise(resolve => {
+    kakaoPlaces.keywordSearch(keyword, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) resolve(data);
+        else resolve([]);
+    }, { location: new kakao.maps.LatLng(myLat, myLng), radius: DEFAULT_SEARCH_RADIUS });
+  }));
+
+  const results = await Promise.all(searchPromises);
+  results.forEach(list => candidates.push(...list));
+
+  // 중복 제거 (ID 기준)
+  const uniqueCandidates = Array.from(new Map(candidates.map(item => [item.id, item])).values());
+
+  if (uniqueCandidates.length === 0) {
+    alert("근처(5km)에 적절한 목적지가 없습니다.");
+    return null;
+  }
+
+  // 🔥 거리 점수 매기기 (Scoring)
+  // 목표: 왕복 거리(직선거리 * 2.5)가 targetKm와 비슷한 곳 찾기
+  let bestPlace = null;
+  let minDiff = Infinity;
+
+  // 직선거리 계산 계수 (Road Factor): 직선거리 대비 실제 거리는 약 1.3~1.5배
+  // 왕복이므로: 직선거리 * 2 * 1.3 ≈ 직선거리 * 2.6
+  const ROUND_TRIP_FACTOR = 2.6; 
+
+  uniqueCandidates.forEach(p => {
+    const distStraightKm = haversine(myLat, myLng, parseFloat(p.y), parseFloat(p.x)) / 1000;
+    const estimatedRoundKm = distStraightKm * ROUND_TRIP_FACTOR;
+    
+    // 너무 짧은 거리(500m 미만) 제외
+    if (distStraightKm < 0.5) return;
+
+    const diff = Math.abs(estimatedRoundKm - targetKm);
+
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestPlace = p;
+    }
+  });
+
+  if (!bestPlace) {
+    // 적절한 곳이 없으면 그냥 가장 먼 곳 추천
+    bestPlace = uniqueCandidates[0]; 
+  }
+
+  // 목적지 설정
+  setEndPoint({ 
+    lat: parseFloat(bestPlace.y), 
+    lng: parseFloat(bestPlace.x), 
+    name: bestPlace.place_name 
+  });
+
+  updateStatus(`추천 목적지: ${bestPlace.place_name} (왕복 예상)`);
+
+  // 왕복 경로 요청 (Start -> End -> Start)
+  return await requestOrsRoute([startPoint, endPoint, startPoint]);
+}
+
+// ---------------------------------------------------------
+// UI 및 이벤트 핸들러
+// ---------------------------------------------------------
 function setupCourseButton() {
   const btn = document.getElementById("btn-generate-course");
-  const summaryEl = document.getElementById("status-summary");
-  const distInput = document.getElementById("distance-input");
-
-  if (!btn || !summaryEl) return;
+  if (!btn) return;
 
   btn.addEventListener("click", async () => {
-    if (!map) return;
+    // 1. 모드 확인
+    const modeEls = document.getElementsByName("course-mode");
+    let mode = "loop";
+    for (const el of modeEls) { if (el.checked) mode = el.value; }
 
-    const mode = getSelectedMode();
-    const targetKm = parseFloat(distInput.value) || null;
+    // 2. 거리 확인
+    const distInput = document.getElementById("distance-input");
+    const targetKm = parseFloat(distInput.value) || 3;
 
-    if (!startPoint && myLat != null && myLng != null) {
-      startPoint = { lat: myLat, lng: myLng, name: "현재 위치" };
-    }
+    // 3. 변형 시드 증가 (누를 때마다 다른 모양 나오도록)
+    loopVariant++; 
 
-    if (!startPoint) {
-      alert("출발지를 먼저 선택해주세요.");
-      return;
+    // 4. 기존 경로 삭제
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
     }
 
     try {
-      if (routeLayer) {
-        map.removeLayer(routeLayer);
-        routeLayer = null;
-      }
+      let result = null;
 
-      let routeInfo = null;
-
-      if (mode === "oneway") {
-        if (!endPoint) {
-          alert("편도 코스는 도착지가 필요합니다.");
-          return;
+      if (mode === "one-way") {
+        if (!startPoint || !endPoint) {
+            alert("편도 모드는 출발지와 도착지가 필요합니다.");
+            return;
         }
-        routeInfo = await buildOneWayRoute(startPoint, endPoint);
+        updateStatus("편도 경로 최적화 중...");
+        result = await requestOrsRoute([startPoint, endPoint]);
+
       } else if (mode === "loop") {
-        routeInfo = await buildLoopRoute(startPoint, endPoint, targetKm);
+        // 스마트 루프 실행
+        result = await buildSmartLoopRoute(targetKm);
+
       } else if (mode === "recommend") {
-        routeInfo = await buildRecommendRoute(targetKm);
+        // 추천 코스 실행
+        result = await buildRecommendRoute(targetKm);
       }
 
-      if (!routeInfo) return;
-
-      const { coords, distance } = routeInfo;
-      routeLayer = L.polyline(coords, { color: "#2563eb", weight: 4 }).addTo(
-        map
-      );
-      const bounds = L.latLngBounds(coords).pad(0.25);
-      map.fitBounds(bounds);
-
-      const km = (distance / 1000).toFixed(2);
-      let text = `총 거리: ${km}km`;
-      if (targetKm) {
-        text += ` / 목표 거리: ${targetKm.toFixed(1)}km`;
+      // 결과 그리기
+      if (result) {
+        drawRoute(result.coords);
+        const km = (result.distance / 1000).toFixed(2);
+        updateStatus(`생성 완료! 총 거리: ${km}km (오차보정됨)`);
+      } else {
+        updateStatus("경로를 생성하지 못했습니다.");
       }
-      summaryEl.textContent = text;
+
     } catch (e) {
       console.error(e);
-      alert("코스 생성 중 오류가 발생했습니다.");
+      updateStatus("오류: " + e.message);
     }
   });
 }
 
-function getSelectedMode() {
-  const radios = document.querySelectorAll('input[name="courseMode"]');
-  for (const r of radios) {
-    if (r.checked) return r.value;
-  }
-  return "oneway";
-}
-
-// OSRM 요청 공통
-async function requestOsrmRoute(points) {
-  if (!points || points.length < 2) return null;
-
-  // 1. 좌표 문자열 생성
-  const coordsStr = points
-    .map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`)
-    .join(";");
-
-  // 2. URL 생성 (여기가 핵심 수정 사항!)
-  // 기존 코드(삭제): const url = `${OSRM_ENDPOINT}/route/v1/foot/${coordsStr}?overview=full&geometries=geojson`;
-  
-  // 수정 코드: Lambda가 이해할 수 있게 '쿼리 파라미터(?coords=...)' 방식으로 변경
-  // encodeURIComponent를 사용하여 특수문자(; ,)가 안전하게 전송되도록 처리
-  const url = `${OSRM_ENDPOINT}?profile=foot&coords=${encodeURIComponent(coordsStr)}`;
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    // 에러 발생 시 어떤 문제인지 콘솔에서 확인하기 쉽게 로그 추가
-    const errText = await res.text();
-    console.error("Lambda Error:", errText);
-    throw new Error("OSRM 요청 실패");
-  }
-  
-  const json = await res.json();
-  
-  // 람다에서 에러 객체를 보냈을 경우 처리
-  if (json.error) {
-     throw new Error(json.error);
-  }
-
-  if (!json.routes || !json.routes.length) {
-    throw new Error("경로를 찾을 수 없습니다.");
-  }
-  
-  const route = json.routes[0];
-  const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-  return { coords, distance: route.distance };
-}
-
-// ① 편도 코스 - 최단경로
-async function buildOneWayRoute(from, to) {
-  const points = [from, to];
-  return await requestOsrmRoute(points);
-}
-
-// ② 사각/왕복 코스
-async function buildLoopRoute(from, to, targetKm) {
-  const base = { lat: from.lat, lng: from.lng };
-  let waypoints = [];
-
-  if (!to) {
-    // 출발지만 있는 경우: 출발지를 기준으로 사각형
-    const total = targetKm && targetKm > 0 ? targetKm : 4; // 기본 4km
-    const sideKm = total / 4;
-    const latRad = (base.lat * Math.PI) / 180;
-    const dLat = (sideKm * 1000) / 111000;
-    const dLng = (sideKm * 1000) / (111000 * Math.cos(latRad));
-
-    const p1 = base;
-    const p2 = { lat: base.lat, lng: base.lng + dLng };
-    const p3 = { lat: base.lat - dLat, lng: base.lng + dLng };
-    const p4 = { lat: base.lat - dLat, lng: base.lng };
-
-    waypoints = [p1, p2, p3, p4, p1];
-  } else {
-    // 출발지 + 목적지 둘 다 있을 때: 대략적인 사다리꼴 루프
-    const vLat = to.lat - from.lat;
-    const vLng = to.lng - from.lng;
-    const distDeg = Math.sqrt(vLat * vLat + vLng * vLng) || 0.001;
-    const offset = distDeg * 0.5;
-
-    // 출발-도착 벡터에 수직인 방향
-    const nLat = (-vLng / distDeg) * offset;
-    const nLng = (vLat / distDeg) * offset;
-
-    const p2 = { lat: from.lat + nLat, lng: from.lng + nLng };
-    const p3 = { lat: to.lat + nLat, lng: to.lng + nLng };
-
-    // 순서: 출발(1) -> p2(2) -> 목적지(4) -> p3(3) -> 출발
-    waypoints = [from, p2, to, p3, from];
-  }
-
-  return await requestOsrmRoute(waypoints);
-}
-
-// ③ 추천 코스 (간단 버전: 근처 공원까지 편도)
-async function buildRecommendRoute(targetKm) {
-  if (myLat == null || myLng == null) {
-    alert("추천 코스를 사용하려면 위치 정보가 필요합니다.");
-    return null;
-  }
-  const base = { lat: myLat, lng: myLng, name: "현재 위치" };
-  startPoint = base;
-  const startInput = document.getElementById("start-input");
-  if (startInput) startInput.value = "현재 위치";
+// 지도 및 마커 유틸
+function setStartPoint(p) {
+  startPoint = p;
+  const input = document.getElementById("start-input");
+  if (input) input.value = p.name;
   updateMarkersOnly();
+}
 
-  if (!kakaoPlaces) {
-    alert("카카오 장소 검색을 사용할 수 없습니다.");
-    return null;
+function setEndPoint(p) {
+  endPoint = p;
+  const input = document.getElementById("end-input");
+  if (input) input.value = p.name;
+  updateMarkersOnly();
+}
+
+function updateMarkersOnly() {
+  if (!map) return;
+  if (startMarker) map.removeLayer(startMarker);
+  if (endMarker) map.removeLayer(endMarker);
+
+  if (startPoint) {
+    startMarker = L.marker([startPoint.lat, startPoint.lng])
+      .addTo(map).bindPopup("출발").openPopup();
   }
+  if (endPoint) {
+    endMarker = L.marker([endPoint.lat, endPoint.lng], {
+        icon: L.icon({ // 도착지는 빨간색 느낌 (기본 아이콘 필터 등 활용 가능하나 여기선 기본)
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        })
+    }).addTo(map).bindPopup("도착");
+  }
+}
 
-  // 근처 공원 검색
-  const keyword = "공원";
-  const center = new kakao.maps.LatLng(myLat, myLng);
+function drawRoute(coords) {
+  if (!map) return;
+  routeLayer = L.polyline(coords, {
+    color: "#2563eb", weight: 6, opacity: 0.8, lineJoin: 'round'
+  }).addTo(map);
+  map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+}
 
-  const places = await new Promise((resolve) => {
-    kakaoPlaces.keywordSearch(
-      keyword,
-      (data, status) => {
-        if (status !== kakao.maps.services.Status.OK) {
-          resolve([]);
-          return;
+function updateStatus(msg) {
+  const el = document.getElementById("status-summary");
+  if (el) el.innerText = msg;
+}
+
+// ---------------------------------------------------------
+// 기타 유틸 (자동완성, 내위치 버튼, 거리계산)
+// ---------------------------------------------------------
+function setupMyLocationButton() {
+  const btn = document.getElementById("btn-my-location");
+  if(!btn) return;
+  btn.addEventListener("click", () => {
+    if(myLat) {
+      setStartPoint({ lat: myLat, lng: myLng, name: "내 위치" });
+      map.setView([myLat, myLng], 15);
+    } else {
+      alert("GPS 신호를 기다리는 중입니다.");
+    }
+  });
+}
+
+function setupAutocomplete() {
+  setupInput("start-input", "start-suggestions", (p) => {
+    setStartPoint({ lat: parseFloat(p.y), lng: parseFloat(p.x), name: p.place_name });
+    map.setView([p.y, p.x], 15);
+  });
+  setupInput("end-input", "end-suggestions", (p) => {
+    setEndPoint({ lat: parseFloat(p.y), lng: parseFloat(p.x), name: p.place_name });
+    map.fitBounds(L.latLngBounds([startPoint, endPoint]), { padding: [50,50] });
+  });
+}
+
+function setupInput(inputId, listId, onSelect) {
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!input || !list) return;
+  let timer;
+  input.addEventListener("input", (e) => {
+    const val = e.target.value.trim();
+    if (val.length < 2) { list.style.display = "none"; return; }
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if(!kakaoPlaces) return;
+      kakaoPlaces.keywordSearch(val, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          list.innerHTML = "";
+          data.forEach(p => {
+            const li = document.createElement("li");
+            li.className = "suggest-item";
+            li.innerText = p.place_name;
+            li.onclick = () => {
+                input.value = p.place_name;
+                list.style.display = "none";
+                onSelect(p);
+            };
+            list.appendChild(li);
+          });
+          list.style.display = "block";
         }
-        resolve(data);
-      },
-      { location: center, radius: 3000 }
-    );
+      });
+    }, 300);
   });
+  document.addEventListener("click", e => {
+    if(e.target !== input && e.target !== list) list.style.display = "none";
+  });
+}
 
-  if (!places.length) {
-    alert("근처에서 추천할 공원을 찾지 못했습니다.");
-    return null;
-  }
-
-  // 가장 가까운 공원 선택
-  let best = null;
-  let bestDist = Infinity;
-  for (const p of places) {
-    const d = haversine(myLat, myLng, Number(p.y), Number(p.x));
-    if (d < bestDist) {
-      bestDist = d;
-      best = p;
-    }
-  }
-
-  const dest = {
-    lat: Number(best.y),
-    lng: Number(best.x),
-    name: best.place_name
-  };
-  endPoint = dest;
-  const endInput = document.getElementById("end-input");
-  if (endInput) endInput.value = best.place_name;
-  updateMarkersOnly();
-
-  return await buildOneWayRoute(base, dest);
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; 
+  const q1 = lat1 * Math.PI/180;
+  const q2 = lat2 * Math.PI/180;
+  const dq = (lat2-lat1)*Math.PI/180;
+  const dl = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dq/2)*Math.sin(dq/2) + Math.cos(q1)*Math.cos(q2)*Math.sin(dl/2)*Math.sin(dl/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
