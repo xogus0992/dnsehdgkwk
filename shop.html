@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>POKEMON GACHA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* --- 기본 레이아웃 --- */
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      
+      /* 배경 흰색 유지 */
+      background-color: #f0f2f5; 
+      
+      color: #333; 
+      height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    
+    .overlay { display: none; } 
+
+    /* --- 헤더 --- */
+    header {
+      padding: 15px 20px; text-align: center;
+      font-family: 'Chakra Petch', sans-serif;
+      border-bottom: 4px solid #ffcb05; 
+      background: #1d4ed8;
+      position: relative; display: flex; justify-content: center; align-items: center;
+      z-index: 200; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    h1 { margin: 0; color: #ffcb05; font-style: italic; text-shadow: 2px 2px 0px #2a75bb; font-size: 1.8rem; -webkit-text-stroke: 1px #3b4cca; }
+    
+    .btn-back {
+      position: absolute; left: 20px;
+      background: rgba(255,255,255,0.2); border: 2px solid #fff; color: #fff;
+      padding: 5px 12px; border-radius: 12px; cursor: pointer; font-family: 'Chakra Petch'; font-weight: bold;
+    }
+
+    .my-point {
+      position: absolute; right: 20px;
+      background: #fff; border: 2px solid #ffcb05;
+      padding: 5px 15px; border-radius: 20px; font-weight: 900;
+      font-family: 'Chakra Petch'; color: #3b4cca; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* --- 냐옹이 NPC --- */
+    .meowth-container {
+      position: absolute; 
+      top: 90px; right: 20px; 
+      z-index: 100; text-align: center;
+      pointer-events: none;
+    }
+    
+    .meowth-gif {
+      width: 150px; height: 150px;
+      image-rendering: pixelated; 
+      filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
+      animation: bounce 1s infinite alternate;
+    }
+    @keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-5px); } }
+
+    /* 말풍선 */
+    .speech-bubble {
+      background: #fff; color: #000; padding: 15px 25px; border-radius: 30px;
+      font-size: 1rem; font-weight: 800; white-space: nowrap;
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+      border: 3px solid #000;
+      position: absolute; 
+      top: 20px; right: 130px; 
+      opacity: 0; transform: scale(0.8);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .speech-bubble.show { opacity: 1; transform: scale(1); }
+    .speech-bubble::after {
+      content: ''; position: absolute; top: 50%; right: -13px; transform: translateY(-50%);
+      border-width: 10px 0 10px 13px; border-style: solid; border-color: transparent transparent transparent #000;
+    }
+    .speech-bubble::before {
+      content: ''; position: absolute; top: 50%; right: -8px; transform: translateY(-50%);
+      border-width: 8px 0 8px 11px; border-style: solid; border-color: transparent transparent transparent #fff;
+      z-index: 1;
+    }
+
+    /* --- 상점 컨테이너 --- */
+    .container {
+      flex: 1; padding: 20px; overflow-y: auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+      align-content: start;
+      padding-top: 160px; padding-bottom: 50px;
+      max-width: 800px; margin: 0 auto; width: 100%;
+    }
+
+    /* --- 가챠 카드 --- */
+    .gacha-card {
+      background-color: #fff; /* 기본 흰색 배경 */
+      border-radius: 12px; padding: 15px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.1); 
+      position: relative; z-index: 10;
+      color: #333;
+      overflow: hidden; /* 배경 이미지 넘침 방지 */
+    }
+    .gacha-card:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0.2); }
+    
+    /* 카드별 배경 이미지 오버레이 (텍스트 잘 보이도록) */
+    .card-background-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.15); /* 약간 어둡게 */
+      z-index: -1;
+      border-radius: 12px; /* 카드와 동일하게 라운딩 */
+    }
+
+    /* 이미지 배경이 들어갈 실제 요소 */
+    .card-bg-image {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: -2; /* 오버레이보다 아래 */
+      border-radius: 12px;
+    }
+
+
+    .gacha-header {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; margin-bottom: 8px; padding-bottom: 8px;
+      border-bottom: 2px dashed #eee;
+    }
+    
+    .rank-label { font-family: 'Chakra Petch'; font-size: 1.5rem; font-weight: 900; font-style: italic; }
+    
+    .ball-img { width: 50px; height: 50px; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.1)); }
+
+    .gacha-body { text-align: center; width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .gacha-title { font-size: 1.1rem; font-weight: 900; margin: 5px 0; color: #333; }
+    .gacha-desc { font-size: 0.75rem; color: #666; margin-bottom: 10px; line-height: 1.3; font-weight: 600;}
+    .probability-info { 
+      font-size: 0.7rem; color: #fff; margin-bottom: 8px; 
+      background: #888; padding: 3px 8px; border-radius: 10px;
+    }
+
+    .gacha-price { font-family: 'Chakra Petch'; font-weight: 900; font-size: 1.3rem; color: #333; }
+    
+    button.btn-draw {
+      margin-top: 10px; width: 100%; padding: 12px;
+      color: #fff; border: none; border-radius: 8px; 
+      cursor: pointer; font-weight: 900; font-size: 1rem;
+      text-transform: uppercase; letter-spacing: 1px;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    }
+
+    /* 카드별 테마 색상 및 이미지 배경 */
+    /* C: 몬스터볼 (빨강) */
+    .card-c { border: 2px solid #ff5555; }
+    .card-c .rank-label { color: #ff5555; }
+    .card-c button.btn-draw { background: #ff5555; }
+    
+    /* B: 슈퍼볼 (파랑) */
+    .card-b { 
+      border: none; /* 이미지 배경을 사용할 것이므로 테두리 제거 */
+      color: #fff; /* 글자색 변경 */
+      background-color: transparent; /* 배경색 투명하게 */
+    }
+    .card-b .card-bg-image { 
+      background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhIAzIXx8LGPZ0sea3J7hC6JIBuUv3oPWW5w&s'); 
+    }
+    .card-b .rank-label { color: #55aaff; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+    .card-b .gacha-title, .card-b .gacha-desc, .card-b .gacha-price { color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+    .card-b .probability-info { background: rgba(59, 130, 246, 0.7); }
+    .card-b button.btn-draw { background: #3b82f6; }
+
+
+    /* A: 하이퍼볼 (노랑) */
+    .card-a { border: 2px solid #fbbf24; }
+    .card-a .rank-label { color: #d97706; }
+    .card-a button.btn-draw { background: #fbbf24; color: #78350f; }
+
+    /* S: 마스터볼 (보라) */
+    .card-s { 
+      border: none; /* 이미지 배경을 사용할 것이므로 테두리 제거 */
+      color: #fff; /* 글자색 변경 */
+      background-color: transparent; /* 배경색 투명하게 */
+    }
+    .card-s .card-bg-image { 
+      background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIyCYS0QJtbIN9bK0Hjy7tvmFtBghQ&s'); 
+    }
+    .card-s .rank-label { color: #aa55ff; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+    .card-s .gacha-title, .card-s .gacha-desc, .card-s .gacha-price { color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+    .card-s .probability-info { background: rgba(170, 85, 255, 0.7); }
+    .card-s button.btn-draw { background: linear-gradient(135deg, #9333ea, #7e22ce); color: #fff; }
+
+
+    /* --- 결과 모달 --- */
+    #result-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 9999;
+      backdrop-filter: blur(5px);
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    .pokemon-reveal { 
+      text-align: center; animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
+      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+      padding: 40px; border-radius: 50%;
+    }
+    @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .poke-img { width: 260px; height: 260px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); margin-bottom: 10px; }
+    .poke-name { font-size: 2.8rem; font-weight: 900; color: #fff; margin: 5px 0; text-shadow: 3px 3px 0px #000; -webkit-text-stroke: 1px #000; }
+    .poke-rank { font-family: 'Chakra Petch'; font-size: 2rem; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; }
+    
+    .poke-stats { 
+      background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; 
+      margin-top: 10px; text-align: left; min-width: 280px; 
+      border: 2px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1.1rem; color: #fff; font-weight: bold; font-family: 'Chakra Petch'; }
+    
+    .btn-confirm {
+      margin-top: 30px; padding: 15px 60px; background: #ffcb05; border: 4px solid #3b4cca;
+      color: #3b4cca; font-weight: 900; font-size: 1.2rem; border-radius: 50px; cursor: pointer;
+      box-shadow: 0 5px 0 #2a75bb; transition: transform 0.1s;
+    }
+    .btn-confirm:active { transform: translateY(5px); box-shadow: 0 0 0 #2a75bb; }
+
+    /* 로딩 화면 */
+    #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; text-align: center; }
+    .spinner {
+      width: 60px; height: 60px; 
+      background-image: url('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png');
+      background-size: cover;
+      animation: spin 0.8s linear infinite; margin: 0 auto 15px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 2px 2px 0 #000; }
+
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <header>
+    <button class="btn-back" onclick="history.back()">◀ BACK</button>
+    <h1>POKE MART</h1>
+    <div class="my-point" id="point-display">1000 P</div>
+  </header>
+
+  <div class="meowth-container">
+    <div class="speech-bubble" id="meowth-say">어서오라옹! 확률이 바꼈다옹!</div>
+    <img class="meowth-gif" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/52.gif" alt="냐옹이">
+  </div>
+
+  <div class="container">
+    
+    <div class="gacha-card card-c">
+      <div class="card-bg-image"></div>
+      <div class="card-background-overlay"></div>
+      <div class="gacha-header">
+        <div class="rank-label label-c">NORMAL</div>
+        <img class="ball-img" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" alt="Pokeball">
+      </div>
+      <div class="gacha-body">
+        <div class="gacha-title">일반 뽑기</div>
+        <div class="probability-info">C:70% | B:25% | A:4% | S:1%</div>
+        <div class="gacha-desc">기본적인 포켓몬이 나온다옹</div>
+        <div class="gacha-price">10 P</div>
+      </div>
+      <button class="btn-draw" onclick="tryDraw('normal', 10)">10P 뽑기</button>
+    </div>
+
+    <div class="gacha-card card-b">
+      <div class="card-bg-image"></div>
+      <div class="card-background-overlay"></div>
+      <div class="gacha-header">
+        <div class="rank-label label-b">RARE</div>
+        <img class="ball-img" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png" alt="Greatball">
+      </div>
+      <div class="gacha-body">
+        <div class="gacha-title">고급 뽑기</div>
+        <div class="probability-info">C:20% | B:60% | A:18% | S:2%</div>
+        <div class="gacha-desc">실전형 포켓몬을 노려라옹</div>
+        <div class="gacha-price">25 P</div>
+      </div>
+      <button class="btn-draw" onclick="tryDraw('rare', 25)">25P 뽑기</button>
+    </div>
+
+    <div class="gacha-card card-a">
+      <div class="card-bg-image"></div>
+      <div class="card-background-overlay"></div>
+      <div class="gacha-header">
+        <div class="rank-label label-a">EPIC</div>
+        <img class="ball-img" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png" alt="Ultraball">
+      </div>
+      <div class="gacha-body">
+        <div class="gacha-title">특급 뽑기</div>
+        <div class="probability-info">B:20% | A:70% | S:10%</div>
+        <div class="gacha-desc">강력한 포켓몬이 가득하다옹</div>
+        <div class="gacha-price">50 P</div>
+      </div>
+      <button class="btn-draw" onclick="tryDraw('epic', 50)">50P 뽑기</button>
+    </div>
+
+    <div class="gacha-card card-s">
+      <div class="card-bg-image"></div>
+      <div class="card-background-overlay"></div>
+      <div class="gacha-header">
+        <div class="rank-label label-a" style="color:#aa55ff">LEGEND</div>
+        <img class="ball-img" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" alt="Masterball">
+      </div>
+      <div class="gacha-body">
+        <div class="gacha-title">전설 뽑기</div>
+        <div class="probability-info">A:10% | S:90%</div>
+        <div class="gacha-desc">전설을 원하나옹? 여기다옹!</div>
+        <div class="gacha-price">100 P</div>
+      </div>
+      <button class="btn-draw" onclick="tryDraw('legend', 100)">100P 뽑기</button>
+    </div>
+
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">누가 나올까옹?</div>
+  </div>
+
+  <div id="result-modal">
+    <div class="pokemon-reveal">
+      <div class="poke-rank" id="res-rank">RANK S</div>
+      <img id="res-img" class="poke-img" src="" alt="Pokemon">
+      <div class="poke-name" id="res-name">뮤츠</div>
+      
+      <div class="poke-stats">
+        <div class="stat-row"><span>TYPE</span> <span id="res-type" style="color:#fff;">에스퍼</span></div>
+        <div class="stat-row"><span>TOTAL</span> <span id="res-total" style="color:#ccff00;">680</span></div>
+        <hr style="border: 0; border-top: 1px solid #555; margin: 10px 0;">
+        <div class="stat-row"><span>HP</span> <span id="res-hp">106</span></div>
+        <div class="stat-row"><span>ATK</span> <span id="res-atk">110</span></div>
+        <div class="stat-row"><span>DEF</span> <span id="res-def">90</span></div>
+      </div>
+
+      <button class="btn-confirm" onclick="closeResult()">확인</button>
+    </div>
+  </div>
+
+  <script>
+    let myPoints = 2000; // 테스트용
+    const pointDisplay = document.getElementById('point-display');
+    const meowthSay = document.getElementById('meowth-say');
+
+    function setMeowthSpeak(text) {
+      meowthSay.innerText = text;
+      meowthSay.classList.remove('show');
+      void meowthSay.offsetWidth; 
+      meowthSay.classList.add('show');
+    }
+
+    setTimeout(() => setMeowthSpeak("어서오라옹! 최고의 상점이다옹!"), 500);
+
+    const RANK_CRITERIA = {
+      'C': { min: 0, max: 399 },
+      'B': { min: 400, max: 499 },
+      'A': { min: 500, max: 579 },
+      'S': { min: 580, max: 999 } 
+    };
+
+    const PROBABILITIES = {
+      'normal': { S: 1, A: 4, B: 25, C: 70 },  
+      'rare':   { S: 2, A: 18, B: 60, C: 20 }, 
+      'epic':   { S: 10, A: 70, B: 20, C: 0 }, 
+      'legend': { S: 90, A: 10, B: 0, C: 0 }   
+    };
+
+    function updatePoints() {
+      pointDisplay.innerText = `${myPoints} P`;
+    }
+
+    function determineRank(type) {
+      const rand = Math.random() * 100;
+      const probs = PROBABILITIES[type];
+      let cumulative = 0;
+      const ranks = ['S', 'A', 'B', 'C'];
+      for (let r of ranks) {
+        cumulative += probs[r];
+        if (rand <= cumulative) return r;
+      }
+      return 'C'; 
+    }
+
+    async function tryDraw(type, cost) {
+      if (myPoints < cost) {
+        const noPointMent = [
+          "포인트가 부족하다옹! 거지냥?",
+          "돈이 없다옹? 운동하고 오라옹!",
+          "공짜는 없다옹! 포인트를 채워라옹!"
+        ];
+        setMeowthSpeak(noPointMent[Math.floor(Math.random() * noPointMent.length)]);
+        return;
+      }
+
+      if (type === 'legend') setMeowthSpeak("우와! 부자다옹! 전설 가즈아옹!");
+      else if (type === 'epic') setMeowthSpeak("오! 좋은거 나올 것 같다옹!");
+      else setMeowthSpeak("두근두근하다옹! 뭐가 나올까옹?");
+
+      myPoints -= cost;
+      updatePoints();
+
+      document.getElementById('loading').style.display = 'block';
+
+      const targetRank = determineRank(type);
+      console.log(`Target Rank: ${targetRank}`); 
+
+      let found = false;
+      let pkmData = null;
+      let attempts = 0;
+
+      while (!found && attempts < 50) { 
+        attempts++;
+        const randomId = Math.floor(Math.random() * 151) + 1; 
+        
+        try {
+          const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
+          const data = await response.json();
+
+          const totalStats = data.stats.reduce((acc, cur) => acc + cur.base_stat, 0);
+
+          let currentRank = 'C';
+          if (totalStats >= RANK_CRITERIA.S.min) currentRank = 'S';
+          else if (totalStats >= RANK_CRITERIA.A.min) currentRank = 'A';
+          else if (totalStats >= RANK_CRITERIA.B.min) currentRank = 'B';
+          else currentRank = 'C';
+
+          if (currentRank === targetRank) {
+            found = true;
+            pkmData = { ...data, totalStats, rank: currentRank };
+            
+            const speciesRes = await fetch(data.species.url);
+            const speciesData = await speciesRes.json();
+            const koreanNameObj = speciesData.names.find(n => n.language.name === 'ko');
+            pkmData.koreanName = koreanNameObj ? koreanNameObj.name : data.name;
+
+            const typeMap = {
+              normal: "노말", fire: "불꽃", water: "물", grass: "풀", electric: "전기",
+              ice: "얼음", fighting: "격투", poison: "독", ground: "땅", flying: "비행",
+              psychic: "에스퍼", bug: "벌레", rock: "바위", ghost: "고스트", dragon: "드래곤",
+              steel: "강철", fairy: "페어리"
+            };
+            pkmData.koreanType = data.types.map(t => typeMap[t.type.name] || t.type.name).join(', ');
+          }
+        } catch (e) {
+          console.error("API Retry", e);
+        }
+      }
+
+      document.getElementById('loading').style.display = 'none';
+
+      if(found && pkmData) {
+        if(pkmData.rank === 'S') setMeowthSpeak("대박이다옹!! 전설이다옹!!");
+        else if(pkmData.rank === 'A') setMeowthSpeak("오오! 꽤 강력한 녀석이다옹!");
+        else if(pkmData.rank === 'C') setMeowthSpeak("흠... 귀여운 녀석이다옹.");
+        else setMeowthSpeak("축하한다옹!");
+        
+        showResultModal(pkmData);
+      } else {
+        setMeowthSpeak("서버가 이상하다옹.. 다시 해보라옹!");
+        myPoints += cost; 
+        updatePoints();
+      }
+    }
+
+    function showResultModal(data) {
+      const modal = document.getElementById('result-modal');
+      const rankEl = document.getElementById('res-rank');
+      
+      rankEl.innerText = `RANK ${data.rank}`;
+      rankEl.style.textShadow = "3px 3px 0px #000";
+      
+      if(data.rank === 'S') rankEl.style.color = '#aa55ff';
+      else if(data.rank === 'A') rankEl.style.color = '#ffd700';
+      else if(data.rank === 'B') rankEl.style.color = '#55aaff';
+      else rankEl.style.color = '#ff5555';
+
+      const imgUrl = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
+      document.getElementById('res-img').src = imgUrl;
+
+      document.getElementById('res-name').innerText = data.koreanName;
+      document.getElementById('res-type').innerText = data.koreanType;
+      document.getElementById('res-total').innerText = data.totalStats;
+      
+      document.getElementById('res-hp').innerText = data.stats[0].base_stat;
+      document.getElementById('res-atk').innerText = data.stats[1].base_stat;
+      document.getElementById('res-def').innerText = data.stats[2].base_stat;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeResult() {
+      document.getElementById('result-modal').style.display = 'none';
+      setMeowthSpeak("또 뽑을거냐옹?");
+    }
+
+    updatePoints();
+  </script>
+</body>
+</html>
+````http://googleusercontent.com/image_generation_content/2

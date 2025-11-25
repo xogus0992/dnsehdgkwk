@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>RANKING</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: url('https://i.pinimg.com/originals/b2/ed/fe/b2edfef246daaae28411ad6901feeb17.jpg') no-repeat center center/cover;
+      color: #fff; height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: -1; }
+
+    header {
+      padding: 20px; text-align: center;
+      font-family: 'Chakra Petch', sans-serif;
+      border-bottom: 2px solid #8b5cf6; /* 보라색 포인트 */
+      background: rgba(0,0,0,0.8);
+      position: relative;
+    }
+    h1 { margin: 0; color: #8b5cf6; font-style: italic; text-shadow: 0 0 10px #8b5cf6; }
+    
+    .btn-back {
+      position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+      background: none; border: 1px solid #fff; color: #fff;
+      padding: 5px 15px; border-radius: 20px; cursor: pointer;
+    }
+
+    .rank-list {
+      flex: 1; padding: 20px; overflow-y: auto;
+    }
+    .rank-item {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,0.05);
+      margin-bottom: 10px; padding: 15px;
+      border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    .rank-num {
+      font-size: 1.5rem; font-weight: bold; width: 40px;
+      font-family: 'Chakra Petch'; color: #8b5cf6;
+    }
+    .user-info { flex: 1; }
+    .user-name { font-weight: bold; font-size: 1.1rem; }
+    .user-score { font-size: 0.9rem; color: #aaa; }
+    
+    /* 1,2,3등 강조 */
+    .rank-item:nth-child(1) { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; }
+    .rank-item:nth-child(1) .rank-num { color: #ffd700; text-shadow: 0 0 5px #ffd700; }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <header>
+    <button class="btn-back" onclick="history.back()">◀ BACK</button>
+    <h1>WEEKLY RANK</h1>
+  </header>
+
+  <div class="rank-list">
+    <div class="rank-item">
+      <div class="rank-num">1</div>
+      <div class="user-info">
+        <div class="user-name">몬스터헌터</div>
+        <div class="user-score">LV. 99 / 234km</div>
+      </div>
+    </div>
+    <div class="rank-item">
+      <div class="rank-num">2</div>
+      <div class="user-info">
+        <div class="user-name">다이어터</div>
+        <div class="user-score">LV. 85 / 198km</div>
+      </div>
+    </div>
+    <div class="rank-item">
+      <div class="rank-num">3</div>
+      <div class="user-info">
+        <div class="user-name">새벽러닝</div>
+        <div class="user-score">LV. 82 / 150km</div>
+      </div>
+    </div>
+    <div class="rank-item">
+      <div class="rank-num">4</div>
+      <div class="user-info">
+        <div class="user-name">근성가이</div>
+        <div class="user-score">LV. 70 / 120km</div>
+      </div>
+    </div>
+    <div class="rank-item">
+      <div class="rank-num">5</div>
+      <div class="user-info">
+        <div class="user-name">초보운전</div>
+        <div class="user-score">LV. 45 / 80km</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
