@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>BATTLE LOBBY - NATURE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-green: #4caf50;
+      --primary-blue: #2196f3;
+      --light-bg: #ffffff;
+      --text-dark: #333333;
+    }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column;
+      background-color: #87ceeb;
+      position: relative;
+    }
+
+    /* [배경] 밝고 평화로운 숲/들판 */
+    .bg-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: url('https://img.freepik.com/free-photo/anime-landscape-canyon-bridge_23-2152016894.jpg?semt=ais_incoming&w=740&q=80') no-repeat center bottom/cover;
+      z-index: -5;
+    }
+
+    /* [효과] 햇살 느낌 */
+    .sun-light {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 40%);
+      z-index: -4; pointer-events: none;
+    }
+
+    /* --- 헤더 --- */
+    header {
+      padding: 15px 20px; text-align: center;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      position: relative; z-index: 10;
+      display: flex; justify-content: center; align-items: center;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    h1 { 
+      margin: 0; color: var(--text-dark); 
+      font-style: italic; font-size: 1.8rem; letter-spacing: 1px; 
+      text-shadow: 1px 1px 0 rgba(255,255,255,1);
+    }
+    
+    .btn-back {
+      position: absolute; left: 20px; 
+      background: #fff; border: 2px solid var(--primary-blue); color: var(--primary-blue);
+      padding: 8px 20px; border-radius: 30px; cursor: pointer; font-weight: bold;
+      transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .btn-back:hover { background: var(--primary-blue); color: #fff; }
+
+    /* --- 메인 스테이지 --- */
+    .stage-container {
+      flex: 1;
+      display: flex; justify-content: center; align-items: flex-end;
+      padding-bottom: 100px; /* 바닥 위치 */
+      gap: 60px; /* 간격 넓게 */
+      position: relative; z-index: 1;
+      perspective: 1000px;
+    }
+
+    /* 포켓몬 슬롯 */
+    .pkm-slot {
+      width: 250px; /* 슬롯 너비 여유 있게 */
+      height: 350px; /* 슬롯 높이 여유 있게 */
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end; /* 발바닥 기준 정렬 */
+      transition: transform 0.3s;
+    }
+    
+    /* [발판] 깔끔한 원형 */
+    .platform {
+      position: absolute; bottom: 20px;
+      width: 180px; height: 60px;
+      background: rgba(255, 255, 255, 0.6);
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      z-index: 1;
+      transform: rotateX(60deg); 
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+      transition: all 0.3s;
+    }
+    .pkm-slot.filled .platform {
+      background: rgba(33, 150, 243, 0.2);
+      border-color: rgba(33, 150, 243, 0.5);
+      box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
+    }
+
+    /* [핵심 수정] 포켓몬 이미지 스타일 */
+    .pkm-sprite {
+      /* 크기 강제 고정 해제 -> 원본 비율 유지 */
+      width: auto; 
+      height: auto;
+      
+      /* 너무 커지는 것만 방지 */
+      max-width: 250px; 
+      max-height: 280px;
+      
+      /* 중요: 선명하게 렌더링 (도트/픽셀 깨짐 방지) */
+      image-rendering: pixelated; 
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+
+      z-index: 5;
+      /* 그림자는 바닥에 깔리게 */
+      filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3)); 
+      
+      cursor: pointer;
+      transition: transform 0.3s;
+      
+      /* 약간의 스케일업 (원본이 너무 작을 수 있어서 1.5배 키우되 선명도 유지) */
+      transform: scale(1.5);
+      transform-origin: bottom center; /* 발바닥 기준으로 커짐 */
+      margin-bottom: 30px; /* 발판 위에 올라가도록 위치 조정 */
+    }
+    .pkm-sprite:hover { transform: scale(1.7) translateY(-5px); }
+
+    /* 빈 슬롯 (+) */
+    .empty-slot {
+      width: 90px; height: 90px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 3px dashed #fff;
+      border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      cursor: pointer;
+      margin-bottom: 60px; 
+      font-size: 3rem; color: #fff;
+      transition: all 0.3s;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .empty-slot:hover { 
+      background: rgba(255, 255, 255, 0.8); 
+      transform: scale(1.1); 
+      color: var(--primary-blue); border-color: var(--primary-blue);
+    }
+
+    /* 이름 태그 */
+    .name-tag {
+      background: #fff; color: #333;
+      padding: 6px 18px; border-radius: 20px;
+      font-weight: bold; font-size: 0.9rem;
+      margin-top: 0px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 6; 
+      transform: translateY(15px); /* 발판 아래로 */
+      border: 1px solid #eee;
+    }
+
+    /* 제거 버튼 */
+    .btn-remove {
+      position: absolute; top: 0; right: 0;
+      background: #fff; color: #ff5252;
+      border: 2px solid #ff5252; border-radius: 50%;
+      width: 32px; height: 32px;
+      display: flex; justify-content: center; align-items: center;
+      font-weight: bold; cursor: pointer; z-index: 10;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .pkm-slot:hover .btn-remove { transform: scale(1.1); }
+    .btn-remove:hover { background: #ff5252; color: #fff; }
+
+
+    /* --- 하단 바 --- */
+    .footer-bar {
+      height: 120px;
+      display: flex; justify-content: center; align-items: center;
+      background: linear-gradient(to top, rgba(0,0,0,0.1) 0%, transparent 100%);
+      position: absolute; bottom: 0; width: 100%;
+      z-index: 20;
+    }
+    
+    .btn-start {
+      padding: 15px 80px;
+      font-size: 1.8rem; font-weight: 900; font-style: italic;
+      color: #fff; 
+      background: linear-gradient(135deg, #66bb6a, #43a047);
+      border: 3px solid #fff; border-radius: 50px;
+      box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+      cursor: pointer; transition: all 0.2s;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .btn-start:hover { 
+      transform: scale(1.05) translateY(-3px); 
+      box-shadow: 0 8px 20px rgba(76, 175, 80, 0.6);
+    }
+    .btn-start:disabled {
+      background: #b0bec5; border-color: #eceff1; cursor: not-allowed; box-shadow: none;
+    }
+
+
+    /* --- 모달 --- */
+    #selection-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 9999;
+      justify-content: center; align-items: center;
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      background: #fff; width: 90%; max-width: 700px; height: 80%;
+      border-radius: 20px; padding: 30px;
+      display: flex; flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;
+    }
+    .modal-title { font-size: 1.6rem; font-weight: 900; color: #333; }
+    .close-modal { font-size: 2.5rem; cursor: pointer; color: #bbb; transition: 0.2s; line-height: 1; }
+    .close-modal:hover { color: #333; }
+    
+    .inventory-grid {
+      flex: 1; overflow-y: auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 15px; padding: 10px;
+    }
+    .inventory-grid::-webkit-scrollbar { width: 6px; }
+    .inventory-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+    .inv-item {
+      background: #f8f9fa; border-radius: 15px; padding: 15px 10px;
+      display: flex; flex-direction: column; align-items: center;
+      cursor: pointer; border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .inv-item:hover { 
+      background: #e3f2fd; border-color: var(--primary-blue);
+      transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.05);
+    }
+    .inv-item.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(100%); background: #eee; }
+
+    .inv-img { width: 80px; height: 80px; object-fit: contain; margin-bottom: 5px; }
+    .inv-name { font-size: 0.9rem; font-weight: bold; color: #333; margin-bottom: 3px; }
+    .inv-rank { 
+      font-size: 0.75rem; font-weight: bold;
+      padding: 2px 8px; border-radius: 10px; background: #fff; border: 1px solid #ddd; color: #666;
+    }
+
+    .empty-msg { text-align: center; color: #888; margin-top: 80px; font-weight: bold; }
+    .btn-go-shop {
+      margin-top: 15px; padding: 10px 25px; background: var(--primary-blue); color: #fff;
+      border: none; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.2s;
+    }
+    .btn-go-shop:hover { background: #1976d2; }
+
+  </style>
+</head>
+<body>
+  
+  <div class="bg-layer"></div>
+  <div class="sun-light"></div>
+
+  <header>
+    <button class="btn-back" onclick="location.href='shop.html'">◀ SHOP</button>
+    <h1>BATTLE LOBBY</h1>
+  </header>
+
+  <div class="stage-container" id="stage">
+    </div>
+
+  <div class="footer-bar">
+    <button id="btn-start" class="btn-start" onclick="startBattle()" disabled>BATTLE START</button>
+  </div>
+
+  <div id="selection-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">출전할 포켓몬 선택</div>
+        <div class="close-modal" onclick="closeModal()">×</div>
+      </div>
+      <div class="inventory-grid" id="inventory-list">
+        </div>
+    </div>
+  </div>
+
+  <script>
+    let myInventory = JSON.parse(localStorage.getItem('myInventory')) || [];
+    let teamSlots = [null, null, null];
+    let currentTargetSlot = -1; 
+
+    const stageEl = document.getElementById('stage');
+    const startBtn = document.getElementById('btn-start');
+    const modalEl = document.getElementById('selection-modal');
+    const invListEl = document.getElementById('inventory-list');
+
+    renderStage();
+
+    function renderStage() {
+      stageEl.innerHTML = '';
+      let filledCount = 0;
+
+      teamSlots.forEach((pkm, index) => {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = pkm ? 'pkm-slot filled' : 'pkm-slot';
+
+        if (pkm) {
+          filledCount++;
+          
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-remove';
+          removeBtn.innerHTML = '✕';
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removePokemon(index);
+          };
+
+          const img = document.createElement('img');
+          img.className = 'pkm-sprite';
+          
+          // [Showdown] 움직이는 3D GIF 사용
+          const animatedUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
+          img.src = animatedUrl;
+          
+          // GIF 없으면 공식 아트워크 (선명한 정지 화상)
+          img.onerror = function() {
+             this.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+          };
+          
+          const platform = document.createElement('div');
+          platform.className = 'platform';
+
+          const tag = document.createElement('div');
+          tag.className = 'name-tag';
+          tag.innerText = `Lv.50 ${pkm.name}`; 
+
+          slotDiv.appendChild(removeBtn);
+          slotDiv.appendChild(img);
+          slotDiv.appendChild(platform);
+          slotDiv.appendChild(tag);
+
+        } else {
+          const emptyBtn = document.createElement('div');
+          emptyBtn.className = 'empty-slot';
+          emptyBtn.innerText = '+';
+          emptyBtn.onclick = () => openModal(index);
+          
+          const platform = document.createElement('div');
+          platform.className = 'platform';
+
+          slotDiv.appendChild(emptyBtn);
+          slotDiv.appendChild(platform);
+        }
+
+        stageEl.appendChild(slotDiv);
+      });
+
+      if (filledCount === 3) {
+        startBtn.disabled = false;
+      } else {
+        startBtn.disabled = true;
+      }
+    }
+
+    function openModal(slotIndex) {
+      currentTargetSlot = slotIndex;
+      renderInventoryList();
+      modalEl.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modalEl.style.display = 'none';
+      currentTargetSlot = -1;
+    }
+
+    function renderInventoryList() {
+      invListEl.innerHTML = '';
+      const selectedUids = teamSlots.filter(p => p !== null).map(p => p.uid);
+
+      if (myInventory.length === 0) {
+        invListEl.innerHTML = `
+          <div class="empty-msg">
+            보유한 포켓몬이 없습니다.<br>
+            <button class="btn-go-shop" onclick="location.href='shop.html'">상점으로 가기</button>
+          </div>
+        `;
+        invListEl.style.display = 'flex';
+        invListEl.style.justifyContent = 'center';
+        invListEl.style.alignItems = 'center';
+        invListEl.style.flexDirection = 'column';
+        return;
+      } else {
+        invListEl.style.display = 'grid'; 
+      }
+
+      const sortedInv = [...myInventory].sort((a, b) => b.total - a.total);
+
+      sortedInv.forEach(pkm => {
+        const isSelected = selectedUids.includes(pkm.uid);
+        
+        const item = document.createElement('div');
+        item.className = `inv-item ${isSelected ? 'disabled' : ''}`;
+        
+        const thumbUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+
+        item.innerHTML = `
+          <img src="${thumbUrl}" class="inv-img" onerror="this.src='${pkm.img}'">
+          <div class="inv-name">${pkm.name}</div>
+          <div class="inv-rank" style="color:${getRankColor(pkm.rank)}">${pkm.rank} | ${Math.floor(pkm.total)}</div>
+        `;
+
+        if (!isSelected) {
+          item.onclick = () => selectPokemon(pkm);
+        }
+
+        invListEl.appendChild(item);
+      });
+    }
+
+    function getRankColor(rank) {
+      if(rank === 'S') return '#9c27b0';
+      if(rank === 'A') return '#fbc02d';
+      if(rank === 'B') return '#2196f3';
+      return '#f44336';
+    }
+
+    function selectPokemon(pkm) {
+      if (currentTargetSlot !== -1) {
+        teamSlots[currentTargetSlot] = pkm;
+        renderStage();
+        closeModal();
+      }
+    }
+
+    function removePokemon(index) {
+      teamSlots[index] = null;
+      renderStage();
+    }
+
+    function startBattle() {
+      if (teamSlots.includes(null)) {
+        alert("3마리를 모두 선택해야 합니다!");
+        return;
+      }
+      
+      const teamNames = teamSlots.map(p => p.name).join(', ');
+      alert(`[${teamNames}] 출격합니다!\n(배틀 페이지 연결 준비 완료)`);
+      localStorage.setItem('battleTeam', JSON.stringify(teamSlots));
+    }
+
+  </script>
+</body>
+</html>
