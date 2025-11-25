@@ -1,42 +1,41 @@
-// diet.js (ES Module)
+// diet.js
+// OSRM foot profile 기반 도로 경로 + 3가지 코스 모드
+// - 편도(최단경로)
+// - 사각/왕복 루프
+// - 추천 코스(근처 공원)
+
+const OSRM_ENDPOINT = "http://129.146.134.15:5000";
+const RADIUS_METERS = 5000;
 
 let map;
-let kakaoPlaces;
+let kakaoPlaces = null;
+
 let myLat = null;
 let myLng = null;
 
-// 외부에서 주입되는 데이터
+let startPoint = null; // {lat,lng,name}
+let endPoint = null;
+
+let startMarker = null;
+let endMarker = null;
+let routeLayer = null;
+
 let STATIONS_DATA = [];
 let CAMPUSES_DATA = [];
 
-// 출발/도착 포인트 및 마커/라인
-let startPoint = null;
-let endPoint = null;
-let startMarker = null;
-let endMarker = null;
-let routeLine = null;
-
-// 5km 반경 제한 (m)
-const RADIUS_LIMIT = 5000;
-
-// ==============================
-// 초기 진입점
-// ==============================
 export function initApp({ STATIONS = [], CAMPUSES = [] } = {}) {
-  STATIONS_DATA = STATIONS;
-  CAMPUSES_DATA = CAMPUSES;
+  STATIONS_DATA = STATIONS || [];
+  CAMPUSES_DATA = CAMPUSES || [];
 
   initMap();
-  initMyLocation();
   initKakaoPlaces();
+  initGeolocation();
   setupAutocomplete();
-  setupMyLocationBtn();
+  setupMyLocationButton();
   setupCourseButton();
 }
 
-// ==============================
-// 지도 초기화 (Leaflet)
-// ==============================
+// 지도 초기화
 function initMap() {
   map = L.map("map").setView([37.5665, 126.978], 13);
 
@@ -45,11 +44,19 @@ function initMap() {
   }).addTo(map);
 }
 
-// ==============================
+// 카카오 장소 검색 초기화
+function initKakaoPlaces() {
+  if (!window.kakao || !kakao.maps || !kakao.maps.load) return;
+
+  kakao.maps.load(() => {
+    kakaoPlaces = new kakao.maps.services.Places();
+  });
+}
+
 // GPS 초기화
-// ==============================
-function initMyLocation() {
+function initGeolocation() {
   const statusEl = document.getElementById("status-gps");
+
   if (!navigator.geolocation) {
     if (statusEl) statusEl.textContent = "GPS: 지원되지 않는 기기입니다.";
     return;
@@ -59,116 +66,80 @@ function initMyLocation() {
     (pos) => {
       myLat = pos.coords.latitude;
       myLng = pos.coords.longitude;
-
       if (statusEl) {
         statusEl.textContent = `GPS: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
       }
-
       if (map) {
         map.setView([myLat, myLng], 15);
       }
     },
-    (err) => {
-      console.warn("초기 위치 가져오기 실패:", err);
+    () => {
       if (statusEl) statusEl.textContent = "GPS: 위치 정보를 가져올 수 없습니다.";
     },
     { enableHighAccuracy: true, timeout: 15000 }
   );
 }
 
-// ==============================
-// Kakao Places 초기화
-// ==============================
-function initKakaoPlaces() {
-  if (!window.kakao || !kakao.maps || !kakao.maps.load) {
-    console.error("Kakao Maps SDK 로드 안됨");
-    return;
-  }
-
-  kakao.maps.load(() => {
-    kakaoPlaces = new kakao.maps.services.Places();
-  });
-}
-
-// ==============================
-// Haversine 거리 계산 (m)
-// ==============================
+// haversine 거리(m)
 function haversine(lat1, lng1, lat2, lng2) {
   const R = 6371000;
-  const toRad = (deg) => (deg * Math.PI) / 180;
-
+  const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) *
       Math.cos(toRad(lat2)) *
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2);
-
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-// ==============================
-// 로컬 데이터(STATIONS + CAMPUSES)에서 키워드 + 거리 매칭
-// ==============================
+// 로컬(STATIONS, CAMPUSES) 검색
 function getLocalMatches(keyword) {
   const key = keyword.trim().toLowerCase();
   if (!key) return [];
 
-  const hasLocation = myLat != null && myLng != null;
+  const hasLoc = myLat != null && myLng != null;
   const results = [];
 
-  // 1) 지하철역
   STATIONS_DATA.forEach((st) => {
     if (!st || !st.name) return;
     const name = String(st.name).toLowerCase();
-    const lines = Array.isArray(st.lines) ? st.lines.join(",") : st.lines || "";
-    const lineStr = String(lines).toLowerCase();
-
-    if (!name.includes(key) && !lineStr.includes(key)) return;
-
+    if (!name.includes(key)) return;
     let distance = null;
-    if (hasLocation && st.lat != null && st.lng != null) {
+    if (hasLoc && st.lat && st.lng) {
       distance = haversine(myLat, myLng, Number(st.lat), Number(st.lng));
-      if (distance > RADIUS_LIMIT) return; // 5km 밖이면 제외
+      if (distance > RADIUS_METERS) return;
     }
-
     results.push({
       place_name: st.name,
       x: st.lng,
       y: st.lat,
       distance,
-      __source: "station"
+      _kind: "station"
     });
   });
 
-  // 2) 대학
   CAMPUSES_DATA.forEach((cp) => {
     if (!cp || !cp.name) return;
     const name = String(cp.name).toLowerCase();
-    const city = cp.city ? String(cp.city).toLowerCase() : "";
-
-    if (!name.includes(key) && !city.includes(key)) return;
-
+    if (!name.includes(key)) return;
     let distance = null;
-    if (hasLocation && cp.lat != null && cp.lng != null) {
+    if (hasLoc && cp.lat && cp.lng) {
       distance = haversine(myLat, myLng, Number(cp.lat), Number(cp.lng));
-      if (distance > RADIUS_LIMIT) return;
+      if (distance > RADIUS_METERS) return;
     }
-
     results.push({
       place_name: cp.name,
       x: cp.lng,
       y: cp.lat,
       distance,
-      __source: "campus"
+      _kind: "campus"
     });
   });
 
-  // 거리순 정렬 (거리 있는 애 우선)
   results.sort((a, b) => {
     if (a.distance == null && b.distance == null) return 0;
     if (a.distance == null) return 1;
@@ -179,167 +150,68 @@ function getLocalMatches(keyword) {
   return results;
 }
 
-// ==============================
-// Kakao Places 검색
-// ==============================
-function searchKakaoPlaces(keyword, callback) {
+// 카카오 검색
+function searchKakao(keyword, cb) {
   if (!kakaoPlaces) {
-    callback([]);
+    cb([]);
     return;
   }
-
-  const hasLocation = myLat != null && myLng != null;
-  const options = hasLocation
+  const hasLoc = myLat != null && myLng != null;
+  const opts = hasLoc
     ? { location: new kakao.maps.LatLng(myLat, myLng) }
     : {};
 
   kakaoPlaces.keywordSearch(
     keyword,
-    (result, status) => {
-      if (status !== kakao.maps.services.Status.OK || !Array.isArray(result)) {
-        callback([]);
+    (data, status) => {
+      if (status !== kakao.maps.services.Status.OK) {
+        cb([]);
         return;
       }
-
-      const list = result.map((p) => {
+      const list = data.map((p) => {
         let distance = null;
-        if (hasLocation) {
-          const lat = Number(p.y);
-          const lng = Number(p.x);
-          distance = haversine(myLat, myLng, lat, lng);
-        } else if (p.distance != null && p.distance !== "") {
+        if (hasLoc) {
+          distance = haversine(myLat, myLng, Number(p.y), Number(p.x));
+        } else if (p.distance) {
           distance = Number(p.distance);
         }
-
         return {
           place_name: p.place_name,
           x: p.x,
           y: p.y,
           distance,
-          __source: "kakao"
+          _kind: "kakao"
         };
       });
-
-      // 5km 반경 필터 (있으면)
-      const filtered = hasLocation
-        ? list.filter((p) => p.distance == null || p.distance <= RADIUS_LIMIT)
+      const filtered = hasLoc
+        ? list.filter((p) => p.distance == null || p.distance <= RADIUS_METERS)
         : list;
-
-      // 거리순 정렬
       filtered.sort((a, b) => {
         if (a.distance == null && b.distance == null) return 0;
         if (a.distance == null) return 1;
         if (b.distance == null) return -1;
         return a.distance - b.distance;
       });
-
-      callback(filtered);
+      cb(filtered);
     },
-    options
+    opts
   );
 }
 
-// ==============================
-// 로컬 + Kakao 결합 검색
-// ==============================
-function searchCombined(keyword, callback) {
+// 로컬 + 카카오 결합 검색
+function searchCombined(keyword, cb) {
   const local = getLocalMatches(keyword);
-  searchKakaoPlaces(keyword, (kakaoList) => {
-    const usedNames = new Set(local.map((p) => p.place_name));
+  searchKakao(keyword, (remote) => {
+    const used = new Set(local.map((p) => p.place_name));
     const merged = [
       ...local,
-      ...kakaoList.filter((p) => !usedNames.has(p.place_name))
+      ...remote.filter((p) => !used.has(p.place_name))
     ];
-    callback(merged);
+    cb(merged);
   });
 }
 
-// ==============================
-// 출발/도착 마커 & 라인 업데이트
-// ==============================
-function updateMarkersAndRoute() {
-  // 기존 마커/라인 제거
-  if (startMarker) {
-    map.removeLayer(startMarker);
-    startMarker = null;
-  }
-  if (endMarker) {
-    map.removeLayer(endMarker);
-    endMarker = null;
-  }
-  if (routeLine) {
-    map.removeLayer(routeLine);
-    routeLine = null;
-  }
-
-  const points = [];
-
-  if (startPoint) {
-    startMarker = L.marker([startPoint.lat, startPoint.lng]).addTo(map);
-    points.push([startPoint.lat, startPoint.lng]);
-  }
-
-  if (endPoint) {
-    endMarker = L.marker([endPoint.lat, endPoint.lng]).addTo(map);
-    points.push([endPoint.lat, endPoint.lng]);
-  }
-
-  // 둘 다 있으면 일단 직선으로만 연결
-  if (points.length === 2) {
-    routeLine = L.polyline(points, { weight: 4 }).addTo(map);
-    const bounds = L.latLngBounds(points[0], points[1]).pad(0.2);
-    map.fitBounds(bounds);
-  } else if (points.length === 1) {
-    map.setView(points[0], 15);
-  }
-}
-
-// ==============================
 // 자동완성 UI
-// ==============================
-function showSuggestions(wrapper, items, targetInput, onSelect) {
-  wrapper.innerHTML = "";
-  if (!items.length) {
-    wrapper.style.display = "none";
-    return;
-  }
-  wrapper.style.display = "block";
-
-  items.slice(0, 8).forEach((place) => {
-    const li = document.createElement("li");
-    li.className = "suggest-item";
-
-    let kind = "";
-    if (place.__source === "station") {
-      kind = " (지하철역)";
-    } else if (place.__source === "campus") {
-      kind = " (대학교)";
-    }
-
-    // 거리 텍스트
-    let dText = "";
-    if (place.distance != null && !Number.isNaN(place.distance)) {
-      const d = place.distance;
-      dText = d < 1000 ? `${Math.round(d)}m` : `${(d / 1000).toFixed(1)}km`;
-    }
-
-    li.textContent = dText
-      ? `${place.place_name}${kind} · ${dText}`
-      : `${place.place_name}${kind}`;
-
-    li.addEventListener("click", () => {
-      targetInput.value = place.place_name;
-      wrapper.style.display = "none";
-      if (onSelect) onSelect(place);
-    });
-
-    wrapper.appendChild(li);
-  });
-}
-
-// ==============================
-// 입력창 자동완성 설정
-// ==============================
 function setupAutocomplete() {
   const startInput = document.getElementById("start-input");
   const endInput = document.getElementById("end-input");
@@ -348,25 +220,50 @@ function setupAutocomplete() {
 
   if (!startInput || !endInput) return;
 
-  // 출발지 선택 콜백
-  const handleSelectStart = (place) => {
-    const lat = place.y != null ? Number(place.y) : null;
-    const lng = place.x != null ? Number(place.x) : null;
-    if (lat != null && lng != null) {
-      startPoint = { lat, lng, name: place.place_name };
-      updateMarkersAndRoute();
-    }
+  const makeDistanceText = (d) => {
+    if (d == null || Number.isNaN(d)) return "";
+    if (d < 1000) return `${Math.round(d)}m`;
+    return `${(d / 1000).toFixed(1)}km`;
   };
 
-  // 도착지 선택 콜백
-  const handleSelectEnd = (place) => {
-    const lat = place.y != null ? Number(place.y) : null;
-    const lng = place.x != null ? Number(place.x) : null;
-    if (lat != null && lng != null) {
-      endPoint = { lat, lng, name: place.place_name };
-      updateMarkersAndRoute();
+  function renderList(wrapper, items, targetInput, type) {
+    wrapper.innerHTML = "";
+    if (!items.length) {
+      wrapper.style.display = "none";
+      return;
     }
-  };
+    wrapper.style.display = "block";
+
+    items.slice(0, 8).forEach((p) => {
+      const li = document.createElement("li");
+      li.className = "suggest-item";
+
+      let kindText = "";
+      if (p._kind === "station") kindText = "지하철역";
+      else if (p._kind === "campus") kindText = "대학교";
+
+      const distText = makeDistanceText(p.distance);
+      let text = p.place_name;
+      if (kindText) text += ` (${kindText})`;
+      if (distText) text += ` · ${distText}`;
+
+      li.textContent = text;
+      li.addEventListener("click", () => {
+        targetInput.value = p.place_name;
+        wrapper.style.display = "none";
+        const lat = Number(p.y);
+        const lng = Number(p.x);
+        if (type === "start") {
+          startPoint = { lat, lng, name: p.place_name };
+        } else {
+          endPoint = { lat, lng, name: p.place_name };
+        }
+        updateMarkersOnly();
+      });
+
+      wrapper.appendChild(li);
+    });
+  }
 
   startInput.addEventListener("input", () => {
     const key = startInput.value.trim();
@@ -374,9 +271,7 @@ function setupAutocomplete() {
       startSug.style.display = "none";
       return;
     }
-    searchCombined(key, (list) =>
-      showSuggestions(startSug, list, startInput, handleSelectStart)
-    );
+    searchCombined(key, (list) => renderList(startSug, list, startInput, "start"));
   });
 
   endInput.addEventListener("input", () => {
@@ -385,35 +280,61 @@ function setupAutocomplete() {
       endSug.style.display = "none";
       return;
     }
-    searchCombined(key, (list) =>
-      showSuggestions(endSug, list, endInput, handleSelectEnd)
-    );
+    searchCombined(key, (list) => renderList(endSug, list, endInput, "end"));
   });
 
-  // 바깥 클릭 시 자동완성 닫기
   document.addEventListener("click", (e) => {
-    if (startSug && e.target !== startInput && !startSug.contains(e.target)) {
+    if (e.target !== startInput && !startSug.contains(e.target)) {
       startSug.style.display = "none";
     }
-    if (endSug && e.target !== endInput && !endSug.contains(e.target)) {
+    if (e.target !== endInput && !endSug.contains(e.target)) {
       endSug.style.display = "none";
     }
   });
 }
 
-// ==============================
+// 마커만 갱신 (경로는 코스 생성 버튼 눌렀을 때)
+function updateMarkersOnly() {
+  if (!map) return;
+
+  if (startMarker) {
+    map.removeLayer(startMarker);
+    startMarker = null;
+  }
+  if (endMarker) {
+    map.removeLayer(endMarker);
+    endMarker = null;
+  }
+
+  const pts = [];
+  if (startPoint) {
+    startMarker = L.marker([startPoint.lat, startPoint.lng]).addTo(map);
+    pts.push([startPoint.lat, startPoint.lng]);
+  }
+  if (endPoint) {
+    endMarker = L.marker([endPoint.lat, endPoint.lng]).addTo(map);
+    pts.push([endPoint.lat, endPoint.lng]);
+  }
+
+  if (pts.length === 1) {
+    map.setView(pts[0], 15);
+  } else if (pts.length === 2) {
+    const bounds = L.latLngBounds(pts[0], pts[1]).pad(0.25);
+    map.fitBounds(bounds);
+  }
+}
+
 // 내 위치 버튼
-// ==============================
-function setupMyLocationBtn() {
+function setupMyLocationButton() {
   const btn = document.getElementById("btn-my-location");
-  if (!btn) return;
+  const startInput = document.getElementById("start-input");
+  if (!btn || !startInput) return;
 
   btn.addEventListener("click", () => {
     if (!navigator.geolocation) {
       alert("GPS를 지원하지 않는 기기입니다.");
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         myLat = pos.coords.latitude;
@@ -421,17 +342,12 @@ function setupMyLocationBtn() {
 
         const statusEl = document.getElementById("status-gps");
         if (statusEl) {
-          statusEl.textContent = `GPS: ${myLat.toFixed(5)}, ${myLng.toFixed(
-            5
-          )}`;
+          statusEl.textContent = `GPS: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
         }
 
-        // 내 위치를 출발지로 사용
-        const startInput = document.getElementById("start-input");
-        if (startInput) startInput.value = "현재 위치";
-
+        startInput.value = "현재 위치";
         startPoint = { lat: myLat, lng: myLng, name: "현재 위치" };
-        updateMarkersAndRoute();
+        updateMarkersOnly();
       },
       () => {
         alert("현재 위치를 가져올 수 없습니다.");
@@ -441,25 +357,208 @@ function setupMyLocationBtn() {
   });
 }
 
-// ==============================
-// 코스 생성 버튼 (지금은 요약만 표시)
-// ==============================
+// 코스 생성 버튼
 function setupCourseButton() {
   const btn = document.getElementById("btn-generate-course");
-  const startInput = document.getElementById("start-input");
-  const endInput = document.getElementById("end-input");
-  const distInput = document.getElementById("distance-input");
   const summaryEl = document.getElementById("status-summary");
+  const distInput = document.getElementById("distance-input");
 
-  if (!btn || !startInput || !endInput || !summaryEl) return;
+  if (!btn || !summaryEl) return;
 
-  btn.addEventListener("click", () => {
-    const s = startInput.value.trim() || "출발지 미지정";
-    const e = endInput.value.trim() || "도착지 미지정";
-    const d = distInput.value.trim();
+  btn.addEventListener("click", async () => {
+    if (!map) return;
 
-    const distText = d ? `${d}km` : "거리 미지정";
+    const mode = getSelectedMode();
+    const targetKm = parseFloat(distInput.value) || null;
 
-    summaryEl.textContent = `코스: ${s} → ${e} / 목표 거리: ${distText}`;
+    if (!startPoint && myLat != null && myLng != null) {
+      startPoint = { lat: myLat, lng: myLng, name: "현재 위치" };
+    }
+
+    if (!startPoint) {
+      alert("출발지를 먼저 선택해주세요.");
+      return;
+    }
+
+    try {
+      if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+
+      let routeInfo = null;
+
+      if (mode === "oneway") {
+        if (!endPoint) {
+          alert("편도 코스는 도착지가 필요합니다.");
+          return;
+        }
+        routeInfo = await buildOneWayRoute(startPoint, endPoint);
+      } else if (mode === "loop") {
+        routeInfo = await buildLoopRoute(startPoint, endPoint, targetKm);
+      } else if (mode === "recommend") {
+        routeInfo = await buildRecommendRoute(targetKm);
+      }
+
+      if (!routeInfo) return;
+
+      const { coords, distance } = routeInfo;
+      routeLayer = L.polyline(coords, { color: "#2563eb", weight: 4 }).addTo(
+        map
+      );
+      const bounds = L.latLngBounds(coords).pad(0.25);
+      map.fitBounds(bounds);
+
+      const km = (distance / 1000).toFixed(2);
+      let text = `총 거리: ${km}km`;
+      if (targetKm) {
+        text += ` / 목표 거리: ${targetKm.toFixed(1)}km`;
+      }
+      summaryEl.textContent = text;
+    } catch (e) {
+      console.error(e);
+      alert("코스 생성 중 오류가 발생했습니다.");
+    }
   });
+}
+
+function getSelectedMode() {
+  const radios = document.querySelectorAll('input[name="courseMode"]');
+  for (const r of radios) {
+    if (r.checked) return r.value;
+  }
+  return "oneway";
+}
+
+// OSRM 요청 공통
+async function requestOsrmRoute(points) {
+  if (!points || points.length < 2) return null;
+
+  const coordsStr = points
+    .map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`)
+    .join(";");
+
+  const url = `${OSRM_ENDPOINT}/route/v1/foot/${coordsStr}?overview=full&geometries=geojson`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error("OSRM 요청 실패");
+  }
+  const json = await res.json();
+  if (!json.routes || !json.routes.length) {
+    throw new Error("경로를 찾을 수 없습니다.");
+  }
+  const route = json.routes[0];
+  const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  return { coords, distance: route.distance };
+}
+
+// ① 편도 코스 - 최단경로
+async function buildOneWayRoute(from, to) {
+  const points = [from, to];
+  return await requestOsrmRoute(points);
+}
+
+// ② 사각/왕복 코스
+async function buildLoopRoute(from, to, targetKm) {
+  const base = { lat: from.lat, lng: from.lng };
+  let waypoints = [];
+
+  if (!to) {
+    // 출발지만 있는 경우: 출발지를 기준으로 사각형
+    const total = targetKm && targetKm > 0 ? targetKm : 4; // 기본 4km
+    const sideKm = total / 4;
+    const latRad = (base.lat * Math.PI) / 180;
+    const dLat = (sideKm * 1000) / 111000;
+    const dLng = (sideKm * 1000) / (111000 * Math.cos(latRad));
+
+    const p1 = base;
+    const p2 = { lat: base.lat, lng: base.lng + dLng };
+    const p3 = { lat: base.lat - dLat, lng: base.lng + dLng };
+    const p4 = { lat: base.lat - dLat, lng: base.lng };
+
+    waypoints = [p1, p2, p3, p4, p1];
+  } else {
+    // 출발지 + 목적지 둘 다 있을 때: 대략적인 사다리꼴 루프
+    const vLat = to.lat - from.lat;
+    const vLng = to.lng - from.lng;
+    const distDeg = Math.sqrt(vLat * vLat + vLng * vLng) || 0.001;
+    const offset = distDeg * 0.5;
+
+    // 출발-도착 벡터에 수직인 방향
+    const nLat = (-vLng / distDeg) * offset;
+    const nLng = (vLat / distDeg) * offset;
+
+    const p2 = { lat: from.lat + nLat, lng: from.lng + nLng };
+    const p3 = { lat: to.lat + nLat, lng: to.lng + nLng };
+
+    // 순서: 출발(1) -> p2(2) -> 목적지(4) -> p3(3) -> 출발
+    waypoints = [from, p2, to, p3, from];
+  }
+
+  return await requestOsrmRoute(waypoints);
+}
+
+// ③ 추천 코스 (간단 버전: 근처 공원까지 편도)
+async function buildRecommendRoute(targetKm) {
+  if (myLat == null || myLng == null) {
+    alert("추천 코스를 사용하려면 위치 정보가 필요합니다.");
+    return null;
+  }
+  const base = { lat: myLat, lng: myLng, name: "현재 위치" };
+  startPoint = base;
+  const startInput = document.getElementById("start-input");
+  if (startInput) startInput.value = "현재 위치";
+  updateMarkersOnly();
+
+  if (!kakaoPlaces) {
+    alert("카카오 장소 검색을 사용할 수 없습니다.");
+    return null;
+  }
+
+  // 근처 공원 검색
+  const keyword = "공원";
+  const center = new kakao.maps.LatLng(myLat, myLng);
+
+  const places = await new Promise((resolve) => {
+    kakaoPlaces.keywordSearch(
+      keyword,
+      (data, status) => {
+        if (status !== kakao.maps.services.Status.OK) {
+          resolve([]);
+          return;
+        }
+        resolve(data);
+      },
+      { location: center, radius: 3000 }
+    );
+  });
+
+  if (!places.length) {
+    alert("근처에서 추천할 공원을 찾지 못했습니다.");
+    return null;
+  }
+
+  // 가장 가까운 공원 선택
+  let best = null;
+  let bestDist = Infinity;
+  for (const p of places) {
+    const d = haversine(myLat, myLng, Number(p.y), Number(p.x));
+    if (d < bestDist) {
+      bestDist = d;
+      best = p;
+    }
+  }
+
+  const dest = {
+    lat: Number(best.y),
+    lng: Number(best.x),
+    name: best.place_name
+  };
+  endPoint = dest;
+  const endInput = document.getElementById("end-input");
+  if (endInput) endInput.value = best.place_name;
+  updateMarkersOnly();
+
+  return await buildOneWayRoute(base, dest);
 }

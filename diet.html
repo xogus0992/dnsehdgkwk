@@ -3,35 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <title>나의 코스 만들기</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet CSS (지도용) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
 
-  <!-- 메인 CSS -->
+  <!-- 메인 스타일 -->
   <link rel="stylesheet" href="diet.css" />
 </head>
-
 <body>
-  <header>
-    <div class="title">나의 코스 만들기</div>
+  <header class="app-header">
+    <div class="header-title">나의 코스 만들기</div>
   </header>
 
-  <main>
+  <main class="app-main">
     <div class="layout">
       <!-- 지도 카드 -->
       <section class="card map-card">
         <div id="map"></div>
       </section>
 
-      <!-- 코스 설정 패널 -->
+      <!-- 패널 카드 -->
       <section class="card panel-card">
         <div class="panel-header">
           <div class="panel-title">🚩 코스 설정</div>
           <button id="btn-my-location" class="btn btn-outline">내 위치</button>
         </div>
 
+        <!-- 코스 모드 선택 -->
+        <div class="mode-group">
+          <span class="mode-label">코스 모드</span>
+          <div class="mode-options">
+            <label class="mode-option">
+              <input type="radio" name="courseMode" value="oneway" checked />
+              <span>편도</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="courseMode" value="loop" />
+              <span>사각/왕복</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="courseMode" value="recommend" />
+              <span>추천</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 출발지 -->
         <div class="field-group">
           <div class="field-label">출발지</div>
           <input
@@ -44,25 +65,27 @@
           <ul id="start-suggestions" class="suggest-list"></ul>
         </div>
 
+        <!-- 도착지 -->
         <div class="field-group">
           <div class="field-label">도착지</div>
           <input
             id="end-input"
             type="text"
             class="text-input"
-            placeholder="도착지 (예: 여의도한강공원)"
+            placeholder="도착지 (예: 여의도공원)"
             autocomplete="off"
           />
           <ul id="end-suggestions" class="suggest-list"></ul>
         </div>
 
+        <!-- 목표 거리 -->
         <div class="field-group">
           <div class="field-label">목표 거리</div>
           <div class="inline-row">
             <input
               id="distance-input"
               type="number"
-              min="1"
+              min="0"
               step="0.5"
               class="text-input"
               placeholder="예: 5"
@@ -76,9 +99,9 @@
         </button>
 
         <div class="status-box">
-          <div class="status-line" id="status-gps">GPS: 위치 정보 없음</div>
-          <div class="status-line" id="status-summary">
-            코스를 생성하면 정보가 표시됩니다.
+          <div id="status-gps" class="status-line">GPS: 위치 정보 없음</div>
+          <div id="status-summary" class="status-line">
+            출발지/도착지를 선택하고 코스를 생성해 보세요.
           </div>
         </div>
       </section>
@@ -88,10 +111,10 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Kakao Maps JS (장소 검색용) : APPKEY 부분을 실제 키로 교체 -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services"></script>
+  <!-- Kakao Maps JS (장소 검색) - appkey 부분을 실제 키로 교체 -->
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
 
-  <!-- ES Module: stations + campus + diet.js 연결 -->
+  <!-- 메인 로직 (ES Module) -->
   <script type="module">
     import { STATIONS } from "./stations.js";
     import { CAMPUSES } from "./campus.js";
