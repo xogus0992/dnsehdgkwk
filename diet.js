@@ -3,9 +3,11 @@
 // - 편도(최단경로)
 // - 사각/왕복 루프
 // - 추천 코스(근처 공원)
-
+// 🔥 AWS HTTP API 올바른 엔드포인트
 const OSRM_ENDPOINT = "https://o0xor6qm0g.execute-api.ap-northeast-2.amazonaws.com/default/osrm-proxy";
+
 const RADIUS_METERS = 5000;
+
 
 let map;
 let kakaoPlaces = null;
@@ -434,20 +436,37 @@ function getSelectedMode() {
 async function requestOsrmRoute(points) {
   if (!points || points.length < 2) return null;
 
+  // 1. 좌표 문자열 생성
   const coordsStr = points
     .map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`)
     .join(";");
 
-  const url = `${OSRM_ENDPOINT}/route/v1/foot/${coordsStr}?overview=full&geometries=geojson`;
+  // 2. URL 생성 (여기가 핵심 수정 사항!)
+  // 기존 코드(삭제): const url = `${OSRM_ENDPOINT}/route/v1/foot/${coordsStr}?overview=full&geometries=geojson`;
+  
+  // 수정 코드: Lambda가 이해할 수 있게 '쿼리 파라미터(?coords=...)' 방식으로 변경
+  // encodeURIComponent를 사용하여 특수문자(; ,)가 안전하게 전송되도록 처리
+  const url = `${OSRM_ENDPOINT}?profile=foot&coords=${encodeURIComponent(coordsStr)}`;
 
   const res = await fetch(url);
   if (!res.ok) {
+    // 에러 발생 시 어떤 문제인지 콘솔에서 확인하기 쉽게 로그 추가
+    const errText = await res.text();
+    console.error("Lambda Error:", errText);
     throw new Error("OSRM 요청 실패");
   }
+  
   const json = await res.json();
+  
+  // 람다에서 에러 객체를 보냈을 경우 처리
+  if (json.error) {
+     throw new Error(json.error);
+  }
+
   if (!json.routes || !json.routes.length) {
     throw new Error("경로를 찾을 수 없습니다.");
   }
+  
   const route = json.routes[0];
   const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
   return { coords, distance: route.distance };
