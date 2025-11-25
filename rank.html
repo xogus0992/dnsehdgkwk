@@ -2,99 +2,588 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>RANKING</title>
+  <title>KANTO POKEDEX</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
+    /* --- 기본 설정 --- */
     body {
       margin: 0; padding: 0;
       font-family: 'Noto Sans KR', sans-serif;
-      background: url('https://i.pinimg.com/originals/b2/ed/fe/b2edfef246daaae28411ad6901feeb17.jpg') no-repeat center center/cover;
-      color: #fff; height: 100vh; overflow: hidden;
+      
+      /* [수정] 배경을 샵과 동일하게 변경 */
+      background-color: #f0f2f5; 
+      color: #333; /* 기본 글자색 어둡게 */
+      
+      height: 100vh; overflow: hidden;
       display: flex; flex-direction: column;
     }
-    .overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: -1; }
+    
+    /* 오버레이 제거 */
+    .overlay { display: none; }
 
+    /* --- 헤더 --- */
     header {
-      padding: 20px; text-align: center;
+      padding: 15px 20px; text-align: center;
       font-family: 'Chakra Petch', sans-serif;
-      border-bottom: 2px solid #8b5cf6; /* 보라색 포인트 */
-      background: rgba(0,0,0,0.8);
-      position: relative;
+      
+      /* [수정] 헤더 스타일을 샵과 유사하게 변경 */
+      border-bottom: 4px solid #ffcb05; 
+      background: #1d4ed8;
+      
+      position: relative; flex-shrink: 0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 200;
     }
-    h1 { margin: 0; color: #8b5cf6; font-style: italic; text-shadow: 0 0 10px #8b5cf6; }
+    
+    /* [수정] 제목 색상 변경 */
+    h1 { margin: 0; color: #ffcb05; font-style: italic; text-shadow: 2px 2px 0px #2a75bb; font-size: 1.8rem; -webkit-text-stroke: 1px #3b4cca; letter-spacing: 1px; }
     
     .btn-back {
-      position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
-      background: none; border: 1px solid #fff; color: #fff;
-      padding: 5px 15px; border-radius: 20px; cursor: pointer;
+      position: absolute; left: 20px;
+      background: rgba(255,255,255,0.2); border: 2px solid #fff; color: #fff;
+      padding: 5px 12px; border-radius: 12px; cursor: pointer; 
+      font-family: 'Chakra Petch'; font-weight: bold;
+    }
+    
+    .collection-rate {
+      position: absolute; right: 20px;
+      font-weight: 900; color: #3b4cca; 
+      font-family: 'Chakra Petch';
+      background: #fff; padding: 5px 15px; border-radius: 20px;
+      font-size: 0.9rem; border: 2px solid #ffcb05;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-    .rank-list {
+    .my-points-display {
+      position: absolute; left: 100px; /* 위치 조정 */
+      font-weight: 900; color: #3b4cca; font-family: 'Chakra Petch';
+      background: #fff; padding: 5px 10px; border-radius: 10px;
+      font-size: 0.9rem; border: 2px solid #ffcb05;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* --- 도감 그리드 영역 --- */
+    .pokedex-container {
       flex: 1; padding: 20px; overflow-y: auto;
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+      gap: 12px;
+      align-content: start;
+      max-width: 900px; margin: 0 auto; width: 100%;
+      padding-bottom: 50px;
     }
-    .rank-item {
-      display: flex; align-items: center;
-      background: rgba(255,255,255,0.05);
-      margin-bottom: 10px; padding: 15px;
-      border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.3);
-    }
-    .rank-num {
-      font-size: 1.5rem; font-weight: bold; width: 40px;
-      font-family: 'Chakra Petch'; color: #8b5cf6;
-    }
-    .user-info { flex: 1; }
-    .user-name { font-weight: bold; font-size: 1.1rem; }
-    .user-score { font-size: 0.9rem; color: #aaa; }
     
-    /* 1,2,3등 강조 */
-    .rank-item:nth-child(1) { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; }
-    .rank-item:nth-child(1) .rank-num { color: #ffd700; text-shadow: 0 0 5px #ffd700; }
+    /* 스크롤바 */
+    .pokedex-container::-webkit-scrollbar { width: 8px; }
+    .pokedex-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+
+    /* --- 개별 포켓몬 슬롯 --- */
+    .dex-slot {
+      /* [수정] 슬롯 배경을 흰색으로 */
+      background: #fff;
+      border-radius: 12px; aspect-ratio: 1 / 1.25; 
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer;
+      border: 2px solid #e5e7eb; /* 연한 회색 테두리 */
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    /* 획득한 상태 (활성화) */
+    .dex-slot.owned {
+      background: #fff; 
+      border: 2px solid #3b82f6; /* 파란 테두리 */
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25); 
+    }
+    .dex-slot.owned:hover { transform: translateY(-5px); border-color: #ffcb05; }
+    
+    /* 미획득 상태 */
+    .dex-slot.missing { background: #f3f4f6; border-color: #e5e7eb; }
+
+    .dex-num {
+      position: absolute; top: 8px; left: 10px;
+      font-size: 0.8rem; font-family: 'Chakra Petch'; color: #9ca3af;
+      font-weight: 900; 
+    }
+    .dex-slot.owned .dex-num { color: #6b7280; }
+
+    .dex-img {
+      width: 70%; height: 70%; object-fit: contain; margin-top: 10px; 
+      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.15)); transition: filter 0.3s;
+    }
+    .dex-slot.missing .dex-img { filter: brightness(0) opacity(0.2); width: 60%; height: 60%; }
+    
+    .dex-name {
+      margin-top: 5px; font-size: 0.9rem; font-weight: 900; color: #333;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;
+    }
+    .dex-slot.missing .dex-name { color: #d1d5db; font-size: 0.8rem; }
+
+    /* 보유 수량 뱃지 */
+    .count-badge {
+      position: absolute; bottom: 8px; right: 8px;
+      background: #ffcb05; color: #333;
+      font-size: 0.8rem; font-weight: 900; padding: 2px 8px; border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15); border: 2px solid #fff;
+      display: none; font-family: 'Chakra Petch';
+    }
+    .dex-slot.owned .count-badge { display: block; }
+
+    /* --- 상세 모달 --- */
+    #detail-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); z-index: 9999; backdrop-filter: blur(5px);
+      align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: #fff; 
+      border: 4px solid #3b82f6; border-radius: 25px; 
+      padding: 30px; width: 85%; max-width: 450px;
+      text-align: center; position: relative;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+      animation: modalPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      color: #333;
+    }
+    @keyframes modalPopIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .close-btn { position: absolute; top: 15px; right: 20px; color: #9ca3af; font-size: 2rem; cursor: pointer; line-height: 1; font-weight: bold; }
+    .close-btn:hover { color: #333; }
+
+    .m-img { width: 180px; height: 180px; margin-bottom: 10px; filter: drop-shadow(0 8px 15px rgba(0,0,0,0.15)); }
+    .m-num { font-family: 'Chakra Petch'; color: #6b7280; font-size: 1.1rem; margin-bottom: 5px; font-weight: bold; } 
+    
+    .name-container {
+      display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;
+    }
+    .m-name { font-size: 2.2rem; font-weight: 900; color: #1f2937; margin: 0; letter-spacing: -1px; }
+    .btn-edit-name {
+      background: none; border: none; font-size: 1.2rem; cursor: pointer; 
+      color: #9ca3af; transition: transform 0.2s;
+    }
+    .btn-edit-name:hover { transform: scale(1.2); color: #3b82f6; }
+
+    .m-stats { 
+      background: #f3f4f6; padding: 15px; border-radius: 12px; 
+      display: flex; justify-content: space-around; margin-bottom: 20px;
+      border: 1px solid #e5e7eb;
+    }
+    .stat-box { display: flex; flex-direction: column; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; font-family: 'Chakra Petch'; font-weight: bold; }
+    .stat-val { font-size: 1.3rem; font-weight: 900; color: #1f2937; }
+
+    .m-desc {
+      background: #f9fafb; padding: 15px; border-radius: 10px;
+      font-size: 0.95rem; line-height: 1.5; color: #4b5563; margin: 20px 0; min-height: 80px;
+      text-align: left;
+      border: 1px solid #e5e7eb;
+    }
+
+    .evo-section { border-top: 2px dashed #e5e7eb; padding-top: 20px; margin-top: 15px; }
+    .evo-info { font-size: 1rem; margin-bottom: 15px; color: #374151; font-weight: bold; }
+    
+    .btn-evolve {
+      background: linear-gradient(135deg, #3b82f6, #2563eb); 
+      border: none; padding: 12px 0; width: 100%;
+      color: #fff; font-weight: 900; border-radius: 10px; cursor: pointer;
+      font-size: 1.1rem; box-shadow: 0 4px 0 #1d4ed8;
+      transition: all 0.2s ease;
+    }
+    .btn-evolve:hover { filter: brightness(1.1); }
+    .btn-evolve:active { transform: translateY(4px); box-shadow: none; }
+    .btn-evolve:disabled { 
+      background: #e5e7eb; cursor: not-allowed; box-shadow: none; color: #9ca3af; 
+    }
+
+    #toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(31, 41, 55, 0.9); color: #fff; padding: 12px 30px; border-radius: 50px;
+      font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 10000;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-size: 1rem;
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+      .pokedex-container { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .dex-slot { padding: 5px; }
+      .dex-img { width: 60%; height: 60%; margin-top: 5px; }
+      .dex-name { font-size: 0.8rem; margin-top: 2px; }
+      .dex-num { font-size: 0.7rem; }
+      .my-points-display { left: 80px; padding: 4px 8px; font-size: 0.8rem; }
+      .modal-content { padding: 25px; max-width: 350px; }
+      .m-img { width: 130px; height: 130px; }
+      .m-name { font-size: 2rem; }
+      .m-stats { padding: 12px; }
+      .stat-val { font-size: 1.1rem; }
+      .m-desc { font-size: 0.85rem; min-height: 60px; }
+      .btn-evolve { padding: 10px 0; font-size: 1rem; }
+    }
+    @media (max-width: 480px) {
+      .pokedex-container { grid-template-columns: repeat(2, 1fr); }
+      h1 { font-size: 1.3rem; }
+      .btn-back { padding: 5px 10px; font-size: 0.8rem; }
+      .collection-rate { padding: 4px 8px; font-size: 0.8rem; }
+      .my-points-display { left: 70px; padding: 3px 6px; font-size: 0.7rem; }
+    }
   </style>
 </head>
 <body>
   <div class="overlay"></div>
   <header>
     <button class="btn-back" onclick="history.back()">◀ BACK</button>
-    <h1>WEEKLY RANK</h1>
+    <h1>KANTO POKEDEX</h1>
+    <div class="my-points-display" id="my-points-display">0 P</div> 
+    <div class="collection-rate" id="collection-rate">0 / 151</div>
   </header>
 
-  <div class="rank-list">
-    <div class="rank-item">
-      <div class="rank-num">1</div>
-      <div class="user-info">
-        <div class="user-name">몬스터헌터</div>
-        <div class="user-score">LV. 99 / 234km</div>
+  <div class="pokedex-container" id="pokedex-grid"></div>
+
+  <div id="detail-modal">
+    <div class="modal-content">
+      <div class="close-btn" onclick="closeModal()">×</div>
+      <div class="m-num" id="modal-num">#000</div>
+      <img src="" id="modal-img" class="m-img">
+      
+      <div class="name-container">
+        <div class="m-name" id="modal-name">???</div>
+        <button class="btn-edit-name" onclick="changeName()">✏️</button>
       </div>
-    </div>
-    <div class="rank-item">
-      <div class="rank-num">2</div>
-      <div class="user-info">
-        <div class="user-name">다이어터</div>
-        <div class="user-score">LV. 85 / 198km</div>
+      
+      <div class="m-stats">
+        <div class="stat-box"><span class="stat-label">RANK</span><span class="stat-val" id="modal-rank">-</span></div>
+        <div class="stat-box"><span class="stat-label">TOTAL</span><span class="stat-val" id="modal-total">-</span></div>
+        <div class="stat-box"><span class="stat-label">OWNED</span><span class="stat-val" id="modal-count">-</span></div>
       </div>
-    </div>
-    <div class="rank-item">
-      <div class="rank-num">3</div>
-      <div class="user-info">
-        <div class="user-name">새벽러닝</div>
-        <div class="user-score">LV. 82 / 150km</div>
+
+      <div id="modal-desc" class="m-desc">
+        포켓몬 정보를 불러오는 중입니다...
       </div>
-    </div>
-    <div class="rank-item">
-      <div class="rank-num">4</div>
-      <div class="user-info">
-        <div class="user-name">근성가이</div>
-        <div class="user-score">LV. 70 / 120km</div>
-      </div>
-    </div>
-    <div class="rank-item">
-      <div class="rank-num">5</div>
-      <div class="user-info">
-        <div class="user-name">초보운전</div>
-        <div class="user-score">LV. 45 / 80km</div>
+
+      <div class="evo-section">
+        <div class="evo-info" id="evo-info-text">
+          진화 정보 확인 중...
+        </div>
+        <button id="btn-evo" class="btn-evolve" onclick="tryEvolve()" disabled>확인 중...</button>
       </div>
     </div>
   </div>
+
+  <div id="toast">메시지</div>
+
+  <script>
+    let myInventory = JSON.parse(localStorage.getItem('myInventory')) || [];
+    let myPoints = parseInt(localStorage.getItem('myPoints')) || 0;
+
+    const myPointsDisplayEl = document.getElementById('my-points-display');
+    myPointsDisplayEl.innerText = `${myPoints} P`;
+    
+    function getOwnedCountMap() {
+        const map = {};
+        myInventory.forEach(p => {
+            map[p.id] = (map[p.id] || 0) + 1;
+        });
+        return map;
+    }
+    
+    function getBestPokemonMap() {
+        const map = {};
+        myInventory.forEach(p => {
+            if (!map[p.id] || p.total > map[p.id].total) {
+                map[p.id] = p;
+            }
+        });
+        return map;
+    }
+
+    let ownedCountMap = getOwnedCountMap();
+    let bestPokemonMap = getBestPokemonMap();
+    let ownedIds = new Set(Object.keys(bestPokemonMap).map(Number));
+
+    const gridEl = document.getElementById('pokedex-grid');
+    const rateEl = document.getElementById('collection-rate');
+    const TOTAL_GEN1 = 151;
+
+    let currentSelectedPokemon = null; 
+    let targetEvolutionSpecies = null; 
+
+    const EVO_CONFIG = {
+      'S': { cost: 500 },
+      'A': { cost: 300 },
+      'B': { cost: 150 },
+      'C': { cost: 50 }
+    };
+
+    function updateCollectionRate() {
+        rateEl.innerText = `${ownedIds.size} / ${TOTAL_GEN1}`;
+    }
+    updateCollectionRate();
+
+    function renderPokedex() {
+      ownedCountMap = getOwnedCountMap();
+      bestPokemonMap = getBestPokemonMap();
+      ownedIds = new Set(Object.keys(bestPokemonMap).map(Number));
+      updateCollectionRate();
+
+      gridEl.innerHTML = '';
+      for (let i = 1; i <= TOTAL_GEN1; i++) {
+        createSlot(i);
+      }
+    }
+    renderPokedex();
+
+    function createSlot(id) {
+      const isOwned = ownedIds.has(id);
+      const slot = document.createElement('div');
+      slot.className = `dex-slot ${isOwned ? 'owned' : 'missing'}`;
+      
+      const numStr = '#' + String(id).padStart(3, '0');
+      const imgUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+      
+      let pName = "???";
+      let displayImgUrl = imgUrl; 
+      let count = 0;
+      
+      if (isOwned && bestPokemonMap[id]) {
+        pName = bestPokemonMap[id].name;
+        displayImgUrl = bestPokemonMap[id].img; 
+        count = ownedCountMap[id];
+      }
+
+      slot.innerHTML = `
+        <div class="dex-num">${numStr}</div>
+        <img class="dex-img" src="${displayImgUrl}" loading="lazy" alt="${pName}">
+        <div class="dex-name">${pName}</div>
+        <div class="count-badge">x${count}</div>
+      `;
+
+      if (isOwned) {
+        slot.onclick = () => showDetail(id);
+      } else {
+        slot.onclick = () => {
+          showToast(`아직 잡지 못한 포켓몬입니다 (${numStr})`);
+          slot.style.animation = "shake 0.3s";
+          setTimeout(() => slot.style.animation = "", 300);
+        }
+      }
+      gridEl.appendChild(slot);
+    }
+
+    async function showDetail(id) {
+      currentSelectedPokemon = bestPokemonMap[id];
+      if (!currentSelectedPokemon) return;
+
+      const data = currentSelectedPokemon;
+      const count = ownedCountMap[id] || 0;
+      const modal = document.getElementById('detail-modal');
+      
+      document.getElementById('modal-num').innerText = '#' + String(id).padStart(3, '0');
+      document.getElementById('modal-img').src = data.img; 
+      document.getElementById('modal-name').innerText = data.name;
+      
+      const rankEl = document.getElementById('modal-rank');
+      rankEl.innerText = data.rank;
+      if(data.rank === 'S') rankEl.style.color = '#aa55ff';
+      else if(data.rank === 'A') rankEl.style.color = '#d97706'; /* 노란색 어둡게 */
+      else if(data.rank === 'B') rankEl.style.color = '#3b82f6';
+      else rankEl.style.color = '#ef4444';
+
+      document.getElementById('modal-total').innerText = Math.floor(data.total) || '?';
+      document.getElementById('modal-count').innerText = `${count} 마리`;
+
+      checkEvolutionAndDesc(data, count);
+
+      modal.style.display = 'flex';
+    }
+
+    function changeName() {
+      if (!currentSelectedPokemon) return;
+      
+      const newName = prompt("변경할 이름을 입력하세요:", currentSelectedPokemon.name);
+      if (newName && newName.trim() !== "") {
+        const targetIndex = myInventory.findIndex(p => p.uid === currentSelectedPokemon.uid);
+        if (targetIndex !== -1) {
+          myInventory[targetIndex].name = newName.trim();
+          localStorage.setItem('myInventory', JSON.stringify(myInventory));
+          
+          document.getElementById('modal-name').innerText = newName.trim();
+          showToast("이름이 변경되었습니다!");
+          renderPokedex(); 
+        }
+      }
+    }
+
+    async function checkEvolutionAndDesc(data, count) {
+        const descEl = document.getElementById('modal-desc');
+        const btnEvo = document.getElementById('btn-evo');
+        const infoText = document.getElementById('evo-info-text');
+
+        descEl.innerText = "정보를 불러오는 중...";
+        infoText.innerHTML = "진화 정보 확인 중...";
+        btnEvo.disabled = true;
+        btnEvo.innerText = "확인 중...";
+        targetEvolutionSpecies = null;
+
+        try {
+            const speciesRes = await fetch(data.speciesUrl);
+            const speciesData = await speciesRes.json();
+
+            const koEntry = speciesData.flavor_text_entries.find(e => e.language.name === 'ko');
+            descEl.innerText = koEntry ? koEntry.flavor_text.replace(/\n/g, ' ') : "설명이 없습니다.";
+
+            const evoRes = await fetch(speciesData.evolution_chain.url);
+            const evoData = await evoRes.json();
+
+            const nextEvoSpecies = findNextEvolution(evoData.chain, speciesData.name); 
+
+            if (nextEvoSpecies) {
+                const nextId = parseInt(nextEvoSpecies.url.split('/').filter(Boolean).pop());
+
+                if (nextId <= 151) {
+                    targetEvolutionSpecies = { name: nextEvoSpecies.name, url: nextEvoSpecies.url, id: nextId };
+                    
+                    const config = EVO_CONFIG[data.rank] || { cost: 100 };
+                    
+                    let statusMsg = "";
+                    let isPossible = true;
+
+                    if (myPoints < config.cost) {
+                        statusMsg += `<span style="color:#ef4444">비용 부족</span> (${config.cost}P 필요)<br>`;
+                        isPossible = false;
+                    } else {
+                        statusMsg += `비용: <span style="color:#2563eb">${config.cost}P</span><br>`;
+                    }
+
+                    if (count < 2) {
+                        statusMsg += `<span style="color:#ef4444">재료 부족</span> (동일한 포켓몬 2마리 필요)`;
+                        isPossible = false;
+                    } else {
+                        statusMsg += `재료: <span style="color:#16a34a">준비 완료 (2/${count})</span>`;
+                    }
+
+                    infoText.innerHTML = `[진화 조건]<br>${statusMsg}`;
+                    btnEvo.disabled = !isPossible;
+                    btnEvo.innerText = isPossible ? "합성하여 진화!" : "조건 불충분";
+
+                } else {
+                    infoText.innerHTML = "관동지방(1세대) 도감에서는<br>더 이상 진화할 수 없습니다.";
+                    btnEvo.innerText = "진화 불가";
+                    btnEvo.disabled = true;
+                }
+            } else {
+                infoText.innerHTML = "최종 진화 형태입니다.";
+                btnEvo.innerText = "진화 완료";
+                btnEvo.disabled = true;
+            }
+
+        } catch (e) {
+            console.error(e);
+            descEl.innerText = "정보를 불러오는데 실패했습니다.";
+            infoText.innerHTML = "통신 오류";
+            btnEvo.innerText = "오류";
+        }
+    }
+
+    function findNextEvolution(chain, currentSpeciesName) {
+        if (chain.species.name === currentSpeciesName) {
+            if (chain.evolves_to.length > 0) {
+                return chain.evolves_to[0].species; 
+            }
+            return null; 
+        }
+        for (let i = 0; i < chain.evolves_to.length; i++) {
+            const result = findNextEvolution(chain.evolves_to[i], currentSpeciesName);
+            if (result) return result;
+        }
+        return null;
+    }
+
+    async function tryEvolve() {
+        if (!currentSelectedPokemon || !targetEvolutionSpecies) return;
+
+        const targetId = currentSelectedPokemon.id;
+        const indices = myInventory.map((p, idx) => p.id === targetId ? idx : -1).filter(idx => idx !== -1);
+        
+        if (indices.length < 2) {
+            showToast("재료가 부족합니다! (2마리 필요)");
+            return;
+        }
+
+        const config = EVO_CONFIG[currentSelectedPokemon.rank] || { cost: 100 };
+        
+        myPoints -= config.cost;
+        localStorage.setItem('myPoints', myPoints);
+        myPointsDisplayEl.innerText = `${myPoints} P`;
+
+        const btnEvo = document.getElementById('btn-evo');
+        btnEvo.disabled = true;
+        btnEvo.innerText = "진화 중...";
+
+        try {
+            showToast("✨ 합성을 시작합니다...! ✨");
+
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${targetEvolutionSpecies.id}`);
+            const newData = await res.json();
+            
+            const speciesRes = await fetch(targetEvolutionSpecies.url);
+            const speciesData = await speciesRes.json();
+            const koNameObj = speciesData.names.find(n => n.language.name === 'ko');
+            const newKrName = koNameObj ? koNameObj.name : newData.name;
+
+            const newTotal = newData.stats.reduce((acc, cur) => acc + cur.base_stat, 0);
+            const typeMap = {
+              normal: "노말", fire: "불꽃", water: "물", grass: "풀", electric: "전기",
+              ice: "얼음", fighting: "격투", poison: "독", ground: "땅", flying: "비행",
+              psychic: "에스퍼", bug: "벌레", rock: "바위", ghost: "고스트", dragon: "드래곤",
+              steel: "강철", fairy: "페어리"
+            };
+            const newType = newData.types.map(t => typeMap[t.type.name] || t.type.name).join(', ');
+
+            const materialIndex = indices[1]; 
+            myInventory.splice(materialIndex, 1);
+
+            const mainPkmIndex = myInventory.findIndex(p => p.uid === currentSelectedPokemon.uid);
+            
+            if(mainPkmIndex !== -1) {
+                const mainPkm = myInventory[mainPkmIndex];
+                mainPkm.id = newData.id;
+                mainPkm.name = newKrName; 
+                mainPkm.img = newData.sprites.other['official-artwork'].front_default || newData.sprites.front_default;
+                mainPkm.hp = newData.stats[0].base_stat;
+                mainPkm.atk = newData.stats[1].base_stat;
+                mainPkm.def = newData.stats[2].base_stat;
+                mainPkm.total = newTotal;
+                mainPkm.type = newType;
+                mainPkm.speciesUrl = speciesData.url;
+                
+                myInventory[mainPkmIndex] = mainPkm;
+                localStorage.setItem('myInventory', JSON.stringify(myInventory));
+
+                setTimeout(() => {
+                    renderPokedex(); 
+                    showDetail(newData.id); 
+                    showToast(`축하합니다! ${newKrName}(으)로 진화했습니다!`);
+                }, 1500);
+            }
+
+        } catch(e) {
+            console.error(e);
+            showToast("오류가 발생했습니다.");
+            btnEvo.disabled = false;
+        }
+    }
+
+    function closeModal() {
+      document.getElementById('detail-modal').style.display = 'none';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.opacity = 1;
+      setTimeout(() => { toast.style.opacity = 0; }, 2000);
+    }
+  </script>
 </body>
 </html>
