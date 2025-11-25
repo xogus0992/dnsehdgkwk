@@ -4,7 +4,7 @@
 // - 사각/왕복 루프
 // - 추천 코스(근처 공원)
 
-const OSRM_ENDPOINT = "http://129.146.134.15:5000";
+const OSRM_ENDPOINT = "https://o0xor6qm0g.execute-api.ap-northeast-2.amazonaws.com/default/osrm-proxy";
 const RADIUS_METERS = 5000;
 
 let map;
