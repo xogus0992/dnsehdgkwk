@@ -1,51 +1,134 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>운동 기록 시작하기</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-        .fullscreen-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        }
-        #main-menu-screen {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-    </style>
-</head>
-<body class="bg-gray-100">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>health</title>
 
-    <div id="main-menu-screen" class="fullscreen-container">
-        <div class="flex space-x-8">
-            <button id="health-btn" class="w-48 h-48 bg-blue-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
-                운동기록
-            </button>
-            <button id="share-btn" class="w-48 h-48 bg-purple-500 text-white rounded-full flex justify-center items-center text-3xl font-bold shadow-lg transform hover:scale-105 transition-transform">
-                운동공유
-            </button>
-        </div>
+<!-- Tailwind -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<!-- CSS -->
+<link rel="stylesheet" href="health.css">
+
+<!-- 운동 데이터 -->
+<script src="exercises.js"></script>
+</head>
+
+<body class="bg-sky-50">
+
+<!-- 캘린더 -->
+<div id="page-calendar" class="page flex flex-col h-screen">
+  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
+    캘린더
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div id="calendar-container" class="bg-white rounded-2xl shadow p-4"></div>
+    <div id="calendar-summary" class="mt-4 text-center text-gray-700"></div>
+  </div>
+</div>
+
+<!-- 루틴 -->
+<div id="page-routine" class="page hidden flex flex-col h-screen">
+  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
+    루틴
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div id="routine-list" class="space-y-3"></div>
+
+    <button id="addRoutineBtn"
+      class="w-full bg-sky-500 text-white py-2 mt-4 rounded-lg shadow">
+      루틴 추가
+    </button>
+
+    <!-- 루틴 모달 -->
+    <div id="routineModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+      <div class="bg-white w-11/12 p-4 rounded-xl shadow space-y-3">
+        <input id="routineNameInput"
+               class="w-full border p-2 rounded"
+               placeholder="루틴 이름 입력">
+
+        <button id="saveRoutineBtn"
+          class="w-full bg-sky-500 text-white py-2 rounded">저장</button>
+
+        <button id="closeRoutineModal"
+          class="w-full bg-gray-300 text-black py-2 rounded">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 세션 -->
+<div id="page-session" class="page hidden flex flex-col h-screen">
+  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
+    세션
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <button id="startExerciseBtn"
+      class="w-full bg-sky-500 text-white py-2 rounded-lg shadow">
+      운동 추가
+    </button>
+
+    <div id="sessionExerciseList"
+      class="space-y-3 text-center text-gray-500 mt-3">
+      아직 운동이 없습니다.
     </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const healthBtn = document.getElementById('health-btn');
-        const shareBtn = document.getElementById('share-btn');
+    <!-- 운동 선택 모달 -->
+    <div id="sessionModal"
+         class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+      <div class="bg-white w-11/12 p-4 rounded-xl shadow space-y-3 max-h-[80vh] overflow-y-auto">
 
-        // '운동기록' 버튼 클릭 시 record.html로 이동
-        healthBtn.addEventListener('click', () => {
-            window.location.href = 'record.html';
-        });
+        <div class="text-lg font-semibold text-gray-700">운동 선택</div>
 
-        // '운동공유' 버튼 클릭 시 share.html로 이동
-        shareBtn.addEventListener('click', () => {
-            window.location.href = 'share.html';
-        });
-    });
-</script>
+        <div id="sessionExerciseSelect" class="space-y-4"></div>
+
+        <button id="closeSessionModal"
+                class="w-full bg-gray-300 py-2 rounded">
+          닫기
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 통계 -->
+<div id="page-stats" class="page hidden flex flex-col h-screen">
+  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
+    통계
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="bg-white rounded-2xl shadow p-4">통계 화면</div>
+  </div>
+</div>
+
+<!-- 하단바 -->
+<nav class="fixed bottom-0 inset-x-0 bg-sky-600 text-white flex justify-around py-4 shadow-lg rounded-t-2xl">
+  <button data-page="calendar" class="nav-btn flex flex-col items-center">
+    <span class="text-sm">캘린더</span>
+  </button>
+
+  <button data-page="routine" class="nav-btn flex flex-col items-center">
+    <span class="text-sm">루틴</span>
+  </button>
+
+  <button data-page="session" class="nav-btn flex flex-col items-center">
+    <span class="text-sm">세션</span>
+  </button>
+
+  <button data-page="stats" class="nav-btn flex flex-col items-center">
+    <span class="text-sm">통계</span>
+  </button>
+</nav>
+
+<!-- JS -->
+<script src="health.js"></script>
 
 </body>
 </html>

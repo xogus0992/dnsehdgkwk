@@ -1,0 +1,12 @@
+
+.page { 
+  display: none;
+}
+.page.active {
+  display: flex;
+}
+
+.nav-btn.active span {
+  font-weight: bold;
+  text-decoration: underline;
+}
