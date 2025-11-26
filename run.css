@@ -1,0 +1,99 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+/* 전체 폰트 */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* 하단 네비게이션 */
+.run-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+.run-nav-active {
+  opacity: 1;
+}
+
+/* 입력 공통 스타일 */
+.run-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.run-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  font-size: 13px;
+}
+
+.run-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+  background-color: #ffffff;
+}
+
+/* 자동완성 리스트 */
+.run-suggest {
+  margin-top: 4px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 13px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 60;
+}
+
+.run-suggest li {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.run-suggest li:hover {
+  background: #f1f5f9;
+}
+
+/* 코스 타입 버튼 */
+.run-course-btn {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 9999px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  color: #0f172a;
+}
+
+.run-course-active {
+  border-color: #38bdf8;
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+/* 코스 패널 최대 높이 */
+#runRoutePanel {
+  max-height: 70vh;
+}
+
+/* 지도 둥근 모서리 유지 */
+#runMap {
+  border-radius: 1rem;
+  overflow: hidden;
+}

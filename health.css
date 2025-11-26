@@ -1,12 +1,44 @@
 
-.page { 
+/* 기본 페이지 전환 */
+.page {
   display: none;
 }
-.page.active {
+.page.page-active {
   display: flex;
 }
 
-.nav-btn.active span {
-  font-weight: bold;
-  text-decoration: underline;
+/* 네비게이션 활성화 스타일 */
+.nav-btn-active span {
+  color: #0284c7; /* sky-600 */
+  font-weight: 600;
+}
+
+/* 모달 공통 */
+.modal {
+  animation: fadeIn 0.16s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 캘린더 날짜 버튼 기본 스타일은 JS에서 Tailwind 클래스로 제어 */
+
+/* 스크롤바 최소화 (모바일 느낌) */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.7);
+  border-radius: 9999px;
 }

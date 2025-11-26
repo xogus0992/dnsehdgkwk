@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>러닝 앱</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="run.css" />
+</head>
+<body class="bg-sky-50 h-screen flex flex-col overflow-hidden">
+
+  <!-- 상단 앱바 -->
+  <header class="bg-sky-500 text-white h-12 flex items-center justify-center shadow-md">
+    <span class="text-lg font-semibold">러닝</span>
+  </header>
+
+  <!-- 메인 영역 -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- 지도 -->
+    <section class="px-4 pt-3">
+      <div
+        id="runMap"
+        class="w-full h-[40vh] rounded-2xl shadow-md overflow-hidden bg-gray-200"
+      ></div>
+    </section>
+
+    <!-- 거리 / 시간 / 페이스 -->
+    <section
+      id="runStats"
+      class="px-4 pt-4 pb-28"
+    >
+      <!-- 거리 (목표 거리 입력용) -->
+      <div class="text-center mb-3">
+        <p
+          id="runDistance"
+          class="text-7xl font-extrabold text-sky-700 leading-none cursor-pointer"
+        >
+          0.00
+        </p>
+        <p class="text-xs text-gray-500 mt-1">
+          터치해서 목표 거리 설정
+        </p>
+      </div>
+
+      <!-- 시간 / 페이스 -->
+      <div class="flex justify-around text-center text-gray-800">
+        <div>
+          <p
+            id="runTime"
+            class="text-2xl font-bold text-sky-700"
+          >
+            0:00
+          </p>
+          <p class="text-xs mt-1">시간</p>
+        </div>
+        <div>
+          <p
+            id="runPace"
+            class="text-2xl font-bold text-sky-700"
+          >
+            -
+          </p>
+          <p class="text-xs mt-1">페이스</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 시작 / 관리자 버튼 (하단 메뉴 위 고정) -->
+  <div
+    id="runButtonRow"
+    class="fixed inset-x-0 bottom-16 flex justify-center gap-5 pointer-events-none"
+  >
+    <button
+      id="runStartBtn"
+      class="pointer-events-auto w-24 h-24 rounded-full bg-sky-600 text-white shadow-xl flex items-center justify-center text-lg font-bold"
+    >
+      시작
+    </button>
+
+    <button
+      id="runAdminBtn"
+      class="pointer-events-auto w-14 h-14 rounded-full bg-sky-100 text-sky-700 shadow flex items-center justify-center text-2xl"
+      title="관리자 시뮬레이션"
+    >
+      🔧
+    </button>
+  </div>
+
+  <!-- 코스 생성 패널 (찾기 탭에서 사용) -->
+  <section
+    id="runRoutePanel"
+    class="fixed left-0 right-0 bottom-[-420px] max-w-[480px] mx-auto bg-white rounded-t-2xl shadow-2xl px-5 pt-4 pb-6 transition-all duration-300 z-40"
+  >
+    <!-- 상단 드래그 바 + 제목 / 최단거리 -->
+    <div class="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-3"></div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-base font-semibold text-sky-700">
+        코스 생성
+      </h2>
+      <p
+        id="runShortestInfo"
+        class="text-xs text-gray-500 text-right whitespace-nowrap"
+      >
+        <!-- 예: 최단거리: 2.06km / 목표 5.00km -->
+      </p>
+    </div>
+
+    <!-- 출발 위치 -->
+    <div class="mb-3">
+      <label class="run-label">출발 위치</label>
+      <div class="flex gap-2">
+        <input
+          id="runRouteStart"
+          class="run-input flex-1"
+          placeholder="예: 내 위치 또는 장소명"
+        />
+        <button
+          id="runUseMyLocation"
+          class="px-3 py-2 rounded-xl bg-sky-100 text-sky-700 text-xs font-semibold border border-sky-200 whitespace-nowrap"
+        >
+          ⦿ 내 위치
+        </button>
+      </div>
+      <ul
+        id="runStartSuggest"
+        class="run-suggest hidden"
+      ></ul>
+    </div>
+
+    <!-- 도착 위치 -->
+    <div class="mb-3">
+      <label class="run-label">도착 위치 (선택)</label>
+      <input
+        id="runRouteEnd"
+        class="run-input"
+        placeholder="예: 소사역"
+      />
+      <ul
+        id="runEndSuggest"
+        class="run-suggest hidden"
+      ></ul>
+    </div>
+
+    <!-- 코스 타입 -->
+    <div class="mb-4">
+      <div class="flex gap-2">
+        <button
+          id="courseLinear"
+          class="run-course-btn run-course-active flex-1"
+        >
+          직선 코스
+        </button>
+        <button
+          id="courseLoop"
+          class="run-course-btn flex-1"
+        >
+          왕복 코스
+        </button>
+      </div>
+      <p
+        id="runCourseHint"
+        class="text-[11px] text-gray-500 mt-1"
+      >
+        직선 코스: 출발→도착 기준 최단 또는 목표 거리에 가깝게 생성됩니다.
+      </p>
+    </div>
+
+    <!-- 코스 생성 버튼 -->
+    <button
+      id="runRouteGenerateBtn"
+      class="w-full py-2.5 bg-sky-600 text-white font-semibold rounded-xl"
+    >
+      코스 생성
+    </button>
+
+    <p
+      id="runRouteStatus"
+      class="text-xs text-gray-500 mt-2 min-h-[1rem]"
+    ></p>
+  </section>
+
+  <!-- 하단 네비게이션 -->
+  <nav
+    class="fixed bottom-0 left-0 right-0 bg-sky-600 text-white h-16 flex items-center justify-around text-[11px] shadow-inner z-50"
+  >
+    <button class="run-nav-item" data-tab="feed">
+      <span class="text-lg">🏠</span>
+      <span class="mt-0.5">피드</span>
+    </button>
+    <button class="run-nav-item" data-tab="search">
+      <span class="text-lg">🔍</span>
+      <span class="mt-0.5">찾기</span>
+    </button>
+    <button
+      class="run-nav-item run-nav-active"
+      data-tab="home"
+    >
+      <span class="text-lg">⏱</span>
+      <span class="mt-0.5">홈</span>
+    </button>
+    <button class="run-nav-item" data-tab="routes">
+      <span class="text-lg">📍</span>
+      <span class="mt-0.5">코스</span>
+    </button>
+    <button class="run-nav-item" data-tab="profile">
+      <span class="text-lg">👤</span>
+      <span class="mt-0.5">프로필</span>
+    </button>
+  </nav>
+
+  <!-- JS (다음 메시지에서 줄 run.js 연결용) -->
+  <script src="run.js"></script>
+</body>
+</html>

@@ -1,134 +1,600 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>health</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>health</title>
 
-<!-- Tailwind -->
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Tailwind CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
 
-<!-- CSS -->
-<link rel="stylesheet" href="health.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="health.css" />
 
-<!-- 운동 데이터 -->
-<script src="exercises.js"></script>
+  <!-- 운동 데이터 -->
+  <script src="exercises.js"></script>
 </head>
+<body class="bg-sky-50 text-gray-900">
+  <div class="min-h-screen flex justify-center">
+    <div class="w-full max-w-md flex flex-col h-screen bg-sky-50">
 
-<body class="bg-sky-50">
-
-<!-- 캘린더 -->
-<div id="page-calendar" class="page flex flex-col h-screen">
-  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
-    캘린더
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-4">
-    <div id="calendar-container" class="bg-white rounded-2xl shadow p-4"></div>
-    <div id="calendar-summary" class="mt-4 text-center text-gray-700"></div>
-  </div>
-</div>
-
-<!-- 루틴 -->
-<div id="page-routine" class="page hidden flex flex-col h-screen">
-  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
-    루틴
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-4">
-    <div id="routine-list" class="space-y-3"></div>
-
-    <button id="addRoutineBtn"
-      class="w-full bg-sky-500 text-white py-2 mt-4 rounded-lg shadow">
-      루틴 추가
-    </button>
-
-    <!-- 루틴 모달 -->
-    <div id="routineModal"
-      class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-      <div class="bg-white w-11/12 p-4 rounded-xl shadow space-y-3">
-        <input id="routineNameInput"
-               class="w-full border p-2 rounded"
-               placeholder="루틴 이름 입력">
-
-        <button id="saveRoutineBtn"
-          class="w-full bg-sky-500 text-white py-2 rounded">저장</button>
-
-        <button id="closeRoutineModal"
-          class="w-full bg-gray-300 text-black py-2 rounded">취소</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 세션 -->
-<div id="page-session" class="page hidden flex flex-col h-screen">
-  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
-    세션
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-4">
-    <button id="startExerciseBtn"
-      class="w-full bg-sky-500 text-white py-2 rounded-lg shadow">
-      운동 추가
-    </button>
-
-    <div id="sessionExerciseList"
-      class="space-y-3 text-center text-gray-500 mt-3">
-      아직 운동이 없습니다.
-    </div>
-
-    <!-- 운동 선택 모달 -->
-    <div id="sessionModal"
-         class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-      <div class="bg-white w-11/12 p-4 rounded-xl shadow space-y-3 max-h-[80vh] overflow-y-auto">
-
-        <div class="text-lg font-semibold text-gray-700">운동 선택</div>
-
-        <div id="sessionExerciseSelect" class="space-y-4"></div>
-
-        <button id="closeSessionModal"
-                class="w-full bg-gray-300 py-2 rounded">
-          닫기
+      <!-- 상단 헤더 -->
+      <header class="bg-sky-500 text-white px-4 py-3 flex items-center justify-between shadow-md">
+        <div>
+          <div id="app-subtitle" class="text-xs opacity-80">오늘의 운동</div>
+          <div id="app-title" class="text-xl font-bold">나의 운동 기록</div>
+        </div>
+        <button
+          id="reset-data-btn"
+          class="text-xs px-3 py-1 rounded-full border border-sky-100 bg-sky-400/60 shadow-sm"
+        >
+          전체 초기화
         </button>
+      </header>
+
+      <!-- 메인 컨테이너 -->
+      <main class="flex-1 overflow-y-auto pt-4 pb-20 px-4 space-y-4">
+
+        <!-- 캘린더 페이지 -->
+        <section id="page-calendar" class="page page-active flex flex-col space-y-4">
+          <!-- 오늘 요약 카드 -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-gray-500">선택한 날짜</div>
+              <div id="selected-date-label" class="text-lg font-semibold">-</div>
+            </div>
+            <div class="text-right text-sm text-gray-500">
+              <div>총 볼륨 <span id="selected-date-volume" class="font-semibold text-sky-600">0kg</span></div>
+              <div>운동 <span id="selected-date-exercise-count" class="font-semibold text-sky-600">0개</span></div>
+            </div>
+          </div>
+
+          <!-- 월간 캘린더 카드 -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-4">
+            <div class="flex items-center justify-between mb-3">
+              <button id="prev-month-btn" class="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm">이전</button>
+              <div id="calendar-title" class="text-base font-semibold"></div>
+              <button id="next-month-btn" class="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm">다음</button>
+            </div>
+
+            <div class="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
+              <div>일</div>
+              <div>월</div>
+              <div>화</div>
+              <div>수</div>
+              <div>목</div>
+              <div>금</div>
+              <div>토</div>
+            </div>
+
+            <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-sm"></div>
+
+            <div class="flex items-center justify-between mt-3">
+              <button id="today-btn" class="text-xs px-3 py-1 rounded-full border border-sky-200 text-sky-600">
+                오늘로 이동
+              </button>
+              <button
+                id="open-stats-modal-btn"
+                class="text-xs px-3 py-1 rounded-full bg-sky-500 text-white shadow-sm"
+              >
+                기간 통계 보기
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 루틴 페이지 -->
+        <section id="page-routines" class="page hidden flex flex-col space-y-4">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-base font-semibold">루틴 템플릿</h2>
+            <button
+              id="create-new-template-btn"
+              class="text-xs px-3 py-1 rounded-full bg-sky-500 text-white shadow-sm"
+            >
+              새 루틴
+            </button>
+          </div>
+
+          <p class="text-xs text-gray-500 mb-2">
+            자주 사용하는 루틴을 템플릿으로 만들어 두고 세션에서 불러올 수 있습니다.
+          </p>
+
+          <div
+            id="routine-template-list"
+            class="space-y-3"
+          >
+            <!-- 루틴 카드가 여기에 렌더링 됩니다 -->
+          </div>
+        </section>
+
+        <!-- 세션 페이지 -->
+        <section id="page-session" class="page hidden flex flex-col space-y-4">
+          <!-- 날짜 / 세션 요약 -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-gray-500">세션 날짜</div>
+              <div id="session-date-label" class="text-lg font-semibold">-</div>
+            </div>
+            <div class="text-right text-xs text-gray-500 space-y-1">
+              <div>총 시간 <span id="session-total-timer-display" class="font-semibold text-sky-600">00:00:00</span></div>
+              <div>총 볼륨 <span id="session-total-volume" class="font-semibold text-sky-600">0kg</span></div>
+              <div>운동 <span id="session-exercise-count" class="font-semibold text-sky-600">0개</span></div>
+            </div>
+          </div>
+
+          <!-- 세션 액션 버튼 -->
+          <div class="grid grid-cols-3 gap-2">
+            <button
+              id="open-add-exercise-modal-btn"
+              class="col-span-2 px-3 py-3 rounded-2xl bg-sky-500 text-white text-sm shadow-sm"
+            >
+              운동 추가
+            </button>
+            <button
+              id="open-timer-modal-btn"
+              class="px-3 py-3 rounded-2xl bg-white text-sky-600 text-sm border border-sky-200 shadow-sm"
+            >
+              휴식 타이머
+            </button>
+          </div>
+
+          <!-- 세션 운동 목록 -->
+          <div class="space-y-3" id="workout-session-list">
+            <!-- 운동 카드가 여기에 렌더링 됩니다 -->
+          </div>
+        </section>
+
+        <!-- 통계 페이지 -->
+        <section id="page-stats" class="page hidden flex flex-col space-y-4">
+          <h2 class="text-base font-semibold mb-1">운동 통계</h2>
+
+          <!-- 기간 선택 -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-3">
+            <div class="text-xs text-gray-500 mb-2">기간 선택</div>
+            <div class="flex gap-2 text-xs">
+              <button id="stats-range-7" class="flex-1 px-2 py-1 rounded-full border border-sky-200 text-sky-600">
+                최근 7일
+              </button>
+              <button id="stats-range-30" class="flex-1 px-2 py-1 rounded-full border border-sky-200 text-sky-600">
+                최근 30일
+              </button>
+              <button id="stats-range-all" class="flex-1 px-2 py-1 rounded-full border border-sky-200 text-sky-600">
+                전체
+              </button>
+            </div>
+          </div>
+
+          <!-- 부위별 통계 -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-gray-500">부위별 볼륨</span>
+              <span id="stats-period-label" class="text-xs text-gray-400"></span>
+            </div>
+            <div id="stats-bodypart-list" class="space-y-2 text-sm">
+              <!-- 부위별 통계 행 -->
+            </div>
+          </div>
+
+          <!-- 최근 PR -->
+          <div class="bg-white rounded-2xl shadow-sm px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-gray-500">최근 PR</span>
+              <button
+                id="open-pr-modal-btn"
+                class="text-xs text-sky-600 underline"
+              >
+                전체 보기
+              </button>
+            </div>
+            <div id="pr-list" class="space-y-2 text-sm text-gray-700">
+              <!-- PR 리스트 -->
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- 하단 네비게이션 -->
+      <nav
+        class="fixed bottom-0 inset-x-0 flex justify-center bg-transparent pointer-events-none"
+      >
+        <div
+          class="pointer-events-auto w-full max-w-md bg-white/95 backdrop-blur border-t border-sky-100 flex justify-around py-2 shadow-inner rounded-t-2xl"
+        >
+          <button data-page="calendar" class="nav-btn flex flex-col items-center gap-0.5 text-xs text-sky-500">
+            <span>캘린더</span>
+          </button>
+          <button data-page="routines" class="nav-btn flex flex-col items-center gap-0.5 text-xs text-gray-400">
+            <span>루틴</span>
+          </button>
+          <button data-page="session" class="nav-btn flex flex-col items-center gap-0.5 text-xs text-gray-400">
+            <span>세션</span>
+          </button>
+          <button data-page="stats" class="nav-btn flex flex-col items-center gap-0.5 text-xs text-gray-400">
+            <span>통계</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- ================= 모달 영역 ================= -->
+
+      <!-- 운동 선택 모달 (세션에 추가) -->
+      <div
+        id="add-to-session-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-end justify-center z-30"
+      >
+        <div class="w-full max-w-md bg-white rounded-t-3xl p-4 space-y-3 max-h-[80vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold">운동 선택</h3>
+            <button id="cancel-add-exercise-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+
+          <div class="text-xs text-gray-500 mb-2">
+            부위를 선택한 뒤 운동을 골라 세션에 추가할 수 있습니다.
+          </div>
+
+          <!-- 부위 필터 -->
+          <div id="session-part-filter" class="flex flex-wrap gap-2 text-xs mb-2">
+            <!-- JS에서 chips 렌더링 -->
+          </div>
+
+          <!-- 운동 리스트 -->
+          <div
+            id="session-exercise-select"
+            class="space-y-2 text-sm"
+          >
+            <!-- JS에서 운동 카드 렌더링 -->
+          </div>
+        </div>
       </div>
+
+      <!-- 커스텀 운동 추가 모달 -->
+      <div
+        id="add-exercise-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-end justify-center z-30"
+      >
+        <div class="w-full max-w-md bg-white rounded-t-3xl p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold">새 운동 추가</h3>
+            <button id="close-add-exercise-modal-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+
+          <label class="block text-xs text-gray-600 mb-1">운동 이름</label>
+          <input
+            id="new-exercise-name"
+            type="text"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            placeholder="예: 인클라인 벤치프레스"
+          />
+
+          <label class="block text-xs text-gray-600 mt-3 mb-1">부위</label>
+          <select
+            id="new-exercise-part"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          >
+            <!-- JS에서 부위 옵션 렌더링 -->
+          </select>
+
+          <button
+            id="add-update-exercise-btn"
+            class="w-full mt-4 py-2 rounded-xl bg-sky-500 text-white text-sm shadow-sm"
+          >
+            저장
+          </button>
+        </div>
+      </div>
+
+      <!-- 타이머 모달 -->
+      <div
+        id="timer-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-30"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold">휴식 타이머</h3>
+            <button id="close-timer-modal-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+
+          <div class="text-xs text-gray-500">
+            세트 사이 휴식 시간을 설정하고 알림을 받을 수 있습니다.
+          </div>
+
+          <!-- 전체 세션 시간 -->
+          <div class="text-xs text-gray-500">
+            총 운동 시간
+            <span id="session-total-timer-display-2" class="font-semibold text-sky-600">00:00:00</span>
+          </div>
+
+          <!-- 아날로그 타이머 -->
+          <div class="flex justify-center mt-2">
+            <div class="relative w-40 h-40 rounded-full border-[6px] border-sky-100 flex items-center justify-center">
+              <div
+                id="floating-timer-progress"
+                class="absolute inset-1 rounded-full border border-sky-200"
+              ></div>
+              <div
+                id="clock-second-hand"
+                class="absolute w-0.5 h-16 bg-sky-500 origin-bottom bottom-1/2"
+              ></div>
+              <div class="w-2 h-2 bg-sky-600 rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- 디지털 타이머 -->
+          <div class="text-center mt-1">
+            <div id="timer-digital-display" class="text-3xl font-mono tracking-widest text-sky-700">
+              01:00
+            </div>
+          </div>
+
+          <!-- 시간 입력 / 조정 -->
+          <div class="flex items-center justify-center gap-2 mt-2">
+            <input
+              id="timer-input"
+              type="number"
+              min="10"
+              max="600"
+              step="5"
+              class="w-20 text-center border border-gray-200 rounded-lg px-2 py-1 text-sm"
+              value="60"
+            />
+            <span class="text-xs text-gray-500">초</span>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2 text-xs mt-3">
+            <button id="timer-minus-30" class="px-2 py-2 rounded-xl bg-gray-100">-30초</button>
+            <button id="timer-minus-10" class="px-2 py-2 rounded-xl bg-gray-100">-10초</button>
+            <button id="timer-plus-10" class="px-2 py-2 rounded-xl bg-gray-100">+10초</button>
+            <button id="timer-plus-30" class="px-2 py-2 rounded-xl bg-gray-100">+30초</button>
+          </div>
+
+          <button
+            id="start-stop-timer-btn"
+            class="w-full mt-3 py-2 rounded-xl bg-sky-500 text-white text-sm shadow-sm"
+          >
+            시작
+          </button>
+        </div>
+      </div>
+
+      <!-- 플로팅 타이머 (하단 고정) -->
+      <div
+        id="floating-timer"
+        class="hidden fixed bottom-16 right-4 z-40"
+      >
+        <div class="bg-sky-500 text-white rounded-full shadow-lg px-3 py-2 flex items-center gap-2 text-xs">
+          <div id="floating-timer-display" class="font-mono">01:00</div>
+          <button id="close-floating-timer" class="text-[10px] opacity-80">닫기</button>
+        </div>
+      </div>
+
+      <!-- Summary 모달 (세션 요약) -->
+      <div
+        id="summary-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-30"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-3 shadow-lg">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold">오늘의 요약</h3>
+            <button id="close-summary-modal-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+
+          <div id="summary-content" class="space-y-2 text-sm text-gray-700">
+            <!-- 세션 요약 내용 -->
+          </div>
+
+          <button
+            id="save-summary-btn"
+            class="w-full mt-2 py-2 rounded-xl bg-sky-500 text-white text-sm shadow-sm"
+          >
+            기록 저장
+          </button>
+        </div>
+      </div>
+
+      <!-- PR 축하 모달 -->
+      <div
+        id="pr-celebration-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-40"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-4 shadow-lg text-center">
+          <div class="text-sm text-sky-500 font-semibold">Personal Record</div>
+          <div class="text-2xl font-bold text-gray-800">PR 달성!</div>
+          <div id="pr-celebration-list" class="mt-2 space-y-1 text-sm text-gray-700">
+            <!-- PR 목록 -->
+          </div>
+          <button
+            id="close-pr-modal"
+            class="w-full mt-3 py-2 rounded-xl bg-sky-500 text-white text-sm shadow-sm"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Log 모달 -->
+      <div
+        id="daily-log-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-30"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-3 shadow-lg">
+          <div class="flex items-center justify-between mb-1">
+            <h3 id="daily-log-modal-title" class="text-base font-semibold">일일 기록</h3>
+            <button id="close-daily-log-modal-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+          <div
+            id="daily-log-modal-list"
+            class="space-y-2 text-sm text-gray-700 max-h-[60vh] overflow-y-auto"
+          >
+            <!-- 일일 기록 아이템 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 워크아웃 세션 리스트 모달 -->
+      <div
+        id="workout-session-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-30"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-3 shadow-lg">
+          <div class="flex items-center justify-between mb-1">
+            <h3 id="workout-session-title" class="text-base font-semibold">세션 목록</h3>
+            <button id="close-workout-session-modal-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+          <div
+            id="workout-session-list"
+            class="space-y-2 text-sm text-gray-700 max-h-[60vh] overflow-y-auto"
+          >
+            <!-- 세션 목록 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 선택(덮어쓰기/추가) 모달 -->
+      <div
+        id="choice-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-40"
+      >
+        <div class="w-11/12 max-w-xs bg-white rounded-2xl p-4 space-y-3 shadow-lg text-sm text-gray-700">
+          <div id="choice-message" class="text-center">
+            기존 데이터가 있습니다. 어떻게 할까요?
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button
+              id="choice-overwrite-btn"
+              class="flex-1 py-2 rounded-xl bg-sky-500 text-white text-xs"
+            >
+              덮어쓰기
+            </button>
+            <button
+              id="choice-append-btn"
+              class="flex-1 py-2 rounded-xl bg-gray-100 text-xs"
+            >
+              이어서 추가
+            </button>
+          </div>
+          <button
+            id="choice-cancel-btn"
+            class="w-full py-2 rounded-xl bg-white border border-gray-200 text-xs text-gray-500"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+
+      <!-- 커스텀 확인 모달 -->
+      <div
+        id="custom-confirm-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-40"
+      >
+        <div class="w-11/12 max-w-xs bg-white rounded-2xl p-4 space-y-3 shadow-lg text-sm text-gray-700">
+          <div id="confirm-message" class="text-center"></div>
+          <div class="flex gap-2 mt-2">
+            <button
+              id="confirm-ok-btn"
+              class="flex-1 py-2 rounded-xl bg-sky-500 text-white text-xs"
+            >
+              확인
+            </button>
+            <button
+              id="confirm-cancel-btn"
+              class="flex-1 py-2 rounded-xl bg-gray-100 text-xs"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 루틴 템플릿 편집 모달 -->
+      <div
+        id="template-editor-modal"
+        class="modal hidden fixed inset-0 bg-black/40 flex items-center justify-center z-30"
+      >
+        <div class="w-11/12 max-w-md bg-white rounded-3xl p-5 space-y-3 shadow-lg max-h-[80vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-1">
+            <h3 id="template-modal-title" class="text-base font-semibold">루틴 편집</h3>
+            <button id="close-template-editor-btn" class="text-xs text-gray-400">닫기</button>
+          </div>
+
+          <label class="block text-xs text-gray-600 mb-1">루틴 이름</label>
+          <input
+            id="template-title-input"
+            type="text"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            placeholder="예: 상체 A, 하체 B"
+          />
+
+          <div class="flex items-center gap-2 mt-3">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 mb-1">세트</label>
+              <input
+                id="template-sets-input"
+                type="number"
+                min="1"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                value="3"
+              />
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 mb-1">횟수</label>
+              <input
+                id="template-reps-input"
+                type="number"
+                min="1"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                value="10"
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mt-3">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 mb-1">중량(kg)</label>
+              <input
+                id="template-weight-input"
+                type="number"
+                min="0"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                value="0"
+              />
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 mb-1">운동 추가</label>
+              <button
+                id="template-add-exercise-btn"
+                class="w-full py-2 rounded-xl bg-sky-500 text-white text-xs"
+              >
+                운동 선택
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="text-xs text-gray-500 mb-1">루틴에 포함된 운동</div>
+            <div
+              id="template-exercise-list"
+              class="space-y-2 text-sm text-gray-700"
+            >
+              <!-- 루틴 운동 목록 -->
+            </div>
+          </div>
+
+          <button
+            id="save-template-btn"
+            class="w-full mt-4 py-2 rounded-xl bg-sky-500 text-white text-sm shadow-sm"
+          >
+            루틴 저장
+          </button>
+        </div>
+      </div>
+
     </div>
-
   </div>
-</div>
 
-<!-- 통계 -->
-<div id="page-stats" class="page hidden flex flex-col h-screen">
-  <header class="bg-sky-500 text-white p-4 text-xl font-bold text-center shadow">
-    통계
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-4">
-    <div class="bg-white rounded-2xl shadow p-4">통계 화면</div>
-  </div>
-</div>
-
-<!-- 하단바 -->
-<nav class="fixed bottom-0 inset-x-0 bg-sky-600 text-white flex justify-around py-4 shadow-lg rounded-t-2xl">
-  <button data-page="calendar" class="nav-btn flex flex-col items-center">
-    <span class="text-sm">캘린더</span>
-  </button>
-
-  <button data-page="routine" class="nav-btn flex flex-col items-center">
-    <span class="text-sm">루틴</span>
-  </button>
-
-  <button data-page="session" class="nav-btn flex flex-col items-center">
-    <span class="text-sm">세션</span>
-  </button>
-
-  <button data-page="stats" class="nav-btn flex flex-col items-center">
-    <span class="text-sm">통계</span>
-  </button>
-</nav>
-
-<!-- JS -->
-<script src="health.js"></script>
-
+  <!-- 메인 스크립트 -->
+  <script src="health.js"></script>
 </body>
 </html>
