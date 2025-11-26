@@ -1,44 +1,280 @@
+/* ============================
+   기본 공통 스타일
+============================ */
 
-/* 기본 페이지 전환 */
-.page {
-  display: none;
-}
-.page.page-active {
-  display: flex;
-}
-
-/* 네비게이션 활성화 스타일 */
-.nav-btn-active span {
-  color: #0284c7; /* sky-600 */
-  font-weight: 600;
+/* iOS bounce 방지 */
+html, body {
+  overscroll-behavior: none;
 }
 
-/* 모달 공통 */
-.modal {
-  animation: fadeIn 0.16s ease-out;
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 캘린더 날짜 버튼 기본 스타일은 JS에서 Tailwind 클래스로 제어 */
-
-/* 스크롤바 최소화 (모바일 느낌) */
+/* 스크롤바 최소화 */
 ::-webkit-scrollbar {
   width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d0d7de;
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.7);
-  border-radius: 9999px;
+
+/* ============================
+   페이지 전환 애니메이션
+============================ */
+
+.page {
+  opacity: 0;
+  transform: translateX(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-active {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* ============================
+   네비게이션바 active 스타일
+============================ */
+
+.nav-btn-active {
+  color: #0284c7 !important;
+}
+
+.nav-btn-active .material-icons {
+  color: #0284c7 !important;
+}
+
+/* ============================
+   모달 공통
+============================ */
+
+.modal {
+  transition: opacity 0.2s ease-out;
+}
+
+.modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================
+   운동 리스트 / 운동 카드
+============================ */
+
+.exercise-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.15s ease;
+}
+
+.exercise-card:hover {
+  background: #f0f9ff;
+}
+
+/* 운동 이미지 (exercises.js 기반) */
+.exercise-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+/* ============================
+   세션 세트 카드
+============================ */
+
+.set-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.25s ease, border 0.25s ease;
+}
+
+.set-complete {
+  background: #f0faff !important;
+  border-color: #38bdf8 !important;
+  animation: pulseSet 0.3s ease-out;
+}
+
+@keyframes pulseSet {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* 세트 복사 버튼 */
+.set-copy-btn {
+  font-size: 11px;
+  color: #0369a1;
+}
+
+/* ============================
+   드래그 정렬 (Sortable.js)
+============================ */
+
+.sortable-ghost {
+  opacity: 0.4;
+  background: #e0f2fe !important;
+}
+
+.sortable-chosen {
+  background: #f0f9ff !important;
+}
+
+/* ============================
+   Summary / PR / Timer UI
+============================ */
+
+.pr-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Floating Timer */
+#floating-timer {
+  animation: floatUp 0.25s ease-out;
+}
+
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================
+   캘린더 스타일
+============================ */
+
+.calendar-day {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border 0.15s ease;
+}
+
+.calendar-day:hover {
+  background: #f0f9ff;
+}
+
+.calendar-day-today {
+  border: 2px solid #0ea5e9;
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.calendar-day-selected {
+  background: #0ea5e9;
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day-has-session {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+  border: 1px solid #bae6fd;
+}
+
+.calendar-day-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ============================
+   통계 페이지
+============================ */
+
+.stats-bodypart-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.stats-number {
+  font-weight: 600;
+  color: #0284c7;
+}
+
+/* ============================
+   루틴 템플릿 카드
+============================ */
+
+.template-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  transition: background 0.2s ease;
+}
+
+.template-card:hover {
+  background: #f0f9ff;
+}
+
+/* 템플릿 내부 운동 리스트 */
+.template-exercise-row {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ============================
+   애니메이션 유틸
+============================ */
+
+.fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 숨김 강제 */
+.hidden-important {
+  display: none !important;
 }
