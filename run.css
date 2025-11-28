@@ -1,279 +1,217 @@
-/* ======================================================
-   기본 설정
-====================================================== */
+/* ─────────────────────────────
+    GLOBAL
+──────────────────────────────*/
 
-body {
-  background: #eef6ff;
-  font-family: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
-  -webkit-tap-highlight-color: transparent;
-  margin: 0;
+/* 전체 여백 제거 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* 공통 색상 / 스타일 */
-.text-txt {
-  color: #0d3b66;
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    background: #e9f4ff;
 }
 
-.text-sub {
-  color: #8ea1b4;
+/* SPA 페이지 공통 */
+.spa-page {
+    display: block;
 }
-
-.bg-accent {
-  background: #25a7ff;
-}
-
-.border-line {
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(18px);
-}
-
-/* 숨김 */
 .hidden {
-  display: none !important;
-}
-
-/* 탭 섹션 공통 패딩 (하단바 공간 확보) */
-.tab-page {
-  display: none;
-  padding-bottom: 110px;
-}
-
-.tab-page.active {
-  display: block;
+    display: none !important;
 }
 
 
-/* ======================================================
-   거리 UI (RUN / ROUTE 공통)
-====================================================== */
+/* ─────────────────────────────
+    상단바 (Pokerun 스타일 유지)
+──────────────────────────────*/
 
-.distance-box {
-  background: #ffffffec;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 4px 12px rgba(13, 59, 102, 0.08);
+#main-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #d9d9d9;
 }
 
-.distance-box div {
-  user-select: none;
+#main-header img {
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
 }
 
-
-/* ======================================================
-   RUN 화면
-====================================================== */
-
-#runStartBtn {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 10px 18px rgba(37, 167, 255, 0.4);
+#main-header i {
+    cursor: pointer;
+    transition: 0.2s;
 }
-
-#runStartBtn:active {
-  transform: scale(0.96);
-  box-shadow: 0 4px 10px rgba(37, 167, 255, 0.3);
-}
-
-/* 지도 공통 */
-#runMap,
-#routeMap {
-  width: 100%;
-  background: #d9e6f3;
-}
-
-/* 칼로리 텍스트 정렬 */
-#runKcal {
-  min-width: 36px;
+#main-header i:hover {
+    opacity: 0.7;
 }
 
 
-/* ======================================================
-   ROUTE: 자동완성 리스트 / 버튼
-====================================================== */
-
-.input-basic {
-  background: #f7fbff;
-  border-radius: 14px;
-  border: 1px solid #d3dce6;
-  padding: 8px 12px;
-  width: 100%;
-  font-size: 14px;
-  outline: none;
-}
-
-.input-basic:focus {
-  border-color: #25a7ff;
-  box-shadow: 0 0 0 1px rgba(37, 167, 255, 0.25);
-}
-
-/* 자동완성 */
-.run-suggest {
-  position: absolute;
-  width: 100%;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e3e6ea;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  max-height: 240px;
-  overflow-y: auto;
-  z-index: 60;
-  margin-top: 4px;
-}
-
-.run-suggest li {
-  padding: 9px 12px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.run-suggest li:hover {
-  background: #f1f8ff;
-}
-
-/* 코스 타입 버튼 */
-.run-course-btn {
-  background: #ffffff;
-  border: 1px solid #9db9d0;
-  border-radius: 12px;
-  padding: 8px 0;
-  font-size: 13px;
-  color: #486482;
-}
-
-.run-course-active {
-  background: #25a7ff !important;
-  border-color: #25a7ff !important;
-  color: #ffffff !important;
-}
-
-/* 코스 생성 버튼 */
-#runRouteGenerateBtn {
-  border-radius: 14px;
-}
-
-
-/* ======================================================
-   ROUTE bottom sheet
-====================================================== */
-
-#runRoutePanel {
-  background: #ffffff;
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
-  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.18);
-  transition: transform 0.25s ease;
-  height: 120px;       /* 기본은 아주 작게 보이도록 */
-  display: none;       /* ROUTE 탭에서만 JS로 보이게 */
-}
-
-/* Floating + 버튼 */
-#routeFloatingBtn {
-  box-shadow: 0 8px 18px rgba(37, 167, 255, 0.55);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-#routeFloatingBtn:active {
-  transform: scale(0.93);
-  box-shadow: 0 4px 10px rgba(37, 167, 255, 0.45);
-}
-
-
-/* ======================================================
-   기록 리스트
-====================================================== */
-
-.record-card {
-  background: #ffffff;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.record-distance {
-  font-size: 28px;
-  font-weight: 900;
-  color: #0d3b66;
-}
-
-.record-meta {
-  font-size: 12px;
-  color: #8093a7;
-  margin-top: 4px;
-}
-
-
-/* ======================================================
-   HOME 최근 기록 애니메이션
-====================================================== */
-
-#homeLastRun {
-  animation: fadeIn 0.25s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-
-/* ======================================================
-   하단 네비게이션 (Pokerun 스타일)
-====================================================== */
+/* ─────────────────────────────
+    하단바 (Pokerun 1:1)
+──────────────────────────────*/
 
 #main-nav {
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.75);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  height: 80px;
+    background: #ffffff;
+    border-top: 1px solid #d9d9d9;
+    height: 72px;
+    padding-bottom: 10px;
 }
 
-.nav-btn {
-  text-align: center;
-  font-size: 12px;
-  color: #8ea1b4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
-  transition: color 0.18s ease, transform 0.18s ease;
+/* 기본 버튼 */
+#main-nav .nav-btn {
+    opacity: 0.55;
+    transition: 0.25s;
+}
+#main-nav .nav-btn span {
+    margin-top: 4px;
+    color: #666;
 }
 
-.nav-btn span:first-child {
-  line-height: 1;
+/* 활성 탭 */
+#main-nav .nav-active {
+    opacity: 1 !important;
+}
+#main-nav .nav-active svg {
+    stroke: #1A82FF !important;
+}
+#main-nav .nav-active span {
+    color: #1A82FF !important;
 }
 
-.nav-btn.nav-active {
-  color: #25a7ff;
-  font-weight: 700;
-  transform: translateY(-2px);
+/* 가운데 버튼 (HOME) */
+.nav-center-btn {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50%;
+    background: #1A82FF;
+    border: 4px solid #ffffff;
+    margin-top: -28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.18);
+    transition: 0.25s;
+}
+.nav-center-btn:active {
+    transform: scale(0.95);
 }
 
-/* 중앙 HOME 버튼 (Pokerun 스타일) */
-#nav-home div {
-  background: #25a7ff;
-  box-shadow: 0 10px 20px rgba(37, 167, 255, 0.5);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+/* ─────────────────────────────
+    RUN 화면
+──────────────────────────────*/
+
+#run-distance {
+    font-size: 54px;
+    font-weight: 900;
+    color: #165fcc;
 }
 
-#nav-home div:hover {
-  transform: scale(1.06);
-  box-shadow: 0 6px 16px rgba(37, 167, 255, 0.45);
+#run-start-btn {
+    background: #1A82FF;
+    color: white;
+    border-radius: 50px;
+    padding: 14px 40px;
+    font-size: 17px;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: 0.2s;
+}
+#run-start-btn:active {
+    transform: scale(0.97);
 }
 
-#nav-home div:active {
-  transform: scale(0.96);
-  box-shadow: 0 3px 10px rgba(37, 167, 255, 0.3);
+/* 지도 컨테이너 */
+#run-map,
+#route-map {
+    width: 100%;
+    height: 100%;
+}
+
+/* 지도 모서리 둥글게 */
+.leaflet-container {
+    border-radius: 16px;
+}
+
+
+/* ─────────────────────────────
+    ROUTE 화면
+──────────────────────────────*/
+
+#route-goal {
+    border-radius: 14px;
+    font-size: 16px;
+    padding: 14px;
+    border: 1px solid #d4d4d4;
+    background: #ffffff;
+    outline: none;
+    transition: 0.2s;
+}
+#route-goal:focus {
+    border-color: #1A82FF;
+}
+
+
+/* + 버튼 (코스 생성 전용) */
+#open-course-gen {
+    background: #1A82FF !important;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
+    transition: 0.2s;
+}
+#open-course-gen:active {
+    transform: scale(0.95);
+}
+
+
+/* ─────────────────────────────
+    HOME
+──────────────────────────────*/
+
+#home-latest {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.07);
+}
+
+
+/* ─────────────────────────────
+    RECORD
+──────────────────────────────*/
+
+#record-list .record-item {
+    background: white;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: 0 2px 7px rgba(0,0,0,0.08);
+}
+
+
+/* ─────────────────────────────
+    PROFILE
+──────────────────────────────*/
+
+#page-profile i {
+    opacity: 0.6;
+}
+
+
+
+/* ─────────────────────────────
+    Leaflet Override (VWorld 타일 스타일에도 영향 없음)
+──────────────────────────────*/
+
+/* 줌 버튼 제거 (모바일에서 불필요) */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* Attribution 제거 */
+.leaflet-control-attribution {
+    display: none !important;
 }

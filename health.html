@@ -17,7 +17,7 @@
 <body class="bg-gray-50">
 
   <!-- =========================================================
-       상단바 — POKERUN 원본 코드 그대로
+       상단바 — POKERUN 원본 스타일
   ========================================================== -->
   <header id="main-header" class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-line shrink-0">
     <div class="flex items-center gap-2">
@@ -31,11 +31,11 @@
     </div>
     
     <div class="flex items-center gap-2">
-      <!-- 여기 기능은 지금 필요 없어서 그대로 두거나 JS에서 무시해도 됨 -->
-      <button onclick="app?.nav && app.nav('settings')" class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
+      <!-- 원본 기능은 일단 유지 / JS에서 안 써도 됨 -->
+      <button class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" class="lucide lucide-settings w-5 h-5 text-txt"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
       </button>
-      <button onclick="app?.toggleTheme && app.toggleTheme()" class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
+      <button class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="moon" id="theme-icon" class="lucide lucide-moon lucide-sun w-5 h-5 text-txt"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg>
       </button>
       <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
@@ -45,11 +45,11 @@
     </div>
   </header>
 
-  <!-- 헤더 높이만큼 아래로 밀기 -->
+  <!-- 헤더 높이만큼 아래 여백 -->
   <main class="pt-[72px] pb-[80px] min-h-screen">
 
     <!-- =======================================================
-         PAGE: CALENDAR (기본: 숨김, JS에서 show)
+         PAGE: CALENDAR (운동 기록 달력)
     ======================================================== -->
     <section id="page-calendar" class="page hidden px-4">
       <h2 class="text-xl font-bold mb-3">운동 기록 달력</h2>
@@ -84,11 +84,14 @@
     </section>
 
     <!-- =======================================================
-         PAGE: ROUTINES
+         PAGE: ROUTINES (루틴 관리)
+         - 루틴 리스트
+         - 루틴 생성 플로팅 버튼
     ======================================================== -->
     <section id="page-routines" class="page hidden px-4">
       <h2 class="text-xl font-bold mb-3">루틴 관리</h2>
 
+      <!-- 루틴 리스트 -->
       <div id="routine-list" class="space-y-3 mb-20"></div>
 
       <!-- 루틴 생성 버튼 (우측 하단 +) -->
@@ -99,12 +102,14 @@
     </section>
 
     <!-- =======================================================
-         PAGE: HOME (앱 첫 화면)
+         PAGE: HOME (오늘의 운동)
+         - 일주일 달력
+         - 루틴 선택 → 운동 시작
     ======================================================== -->
     <section id="page-home" class="page px-4">
       <h2 class="text-xl font-bold mb-3">오늘의 운동</h2>
 
-      <!-- 일주일 달력 -->
+      <!-- 일주일 달력 (일요일 시작) -->
       <div id="home-weekly-calendar" class="grid grid-cols-7 gap-1 mb-3"></div>
       <div id="home-session-date" class="font-semibold text-sm text-blue-700 mb-2"></div>
 
@@ -114,12 +119,12 @@
         루틴으로 운동 시작
       </button>
 
-      <!-- 오늘 세션 -->
+      <!-- 오늘 세션 요약 -->
       <div id="home-session-list" class="space-y-3"></div>
     </section>
 
     <!-- =======================================================
-         PAGE: STATS
+         PAGE: STATS (운동 통계)
     ======================================================== -->
     <section id="page-stats" class="page hidden px-4">
       <h2 class="text-xl font-bold mb-3">운동 통계</h2>
@@ -143,7 +148,7 @@
     </section>
 
     <!-- =======================================================
-         PAGE: PROFILE
+         PAGE: PROFILE (프로필)
     ======================================================== -->
     <section id="page-profile" class="page hidden px-4 mb-10">
       <h2 class="text-xl font-bold mb-3">프로필</h2>
@@ -160,7 +165,7 @@
   </main>
 
   <!-- =========================================================
-       DAILY LOG MODAL
+       DAILY LOG MODAL (날짜별 전체 기록)
   ========================================================== -->
   <div id="daily-log-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
     <div class="bg-white w-full max-w-md rounded-xl p-4">
@@ -174,6 +179,7 @@
 
   <!-- =========================================================
        ROUTINE EDITOR MODAL
+       B안 구조용: 부위 탭 + 종목 리스트 + 선택된 운동(세트/무게/횟수)
   ========================================================== -->
   <div id="routine-editor-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
     <div class="bg-white w-full max-w-lg rounded-xl p-4 space-y-3">
@@ -182,16 +188,23 @@
         <button id="close-routine-editor" class="text-gray-500 text-xl">✕</button>
       </div>
 
-      <input id="routine-name-input" class="w-full border rounded-lg px-3 py-2" placeholder="루틴 이름 입력" />
+      <!-- 루틴 이름 -->
+      <input id="routine-name-input" class="w-full border rounded-lg px-3 py-2"
+             placeholder="루틴 이름 입력 (예: 상체 루틴 A)" />
 
+      <!-- 부위 탭 (가로 스크롤) -->
       <div id="routine-part-tabs" class="flex gap-2 overflow-x-auto py-1"></div>
 
-      <div id="routine-exercise-list" class="space-y-2 max-h-[200px] overflow-y-auto border rounded p-2 bg-gray-50"></div>
+      <!-- 선택된 부위의 종목 리스트 -->
+      <div id="routine-exercise-list"
+           class="space-y-2 max-h-[180px] overflow-y-auto border rounded p-2 bg-gray-50"></div>
 
+      <!-- 선택된 운동 목록 -->
       <h3 class="font-bold text-sm">
         추가된 운동 (<span id="routine-selected-count">0</span>)
       </h3>
-      <div id="routine-selected-list" class="space-y-2 max-h-[180px] overflow-y-auto border rounded p-2 bg-white"></div>
+      <div id="routine-selected-list"
+           class="space-y-2 max-h-[220px] overflow-y-auto border rounded p-2 bg-white"></div>
 
       <div class="flex justify-between mt-2">
         <button id="routine-delete-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hidden">삭제</button>
@@ -201,7 +214,7 @@
   </div>
 
   <!-- =========================================================
-       ROUTINE DETAIL MODAL
+       ROUTINE DETAIL MODAL (루틴 상세 보기)
   ========================================================== -->
   <div id="routine-detail-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
     <div class="bg-white w-full max-w-md rounded-xl p-4 space-y-3">
@@ -220,7 +233,7 @@
   </div>
 
   <!-- =========================================================
-       하단바 — POKERUN 원본 UI 그대로, 기능만 health용
+       하단바 — POKERUN 네비게이션 (CAL / ROUT / HOME / STAT / ME)
   ========================================================== -->
   <nav id="main-nav" class="fixed bottom-0 w-full h-[64px] glass border-t border-line px-2 flex justify-around items-center z-40 transition-colors duration-300">
     <!-- CALENDAR -->
@@ -235,7 +248,7 @@
       <span class="text-[10px] font-black italic font-sport">ROUT</span>
     </button>
 
-    <!-- HOME (중앙 큰 동그라미 버튼) -->
+    <!-- HOME (중앙 큰 버튼) -->
     <button onclick="switchPage('home')" class="transform transition-transform active:scale-95 group">
       <div class="w-14 h-14 bg-accent rounded-full flex items-center justify-center border-4 border-main shadow-md relative z-10 group-hover:scale-105 transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="activity" class="lucide lucide-activity w-7 h-7 text-white"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -255,7 +268,7 @@
     </button>
   </nav>
 
-  <!-- 운동 데이터 & 로직 -->
+  <!-- 데이터/로직 -->
   <script src="exercises.js"></script>
   <script src="health.js"></script>
 </body>

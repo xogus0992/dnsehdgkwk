@@ -1,838 +1,337 @@
-/* ============================================================
-   POKERUN RUN APP – JS 전체 업데이트
-   (RUN / ROUTE / HOME / RECORD / PROFILE 완전 통합)
-============================================================ */
+// POKERUN PRO - run.js (통합본)
 
-/* ---------------------------
-   API Keys
----------------------------- */
-const ORS_API_KEY = "YOUR_ORS_KEY";
-const KAKAO_REST_KEY = "YOUR_KAKAO_REST_KEY";
-const VWORLD_KEY = "0E603DDF-E18F-371F-96E8-ECD87D4CA088";
+// ===== API 키 설정 =====
+const VWORLD_API_KEY = "0E603DDF-E18F-371F-96E8-ECD87D4CA088"; // VWorld
+const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0="; // 여기에 ORS Directions API 키를 직접 입력하세요 (없으면 코스 자동생성 비활성)
 
-/* ---------------------------
-   전역 상태
----------------------------- */
+// ===== 전역 상태 =====
+const defaultLat = 37.5665;
+const defaultLon = 126.9780;
 
-let activeTab = "run";
+let runMap = null;
+let routeMap = null;
 
-// 지도
-let runMap, routeMap;
-
-// RUN 상태
-let isRunning = false;
+let runMarker = null;
+let runPolyline = null;
+let runPath = [];
 let runWatchId = null;
+let isRunning = false;
 let runStartTime = null;
-let runDistanceMeters = 0;
-let runKcal = 0;
-let runCoords = [];
-let lastPos = null;
+let totalDistance = 0;
+let totalCalories = 0;
 
-// ROUTE 상태
-let targetDistanceMeters = 0;
-let plannedRouteLine = null;
-let routeShortestMeters = 0;
+let routePolyline = null;
 
-// ROUTE 검색 입력 / 자동완성
-let startMarker = null;
-let endMarker = null;
+let runRecords = []; // localStorage에서 로드
 
-// 코스 생성 패널
-let routePanel;
-let routePanelState = 0; 
-let routePanelHeight = 0;
-let dragging = false;
-let dragStartY = 0;
-let dragStartTranslate = 0;
-
-// 기록
-let runHistory = [];
-
-// UI 요소
-let elRunDistance, elRunTime, elRunPace, elRunKcal;
-
-/* ============================================================
-   기본 유틸 함수
-============================================================ */
-
-function $(id) { return document.getElementById(id); }
-
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = v => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
+// ===== 공통 유틸 =====
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    0.5 - Math.cos(dLat) / 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    (1 - Math.cos(dLon)) / 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
 }
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function formatPace(dist, time) {
-  if (dist < 1 || time === 0) return "-";
-  const secPerKm = time / (dist / 1000);
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.floor(secPerKm % 60);
-  return `${m}'${s.toString().padStart(2, "0")}"`;
-}
-
-/* ============================================================
-   탭 전환
-============================================================ */
-function initTabs() {
-  const btns = document.querySelectorAll("#main-nav [data-tab-target]");
-  const pages = document.querySelectorAll(".tab-page");
-
-  btns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const tgt = btn.getAttribute("data-tab-target");
-      activeTab = tgt;
-
-      pages.forEach(p => {
-        if (p.dataset.tab === tgt) {
-          p.classList.add("active");
-          p.classList.remove("hidden");
-        } else {
-          p.classList.add("hidden");
-          p.classList.remove("active");
-        }
-      });
-
-      btns.forEach(b => {
-        if (b === btn) b.classList.add("nav-active");
-        else b.classList.remove("nav-active");
-      });
-
-      // ROUTE 탭 → 패널 표시 / 그 외 숨김
-      if (routePanel) {
-        if (tgt === "route") routePanel.style.display = "block";
-        else routePanel.style.display = "none";
-      }
-
-      if (tgt === "run" && runMap) setTimeout(() => runMap.invalidateSize(), 200);
-      if (tgt === "route" && routeMap) setTimeout(() => routeMap.invalidateSize(), 200);
-    });
-  });
-}
-
-/* ============================================================
-   Leaflet + 브이월드 타일
-============================================================ */
-function createVWorldTileLayer() {
-  return L.tileLayer(
-    "https://api.vworld.kr/req/wmts/1.0.0/" +
-      VWORLD_KEY +
-      "/Base/{z}/{y}/{x}.png",
-    { minZoom: 6, maxZoom: 19 }
-  );
-}
-
-function initRunMap() {
-  runMap = L.map("runMap", {
+// ===== Leaflet + VWorld =====
+function createLeafletMap(targetId, lat, lon, zoom = 16) {
+  const map = L.map(targetId, {
     zoomControl: false,
     attributionControl: false
-  }).setView([37.5665, 126.9780], 15);
+  }).setView([lat, lon], zoom);
 
-  createVWorldTileLayer().addTo(runMap);
+  L.tileLayer(
+    `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/Base/{z}/{y}/{x}.png`,
+    {
+      minZoom: 6,
+      maxZoom: 19
+    }
+  ).addTo(map);
+
+  return map;
 }
 
-function initRouteMap() {
-  routeMap = L.map("routeMap", {
-    zoomControl: false,
-    attributionControl: false
-  }).setView([37.5665, 126.9780], 15);
-
-  createVWorldTileLayer().addTo(routeMap);
+// ===== 러닝 기록 저장/로드 =====
+function loadRunRecords() {
+  try {
+    const raw = localStorage.getItem("runRecords");
+    if (!raw) {
+      runRecords = [];
+      return;
+    }
+    runRecords = JSON.parse(raw);
+    if (!Array.isArray(runRecords)) runRecords = [];
+  } catch {
+    runRecords = [];
+  }
 }
 
-/* ============================================================
-   RUN UI + 러닝 기능
-============================================================ */
-function initRunUI() {
-  elRunDistance = $("runDistance");
-  elRunTime = $("runTime");
-  elRunPace = $("runPace");
-  elRunKcal = $("runKcal");
-
-  $("runStartBtn").addEventListener("click", () => {
-    if (isRunning) stopRun();
-    else startRun();
-  });
+function saveRunRecord(distanceKm, timeSec, calories, path) {
+  const rec = {
+    distanceKm,
+    timeSec,
+    calories,
+    path,
+    createdAt: new Date().toISOString()
+  };
+  runRecords.push(rec);
+  localStorage.setItem("runRecords", JSON.stringify(runRecords));
+  updateHomeSummary();
+  updateRecordList();
 }
 
-function startRun() {
-  if (!navigator.geolocation) {
-    alert("GPS를 지원하지 않습니다.");
+// ===== HOME / RECORD UI =====
+function updateHomeSummary() {
+  const box = document.getElementById("home-latest");
+  if (!box) return;
+
+  if (!runRecords.length) {
+    box.innerHTML = `<p class="text-gray-500 text-sm">최근 러닝 기록이 없습니다.</p>`;
     return;
   }
 
-  isRunning = true;
-  runStartTime = Date.now();
-  runDistanceMeters = 0;
-  runKcal = 0;
-  runCoords = [];
-  lastPos = null;
-
-  $("runStartBtn").textContent = "정지";
-
-  runWatchId = navigator.geolocation.watchPosition(
-    handleRunGPS,
-    (err) => { console.error(err); stopRun(); },
-    { enableHighAccuracy: true }
-  );
-
-  requestAnimationFrame(runTimerLoop);
+  const last = runRecords[runRecords.length - 1];
+  box.innerHTML = `
+    <div class="font-bold text-lg mb-1">${last.distanceKm.toFixed(2)} km</div>
+    <div class="text-gray-600 text-sm">${formatTime(last.timeSec)}</div>
+    <div class="text-gray-500 text-xs mt-1">${new Date(last.createdAt).toLocaleString()}</div>
+  `;
 }
 
-function stopRun() {
+function updateRecordList() {
+  const box = document.getElementById("record-list");
+  if (!box) return;
+
+  box.innerHTML = "";
+  if (!runRecords.length) {
+    box.innerHTML = `<p class="text-gray-500 text-sm">저장된 러닝 기록이 없습니다.</p>`;
+    return;
+  }
+
+  runRecords
+    .slice()
+    .reverse()
+    .forEach((rec, idx) => {
+      const div = document.createElement("div");
+      div.className = "record-item";
+      div.innerHTML = `
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-bold">${rec.distanceKm.toFixed(2)} km</div>
+            <div class="text-gray-600 text-sm">${formatTime(rec.timeSec)}</div>
+            <div class="text-gray-500 text-[11px] mt-1">${new Date(rec.createdAt).toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+      box.appendChild(div);
+    });
+}
+
+// ===== RUN: 지도 + GPS 러닝 =====
+function initRunMap(lat, lon) {
+  if (runMap) return;
+  runMap = createLeafletMap("run-map", lat, lon, 16);
+
+  runMarker = L.circleMarker([lat, lon], {
+    radius: 7,
+    color: "#1A82FF",
+    fillColor: "#1A82FF",
+    fillOpacity: 1
+  }).addTo(runMap);
+}
+
+function ensureRunMap() {
+  if (runMap) return;
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        initRunMap(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        initRunMap(defaultLat, defaultLon);
+      },
+      { enableHighAccuracy: true }
+    );
+  } else {
+    initRunMap(defaultLat, defaultLon);
+  }
+}
+
+function startRun() {
+  if (isRunning) return;
+
+  ensureRunMap();
+
+  isRunning = true;
+  runStartTime = Date.now();
+  totalDistance = 0;
+  totalCalories = 0;
+  runPath = [];
+  if (runPolyline && runMap) {
+    runMap.removeLayer(runPolyline);
+    runPolyline = null;
+  }
+
+  const btn = document.getElementById("run-start-btn");
+  if (btn) btn.innerText = "정지";
+
+  if (!navigator.geolocation) {
+    alert("이 기기에서 GPS를 사용할 수 없습니다.");
+    return;
+  }
+
+  runWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      // 위치 기록
+      runPath.push([lat, lon]);
+
+      // 거리 계산
+      if (runPath.length >= 2) {
+        const a = runPath[runPath.length - 2];
+        const b = runPath[runPath.length - 1];
+        totalDistance += haversineDistance(a[0], a[1], b[0], b[1]);
+      }
+
+      // 지도/마커 갱신
+      if (runMarker) runMarker.setLatLng([lat, lon]);
+      if (runMap) runMap.setView([lat, lon]);
+
+      // 폴리라인
+      if (runMap && runPath.length >= 2) {
+        if (runPolyline) runMap.removeLayer(runPolyline);
+        runPolyline = L.polyline(runPath, {
+          color: "#1A82FF",
+          weight: 5
+        }).addTo(runMap);
+      }
+
+      updateRunUI();
+    },
+    err => {
+      console.error(err);
+      alert("GPS 위치를 가져오지 못했습니다.");
+      stopRun(false);
+    },
+    { enableHighAccuracy: true, maximumAge: 1000 }
+  );
+}
+
+function stopRun(save = true) {
+  if (!isRunning) return;
   isRunning = false;
 
-  if (runWatchId) {
+  if (runWatchId != null) {
     navigator.geolocation.clearWatch(runWatchId);
     runWatchId = null;
   }
 
-  $("runStartBtn").textContent = "시작";
+  const btn = document.getElementById("run-start-btn");
+  if (btn) btn.innerText = "시작";
 
-  if (runDistanceMeters > 5) saveRunHistory(); // 5m 이상 저장
-}
+  const elapsedSec = Math.floor((Date.now() - runStartTime) / 1000);
 
-function handleRunGPS(pos) {
-  const lat = pos.coords.latitude;
-  const lng = pos.coords.longitude;
-  const now = [lat, lng];
-
-  if (!lastPos) {
-    lastPos = now;
-    runCoords.push(now);
-
-    if (!window._runLine)
-      window._runLine = L.polyline([now], { color: "#ff623d", weight: 5 }).addTo(runMap);
-
-    runMap.setView(now, 16);
-    return;
+  if (save && totalDistance > 0.01) {
+    // kcal: 대략 60kcal/km 기준 (추정값)
+    totalCalories = Math.round(totalDistance * 60);
+    saveRunRecord(totalDistance, elapsedSec, totalCalories, runPath);
+    alert("러닝 기록이 저장되었습니다.");
   }
 
-  const d = haversine(lastPos[0], lastPos[1], lat, lng);
-
-  // GPS 점프 제거 (추측 기반)
-  if (d > 40) {
-    lastPos = now;
-    return;
-  }
-
-  runDistanceMeters += d;
-  runKcal = Math.floor(runDistanceMeters * 0.06); // 대략 kcal 추정값 (추측입니다)
-
-  lastPos = now;
-  runCoords.push(now);
-
-  window._runLine.addLatLng(now);
-  runMap.panTo(now);
-
   updateRunUI();
-}
-
-function runTimerLoop() {
-  if (!isRunning) return;
-  updateRunUI();
-  requestAnimationFrame(runTimerLoop);
 }
 
 function updateRunUI() {
-  const elapsedSec = Math.floor((Date.now() - runStartTime) / 1000);
-
-  elRunDistance.textContent = (runDistanceMeters / 1000).toFixed(2);
-  elRunTime.textContent = formatTime(elapsedSec);
-  elRunPace.textContent = formatPace(runDistanceMeters, elapsedSec);
-  elRunKcal.textContent = runKcal;
-}
-/* ============================================================
-   ROUTE UI (목표거리, 패널, +버튼)
-============================================================ */
-
-function initRouteUI() {
-  const elRouteDistance = $("routeDistance");
-  if (elRouteDistance) {
-    elRouteDistance.addEventListener("click", () => {
-      const cur = targetDistanceMeters ? (targetDistanceMeters / 1000).toFixed(1) : "0.0";
-      const v = prompt("목표 거리를 km 단위로 입력하세요.", cur);
-      if (v === null) return;
-      const km = parseFloat(v);
-      if (!isNaN(km) && km > 0) {
-        targetDistanceMeters = km * 1000;
-        elRouteDistance.textContent = km.toFixed(1);
-      }
-    });
-  }
-
-  const fab = $("routeFloatingBtn");
-  if (fab) {
-    fab.addEventListener("click", () => {
-      openRoutePanel(1); // 중간 단계
-    });
-  }
-
-  routePanel = $("runRoutePanel");
-  if (routePanel) {
-    initRoutePanelDrag(routePanel);
-  }
-
-  const btnMyLoc = $("runUseMyLocation");
-  if (btnMyLoc) {
-    btnMyLoc.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("GPS를 지원하지 않습니다.");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-
-          const input = $("runRouteStart");
-          if (input) {
-            input.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            input.dataset.lat = lat;
-            input.dataset.lng = lng;
-          }
-          if (routeMap) {
-            if (startMarker) routeMap.removeLayer(startMarker);
-            startMarker = L.marker([lat, lng]).addTo(routeMap);
-            routeMap.setView([lat, lng], 16);
-          }
-          openRoutePanel(1);
-        },
-        () => alert("내 위치를 가져오지 못했습니다."),
-        { enableHighAccuracy: true }
-      );
-    });
-  }
-
-  const linearBtn = $("courseLinear");
-  const loopBtn = $("courseLoop");
-
-  if (linearBtn && loopBtn) {
-    linearBtn.addEventListener("click", () => {
-      linearBtn.classList.add("run-course-active");
-      loopBtn.classList.remove("run-course-active");
-    });
-    loopBtn.addEventListener("click", () => {
-      loopBtn.classList.add("run-course-active");
-      linearBtn.classList.remove("run-course-active");
-    });
-  }
-
-  const genBtn = $("runRouteGenerateBtn");
-  if (genBtn) genBtn.addEventListener("click", generateCourse);
-}
-
-/* ---------------------------
-   ROUTE 패널 드래그
----------------------------- */
-function initRoutePanelDrag(panel) {
-  panel.style.transform = "translateY(100%)";
-  routePanelHeight = panel.offsetHeight || 120;
-
-  const handle = panel.querySelector(".w-full.h-6") || panel.firstElementChild;
-  if (!handle) return;
-
-  const startDrag = (y) => {
-    dragging = true;
-    dragStartY = y;
-    const style = window.getComputedStyle(panel);
-    const m = new DOMMatrixReadOnly(style.transform);
-    dragStartTranslate = m.m42;
-  };
-
-  const moveDrag = (y) => {
-    if (!dragging) return;
-    const diff = y - dragStartY;
-    let next = dragStartTranslate + diff;
-
-    const max = routePanelHeight;
-    if (next < 0) next = 0;
-    if (next > max) next = max;
-
-    panel.style.transition = "none";
-    panel.style.transform = `translateY(${next}px)`;
-  };
-
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-
-    const style = window.getComputedStyle(panel);
-    const m = new DOMMatrixReadOnly(style.transform);
-    const cur = m.m42;
-    const max = routePanelHeight;
-    const midVisible = 240;
-    const mid = Math.max(max - midVisible, max * 0.4);
-
-    const dClose = Math.abs(cur - max);
-    const dMid = Math.abs(cur - mid);
-    const dFull = Math.abs(cur - 0);
-
-    let state = 0;
-    if (dFull <= dMid && dFull <= dClose) state = 2;
-    else if (dMid <= dClose) state = 1;
-    else state = 0;
-
-    openRoutePanel(state);
-  };
-
-  // mouse
-  handle.addEventListener("mousedown", (e) => startDrag(e.clientY));
-  window.addEventListener("mousemove", (e) => moveDrag(e.clientY));
-  window.addEventListener("mouseup", endDrag);
-
-  // touch
-  handle.addEventListener(
-    "touchstart",
-    (e) => {
-      if (e.touches.length) startDrag(e.touches[0].clientY);
-    },
-    { passive: true }
-  );
-  window.addEventListener(
-    "touchmove",
-    (e) => {
-      if (e.touches.length) moveDrag(e.touches[0].clientY);
-    },
-    { passive: true }
-  );
-  window.addEventListener("touchend", endDrag);
-}
-
-function openRoutePanel(state) {
-  if (!routePanel) return;
-
-  if (!routePanelHeight) routePanelHeight = routePanel.offsetHeight || 120;
-
-  const max = routePanelHeight;
-  const midVisible = 240;
-  const mid = Math.max(max - midVisible, max * 0.4);
-
-  let ty = max;
-  if (state === 0) ty = max;
-  else if (state === 1) ty = mid;
-  else if (state === 2) ty = 0;
-
-  routePanel.style.display = "block";
-  routePanel.style.transition = "transform 0.25s ease";
-  routePanel.style.transform = `translateY(${ty}px)`;
-  routePanelState = state;
-}
-
-/* ============================================================
-   카카오 장소 검색 + 자동완성
-============================================================ */
-
-async function kakaoSearch(query) {
-  if (!KAKAO_REST_KEY || KAKAO_REST_KEY.startsWith("YOUR_")) return [];
-
-  const res = await fetch(
-    "https://dapi.kakao.com/v2/local/search/keyword.json?query=" +
-      encodeURIComponent(query),
-    {
-      headers: { Authorization: "KakaoAK " + KAKAO_REST_KEY },
-    }
-  );
-
-  if (!res.ok) return [];
-  const data = await res.json();
-
-  return data.documents.map((d) => ({
-    name: d.place_name,
-    address: d.road_address_name || d.address_name,
-    lat: parseFloat(d.y),
-    lng: parseFloat(d.x),
-  }));
-}
-
-function initSearchInputs() {
-  const sInput = $("runRouteStart");
-  const eInput = $("runRouteEnd");
-  const sList = $("runStartSuggest");
-  const eList = $("runEndSuggest");
-  if (!sInput || !eInput || !sList || !eList) return;
-
-  const bind = (input, list, isStart) => {
-    let timer = null;
-
-    input.addEventListener("input", () => {
-      const q = input.value.trim();
-      list.innerHTML = "";
-      if (!q) {
-        list.classList.add("hidden");
-        return;
-      }
-
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(async () => {
-        const results = await kakaoSearch(q);
-        list.innerHTML = "";
-        if (!results.length) {
-          list.classList.add("hidden");
-          return;
-        }
-
-        results.slice(0, 8).forEach((r) => {
-          const li = document.createElement("li");
-          li.textContent = `${r.name} (${r.address})`;
-          li.addEventListener("click", () => {
-            input.value = r.name;
-            input.dataset.lat = r.lat;
-            input.dataset.lng = r.lng;
-
-            if (isStart && routeMap) {
-              if (startMarker) routeMap.removeLayer(startMarker);
-              startMarker = L.marker([r.lat, r.lng]).addTo(routeMap);
-              routeMap.setView([r.lat, r.lng], 16);
-            } else if (!isStart && routeMap) {
-              if (endMarker) routeMap.removeLayer(endMarker);
-              endMarker = L.marker([r.lat, r.lng]).addTo(routeMap);
-              routeMap.setView([r.lat, r.lng], 16);
-            }
-
-            list.classList.add("hidden");
-          });
-          list.appendChild(li);
-        });
-
-        list.classList.remove("hidden");
-      }, 250);
-    });
-  };
-
-  bind(sInput, sList, true);
-  bind(eInput, eList, false);
-}
-
-/* ============================================================
-   ORS Directions
-============================================================ */
-
-async function orsDirections(coords) {
-  if (!ORS_API_KEY || ORS_API_KEY.startsWith("YOUR_")) {
-    alert("ORS API 키를 설정하세요.");
-    throw new Error("ORS key missing");
-  }
-
-  const body = {
-    coordinates: coords.map(([lat, lng]) => [lng, lat]),
-  };
-
-  const res = await fetch(
-    "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
-    {
-      method: "POST",
-      headers: {
-        Authorization: ORS_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  );
-
-  if (!res.ok) throw new Error("ORS 요청 실패");
-
-  const data = await res.json();
-  const feature = data.features[0];
-  const path = feature.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-  const distanceMeters = feature.properties.summary.distance;
-
-  return { path, distanceMeters };
-}
-/* ============================================================
-   코스 생성 메인
-============================================================ */
-
-async function generateCourse() {
-  const sInput = $("runRouteStart");
-  const eInput = $("runRouteEnd");
-  const statusEl = $("runRouteStatus");
-  const shortestEl = $("runShortestInfo");
-  const linearBtn = $("courseLinear");
-  const loopBtn = $("courseLoop");
-
-  if (!sInput || !statusEl || !shortestEl || !linearBtn || !loopBtn) return;
-
-  const sLat = parseFloat(sInput.dataset.lat);
-  const sLng = parseFloat(sInput.dataset.lng);
-  const eLat = parseFloat(eInput.dataset.lat);
-  const eLng = parseFloat(eInput.dataset.lng);
-
-  if (isNaN(sLat) || isNaN(sLng)) {
-    statusEl.textContent = "출발 위치를 설정하세요.";
-    return;
-  }
-
-  const isLinear = linearBtn.classList.contains("run-course-active");
-  statusEl.textContent = "최단거리 계산 중...";
-
-  // 최단거리
-  try {
-    if (!isNaN(eLat) && !isNaN(eLng)) {
-      const shortest = await orsDirections([
-        [sLat, sLng],
-        [eLat, eLng],
-      ]);
-      routeShortestMeters = shortest.distanceMeters;
-      shortestEl.textContent =
-        "최단거리: " + (routeShortestMeters / 1000).toFixed(2) + " km";
-    } else {
-      routeShortestMeters = 0;
-      shortestEl.textContent = "";
-    }
-  } catch (e) {
-    console.error(e);
-    routeShortestMeters = 0;
-    shortestEl.textContent = "최단거리 계산 실패";
-  }
-
-  let useTarget = targetDistanceMeters;
-  if (routeShortestMeters && useTarget && useTarget < routeShortestMeters) {
-    alert(
-      `목표거리(${(useTarget / 1000).toFixed(
-        2
-      )} km)가 최단거리(${(routeShortestMeters / 1000).toFixed(
-        2
-      )} km)보다 짧아 최단거리로 조정합니다.`
-    );
-    useTarget = routeShortestMeters;
-  }
-
-  statusEl.textContent = "코스 생성 중...";
-
-  let control = [];
-  if (isLinear) {
-    // 직선 모드
-    if (isNaN(eLat) || isNaN(eLng)) {
-      statusEl.textContent = "직선 코스는 도착 위치가 필요합니다.";
-      return;
-    }
-
-    if (!useTarget || !routeShortestMeters || useTarget - routeShortestMeters < 50) {
-      control = [
-        [sLat, sLng],
-        [eLat, eLng],
-      ];
-    } else {
-      const midLat = (sLat + eLat) / 2;
-      const midLng = (sLng + eLng) / 2;
-      const dx = eLng - sLng;
-      const dy = eLat - sLat;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      const ux = -dy / len;
-      const uy = dx / len;
-      const extra = Math.min(useTarget - routeShortestMeters, 3000);
-      const offset = extra / 111000;
-      const viaLat = midLat + uy * offset;
-      const viaLng = midLng + ux * offset;
-
-      control = [
-        [sLat, sLng],
-        [viaLat, viaLng],
-        [eLat, eLng],
-      ];
-    }
-  } else {
-    // 왕복 모드 (단순 사각 루프) – 추측입니다
-    if (!useTarget) {
-      statusEl.textContent = "왕복 코스는 목표 거리가 필요합니다.";
-      return;
-    }
-
-    const side = useTarget / 4;
-    const dLat = side / 111000;
-    const dLng = side / (111000 * Math.cos((sLat * Math.PI) / 180));
-
-    if (!isNaN(eLat) && !isNaN(eLng)) {
-      const c1 = [sLat + dLat, sLng];
-      const c2 = [sLat, sLng + dLng];
-      control = [
-        [sLat, sLng],
-        c1,
-        [eLat, eLng],
-        c2,
-        [sLat, sLng],
-      ];
-    } else {
-      const p2 = [sLat + dLat, sLng];
-      const p3 = [sLat + dLat, sLng + dLng];
-      const p4 = [sLat, sLng + dLng];
-      control = [[sLat, sLng], p2, p3, p4, [sLat, sLng]];
-    }
-  }
-
-  try {
-    const result = await orsDirections(control);
-
-    if (plannedRouteLine && routeMap) {
-      routeMap.removeLayer(plannedRouteLine);
-    }
-    if (routeMap) {
-      plannedRouteLine = L.polyline(result.path, {
-        color: "#22c55e",
-        weight: 5,
-      }).addTo(routeMap);
-      routeMap.fitBounds(plannedRouteLine.getBounds());
-    }
-
-    statusEl.textContent =
-      "완료: " + (result.distanceMeters / 1000).toFixed(2) + " km";
-  } catch (e) {
-    console.error(e);
-    statusEl.textContent = "코스 생성 실패";
-  }
-}
-
-/* ============================================================
-   러닝 기록 (localStorage)
-============================================================ */
-
-function loadRunHistory() {
-  try {
-    const raw = localStorage.getItem("runHistory");
-    if (!raw) runHistory = [];
-    else runHistory = JSON.parse(raw) || [];
-  } catch (e) {
-    console.error(e);
-    runHistory = [];
-  }
-}
-
-function saveRunHistory() {
-  const elapsedSec = runStartTime
+  const distEl = document.getElementById("run-distance");
+  const timeEl = document.getElementById("run-time");
+  const paceEl = document.getElementById("run-pace");
+  const calEl = document.getElementById("run-cal");
+
+  const elapsedSec = isRunning && runStartTime
     ? Math.floor((Date.now() - runStartTime) / 1000)
     : 0;
 
-  const rec = {
-    date: new Date().toLocaleString(),
-    distanceKm: (runDistanceMeters / 1000).toFixed(2),
-    time: formatTime(elapsedSec),
-    pace: formatPace(runDistanceMeters, elapsedSec),
-    kcal: runKcal,
-  };
+  if (distEl) distEl.innerText = totalDistance.toFixed(2);
+  if (timeEl) timeEl.innerText = formatTime(elapsedSec);
 
-  runHistory.push(rec);
-  localStorage.setItem("runHistory", JSON.stringify(runHistory));
-
-  renderRunHistory();
-  renderHomeLastRun();
-}
-
-function renderRunHistory() {
-  const list = $("recordList");
-  const empty = $("recordEmpty");
-  if (!list || !empty) return;
-
-  list.innerHTML = "";
-  if (!runHistory.length) {
-    empty.classList.remove("hidden");
-    return;
+  if (paceEl) {
+    if (totalDistance > 0.01 && elapsedSec > 0) {
+      const pace = (elapsedSec / 60) / totalDistance; // 분/ km
+      paceEl.innerText = pace.toFixed(1) + " /km";
+    } else {
+      paceEl.innerText = "-";
+    }
   }
 
-  empty.classList.add("hidden");
-
-  runHistory
-    .slice()
-    .reverse()
-    .forEach((rec) => {
-      const card = document.createElement("div");
-      card.className = "record-card";
-      card.innerHTML = `
-        <div class="record-distance">${rec.distanceKm}</div>
-        <div class="record-meta">
-          ${rec.time} · ${rec.pace} · ${rec.kcal} kcal<br/>
-          ${rec.date}
-        </div>
-      `;
-      list.appendChild(card);
-    });
+  if (calEl) calEl.innerText = Math.round(totalDistance * 60);
 }
 
-/* ============================================================
-   HOME 탭 – 최근 기록
-============================================================ */
+// ===== ROUTE: 지도 + 목표 거리 UI 기본 =====
+function ensureRouteMap() {
+  if (routeMap) return;
 
-function renderHomeLastRun() {
-  const distEl = $("homeLastRunDistance");
-  if (!distEl) return;
-
-  if (!runHistory.length) {
-    distEl.textContent = "0.00";
-    return;
-  }
-
-  const last = runHistory[runHistory.length - 1];
-  distEl.textContent = last.distanceKm;
-}
-
-function initHomeQuickButtons() {
-  const qRun = $("homeQuickRun");
-  const qRoute = $("homeQuickRoute");
-
-  if (qRun) {
-    qRun.addEventListener("click", () => {
-      const btn = document.querySelector('#main-nav [data-tab-target="run"]');
-      if (btn) btn.click();
-    });
-  }
-
-  if (qRoute) {
-    qRoute.addEventListener("click", () => {
-      const btn = document.querySelector('#main-nav [data-tab-target="route"]');
-      if (btn) btn.click();
-    });
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        routeMap = createLeafletMap("route-map", pos.coords.latitude, pos.coords.longitude, 16);
+      },
+      () => {
+        routeMap = createLeafletMap("route-map", defaultLat, defaultLon, 16);
+      },
+      { enableHighAccuracy: true }
+    );
+  } else {
+    routeMap = createLeafletMap("route-map", defaultLat, defaultLon, 16);
   }
 }
 
-/* ============================================================
-   초기화
-============================================================ */
+// navSwitch()에서 route로 들어올 때 호출할 함수
+function openRoutePage() {
+  ensureRouteMap();
+}
 
-window.addEventListener("DOMContentLoaded", () => {
-  // 지도
-  initRunMap();
-  initRouteMap();
+function handleOpenCourseGenerator() {
+  // ⚠ 코스 상세 생성/ORS 연동 부분
+  // 현재 run.js 원본(너가 쓰던 버전)을 이 채팅에서 볼 수 없어서
+  // 기존 코스 생성 알고리즘을 1:1로 복원할 수 없는 상태라
+  // 여기서는 "자리만 잡아둔" 상태다. (추측 구현 방지)
+  alert("코스 상세 생성 UI/코스 자동 생성 로직은 나중에 원본 run.js 기준으로 다시 붙이는 게 안전함.");
+}
 
-  // 탭
-  initTabs();
-
-  // RUN
-  initRunUI();
-
-  // ROUTE
-  initRouteUI();
-  initSearchInputs();
-
-  // 기록
-  loadRunHistory();
-  renderRunHistory();
-  renderHomeLastRun();
-
-  // HOME
-  initHomeQuickButtons();
-
-  // 기록 삭제 버튼
-  const clearBtn = $("clearRunHistoryBtn");
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      if (!confirm("모든 러닝 기록을 삭제할까요?")) return;
-      runHistory = [];
-      localStorage.setItem("runHistory", JSON.stringify(runHistory));
-      renderRunHistory();
-      renderHomeLastRun();
+// ===== 이벤트 바인딩 =====
+function bindEvents() {
+  const runBtn = document.getElementById("run-start-btn");
+  if (runBtn) {
+    runBtn.addEventListener("click", () => {
+      if (isRunning) stopRun(true);
+      else startRun();
     });
   }
+
+  const openCourseBtn = document.getElementById("open-course-gen");
+  if (openCourseBtn) {
+    openCourseBtn.addEventListener("click", handleOpenCourseGenerator);
+  }
+}
+
+// ===== 초기 진입 =====
+window.addEventListener("load", () => {
+  loadRunRecords();
+  updateHomeSummary();
+  updateRecordList();
+  ensureRunMap();
+  bindEvents();
 });

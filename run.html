@@ -1,243 +1,229 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>PokeRun – Run App</title>
+    <title>POKERUN PRO</title>
 
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="run.css" />
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom CSS (다음 단계에서 제공) -->
+    <link rel="stylesheet" href="custom.css">
+
 </head>
 
-<body class="bg-[#eef6ff]">
+<body class="select-none bg-[#e9f4ff]">
 
-<!-- ======================= Pokerun 상단바 ======================= -->
-<header id="main-header" class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-line shrink-0">
-    <div class="flex items-center gap-2">
-        <div class="bg-accent p-1 rounded text-white shadow-lg transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zap" class="lucide lucide-zap w-5 h-5 fill-current"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
-        </div>
-        <h1 class="text-xl font-sport font-black italic tracking-tighter text-txt">POKE<span class="text-accent">RUN</span> <span class="text-xs align-top text-red-500">PRO</span></h1>
-    </div>
+<!-- ▒▒▒▒▒▒ 상단바 (Pokerun UI 그대로) ▒▒▒▒▒▒ -->
+<header id="main-header"
+        class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-gray-300 bg-white/70 backdrop-blur-md">
     
     <div class="flex items-center gap-2">
-        <button onclick="app.nav('settings')" class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" class="lucide lucide-settings w-5 h-5 text-txt"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        </button>
-        <button onclick="app.toggleTheme()" class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="moon" id="theme-icon" class="lucide lucide-moon lucide-sun w-5 h-5 text-txt"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg>
-        </button>
-        <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
+        <img src="https://i.imgur.com/R7eXQ0e.png" class="w-6 opacity-70">
+        <h1 class="text-xl font-black italic tracking-tighter text-gray-800">
+            POKE<span class="text-blue-500">RUN</span> <span class="text-xs text-red-500">PRO</span>
+        </h1>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <i data-lucide="settings" class="w-6 h-6 text-gray-700" id="btn-settings"></i>
+        <i data-lucide="moon" class="w-6 h-6 text-gray-700" id="btn-theme"></i>
+
+        <div class="flex items-center gap-2 bg-gray-200 px-4 py-1.5 rounded-full">
             <span class="text-yellow-400 text-xs font-bold">●</span>
-            <span id="display-coins" class="font-sport font-bold text-sm text-txt">0</span>
+            <span id="display-coins" class="font-bold text-sm text-gray-800">0</span>
         </div>
     </div>
 </header>
 
 
-<div class="h-[56px] w-full"></div>
 
 
-<!-- ======================= RUN 탭 ======================= -->
-<section class="tab-page active" data-tab="run">
 
-  <!-- 거리 UI = RUN / ROUTE 공통 -->
-  <div class="distance-box mx-4 mt-4 rounded-2xl p-5 text-center shadow">
-      <div class="text-xs text-sub tracking-wider font-bold">RUN</div>
-      <div id="runDistance" class="text-[76px] font-black text-[#0d3b66] leading-none">0.00</div>
-      <div class="text-sm text-sub -mt-1">현재 뛴 거리 (km)</div>
-  </div>
+<!-- ▒▒▒▒▒▒ SPA 페이지 컨테이너 ▒▒▒▒▒▒ -->
+<main class="pt-[70px] pb-[90px]">
 
-  <!-- 핵심 정보 3개: 페이스 / 시간 / 칼로리 -->
-  <div class="grid grid-cols-3 text-center mt-6 mx-6 gap-2">
-      <div>
-          <div id="runPace" class="text-[18px] font-bold text-txt">-</div>
-          <div class="text-xs text-sub">평균 페이스</div>
-      </div>
-      <div>
-          <div id="runTime" class="text-[18px] font-bold text-txt">0:00</div>
-          <div class="text-xs text-sub">시간</div>
-      </div>
-      <div>
-          <div id="runKcal" class="text-[18px] font-bold text-txt">0</div>
-          <div class="text-xs text-sub">칼로리</div>
-      </div>
-  </div>
+    <!-- 페이지 1: RUN -->
+    <section id="page-run" class="spa-page pt-4 px-5">
 
-  <!-- 시작 버튼 -->
-  <div class="mt-6 flex justify-center">
-      <button id="runStartBtn"
-        class="px-12 py-3 rounded-full bg-accent text-white font-bold shadow text-lg">
-        시작
-      </button>
-  </div>
-
-  <!-- 지도 (미니맵 스타일) -->
-  <div class="mx-4 mt-6 rounded-2xl overflow-hidden shadow">
-      <div id="runMap" style="height: 220px;"></div>
-  </div>
-</section>
-
-
-<!-- ======================= ROUTE 탭 ======================= -->
-<section class="tab-page hidden" data-tab="route">
-
-  <!-- 거리 UI = RUN과 완전히 동일 -->
-  <div class="distance-box mx-4 mt-4 rounded-2xl p-5 text-center shadow">
-      <div class="text-xs text-sub tracking-wider font-bold">ROUTE</div>
-      <div id="routeDistance" class="text-[76px] font-black text-[#0d3b66] leading-none">0.0</div>
-      <div class="text-sm text-sub -mt-1">목표 거리 입력 (km)</div>
-  </div>
-
-  <!-- 지도 -->
-  <div class="mx-4 mt-6 rounded-2xl overflow-hidden shadow">
-      <div id="routeMap" style="height: 200px;"></div>
-  </div>
-
-  <p id="runRouteStatus" class="text-center text-sub mt-3 text-sm">
-    아직 생성된 코스가 없습니다.
-  </p>
-
-  <p id="runShortestInfo" class="text-center text-xs text-sub mt-1"></p>
-
-  <!-- Floating + 버튼 -->
-  <button id="routeFloatingBtn"
-    class="w-16 h-16 rounded-full bg-accent flex items-center justify-center
-           text-white shadow-xl fixed bottom-24 right-6 z-40">
-      <span class="text-4xl leading-none">+</span>
-  </button>
-
-</section>
-
-
-<!-- ======================= HOME 탭 ======================= -->
-<section class="tab-page hidden" data-tab="home">
-  <div class="p-6 text-center">
-      <div class="text-lg text-sub">최근 러닝</div>
-
-      <div id="homeLastRun" class="mt-4">
-          <div class="text-6xl font-black text-[#0d3b66]" id="homeLastRunDistance">0.00</div>
-          <div class="text-sm text-sub">km</div>
-      </div>
-
-      <div class="flex gap-3 justify-center mt-6">
-          <button id="homeQuickRun" class="px-5 py-2 rounded-xl bg-accent text-white font-bold">RUN</button>
-          <button id="homeQuickRoute" class="px-5 py-2 rounded-xl bg-accent text-white font-bold">ROUTE</button>
-      </div>
-  </div>
-</section>
-
-
-<!-- ======================= RECORD 탭 ======================= -->
-<section class="tab-page hidden" data-tab="record">
-  <div class="p-4">
-      <div class="text-lg font-bold text-txt mb-4">러닝 기록</div>
-      <div id="recordList" class="flex flex-col gap-3"></div>
-      <div id="recordEmpty" class="text-center text-sub mt-6">기록이 없습니다.</div>
-
-      <button id="clearRunHistoryBtn"
-        class="mt-6 w-full py-2 rounded-xl bg-red-400 text-white font-bold">
-        전체 삭제
-      </button>
-  </div>
-</section>
-
-
-<!-- ======================= PROFILE 탭 ======================= -->
-<section class="tab-page hidden" data-tab="profile">
-  <div class="flex flex-col items-center justify-center mt-16">
-      <div class="text-7xl">👤</div>
-      <div class="text-sub mt-4">프로필은 추후 업데이트 예정</div>
-  </div>
-</section>
-
-
-<!-- ======================= ROUTE Bottom Sheet ======================= -->
-<div id="runRoutePanel"
-     class="fixed left-0 w-full bg-white shadow-2xl rounded-t-2xl z-50"
-     style="bottom:0; transform:translateY(100%); height:120px; display:none;">
-
-    <div class="w-full h-6 flex justify-center items-center cursor-grab">
-        <div class="w-10 h-1.5 bg-gray-300 rounded-full"></div>
-    </div>
-
-    <div class="p-4">
-        <div class="text-sm font-bold text-txt mb-2">코스 생성</div>
-
-        <input id="runRouteStart" class="input-basic mb-2" placeholder="출발 위치" />
-        <ul id="runStartSuggest" class="run-suggest hidden"></ul>
-
-        <input id="runRouteEnd" class="input-basic mb-2" placeholder="도착 위치" />
-        <ul id="runEndSuggest" class="run-suggest hidden"></ul>
-
-        <div class="flex gap-2 mt-2">
-            <button id="runUseMyLocation" class="flex-1 run-course-btn">내 위치</button>
-            <button id="courseLinear" class="flex-1 run-course-btn run-course-active">직선</button>
-            <button id="courseLoop" class="flex-1 run-course-btn">왕복</button>
+        <!-- RUN 거리 표시 (흰 박스 제거 버전) -->
+        <div class="text-center">
+            <h2 class="text-xs text-gray-500 tracking-widest">RUN</h2>
+            <div class="text-6xl font-black text-blue-900 mt-1" id="run-distance">0.00</div>
+            <p class="text-gray-500 text-sm">(현재 뛴 거리 km)</p>
         </div>
 
-        <button id="runRouteGenerateBtn"
-                class="w-full mt-3 py-2 bg-accent text-white rounded-xl font-bold">
-            코스 생성
+        <!-- 페이스/시간/칼로리 -->
+        <div class="flex justify-between mt-6 text-center px-3">
+            <div>
+                <div id="run-pace" class="text-gray-600 text-sm">-</div>
+                <div class="text-gray-500 text-xs mt-1">평균 페이스</div>
+            </div>
+
+            <div>
+                <div id="run-time" class="text-gray-600 text-sm">0:00</div>
+                <div class="text-gray-500 text-xs mt-1">시간</div>
+            </div>
+
+            <div>
+                <div id="run-cal" class="text-gray-600 text-sm">0</div>
+                <div class="text-gray-500 text-xs mt-1">칼로리</div>
+            </div>
+        </div>
+
+        <!-- RUN 시작 버튼 -->
+        <div class="flex justify-center mt-6">
+            <button id="run-start-btn" class="bg-blue-500 text-white font-bold px-10 py-3 rounded-full shadow-md">
+                시작
+            </button>
+        </div>
+
+        <!-- RUN 지도 -->
+        <div class="w-full h-[230px] rounded-xl overflow-hidden mt-6 shadow">
+            <div id="run-map" class="w-full h-full"></div>
+        </div>
+
+    </section>
+
+
+
+
+
+    <!-- 페이지 2: ROUTE -->
+    <section id="page-route" class="spa-page hidden pt-4 px-5">
+
+        <div class="text-center">
+            <h2 class="text-xs text-gray-500 tracking-widest">ROUTE</h2>
+
+            <!-- 목표 거리 입력 (RUN과 동일 UI) -->
+            <input id="route-goal" type="number"
+                   placeholder="목표 거리 입력 (km)"
+                   class="text-center w-full mt-2 bg-white px-4 py-3 rounded-xl shadow-inner">
+        </div>
+
+        <!-- ROUTE 지도 -->
+        <div class="w-full h-[230px] rounded-xl overflow-hidden mt-6 shadow">
+            <div id="route-map" class="w-full h-full"></div>
+        </div>
+
+        <!-- + 버튼: 코스 생성 패널 -->
+        <button id="open-course-gen"
+                class="fixed bottom-24 right-6 bg-blue-500 w-12 h-12 rounded-full text-white shadow-md flex items-center justify-center">
+            <i data-lucide="plus" class="w-6 h-6"></i>
         </button>
-    </div>
-</div>
+
+    </section>
 
 
-<!-- ======================= Pokerun 스타일 하단바 ======================= -->
-<nav id="main-nav" class="fixed bottom-0 w-full h-[64px] glass border-t border-line px-2 flex justify-around items-center z-40 transition-colors duration-300">
+
+
+
+    <!-- 페이지 3: HOME -->
+    <section id="page-home" class="spa-page hidden pt-4 px-5">
+        <h2 class="text-xl font-bold">최근 기록</h2>
+        <div id="home-latest" class="bg-white p-4 rounded-xl mt-4 shadow text-gray-600 text-sm">
+            최근 러닝 기록이 없습니다.
+        </div>
+    </section>
+
+
+
+
+
+    <!-- 페이지 4: RECORD -->
+    <section id="page-record" class="spa-page hidden pt-4 px-5">
+        <h2 class="text-xl font-bold">러닝 기록</h2>
+        <div id="record-list" class="mt-4 space-y-3"></div>
+    </section>
+
+
+
+
+
+    <!-- 페이지 5: PROFILE -->
+    <section id="page-profile" class="spa-page hidden pt-4 px-5 text-center">
+        <i data-lucide="user" class="w-24 h-24 mx-auto text-gray-500 mt-10"></i>
+        <p class="text-gray-600 mt-6">프로필 기능 준비 중</p>
+    </section>
+
+</main>
+
+
+
+
+
+
+<!-- ▒▒▒▒▒▒ 하단바 (Pokerun UI 그대로) ▒▒▒▒▒▒ -->
+<nav id="main-nav"
+     class="fixed bottom-0 w-full h-[72px] bg-white border-t border-gray-300 flex justify-around items-end pb-2 z-40">
 
     <!-- RUN -->
-    <button onclick="app.nav('run')" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-sub hover:text-txt nav-active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="activity" class="lucide lucide-activity w-6 h-6">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-        </svg>
-        <span class="text-[10px] font-black italic font-sport">RUN</span>
+    <button onclick="navSwitch('run')" id="nav-run"
+            class="nav-btn flex flex-col items-center">
+        <i data-lucide="home" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black">RUN</span>
     </button>
 
     <!-- ROUTE -->
-    <button onclick="app.nav('route')" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-sub hover:text-txt">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="map" class="lucide lucide-map w-6 h-6">
-            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
-            <line x1="9" x2="9" y1="3" y2="18"></line>
-            <line x1="15" x2="15" y1="6" y2="21"></line>
-        </svg>
-        <span class="text-[10px] font-black italic font-sport">ROUTE</span>
+    <button onclick="navSwitch('route')" id="nav-route"
+            class="nav-btn flex flex-col items-center">
+        <i data-lucide="users" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black">ROUTE</span>
     </button>
 
-    <!-- HOME (중앙 버튼 그대로) -->
-    <button onclick="app.nav('home')" class="transform transition-transform active:scale-95 group">
-        <div class="w-14 h-14 bg-accent rounded-full flex items-center justify-center border-4 border-main shadow-md relative z-10 group-hover:scale-105 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="home" class="lucide lucide-home w-7 h-7 text-white fill-current">
-                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
-                <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            </svg>
-        </div>
+    <!-- HOME: 가운데 버튼 -->
+    <button onclick="navSwitch('home')" id="nav-home"
+            class="nav-center-btn w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center border-4 border-white shadow-lg -mt-8">
+        <i data-lucide="swords" class="w-7 h-7 text-white"></i>
     </button>
 
     <!-- RECORD -->
-    <button onclick="app.nav('record')" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-sub hover:text-txt">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clipboard-list" class="lucide lucide-clipboard-list w-6 h-6"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M14 2v4"/><path d="M10 2v4"/><rect width="14" height="18" x="5" y="4" rx="2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
-        <span class="text-[10px] font-black italic font-sport">RECORD</span>
+    <button onclick="navSwitch('record')" id="nav-record"
+            class="nav-btn flex flex-col items-center">
+        <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black">RECORD</span>
     </button>
 
     <!-- PROFILE -->
-    <button onclick="app.nav('profile')" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-sub hover:text-txt">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="user" class="lucide lucide-user w-6 h-6"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span class="text-[10px] font-black italic font-sport">PROFILE</span>
+    <button onclick="navSwitch('profile')" id="nav-profile"
+            class="nav-btn flex flex-col items-center">
+        <i data-lucide="book-open" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black">PROFILE</span>
     </button>
 
 </nav>
 
 
 
+
+
+
+<!-- ▒▒▒▒▒▒ SPA 네비게이션 스크립트 ▒▒▒▒▒▒ -->
+<script>
+function navSwitch(page) {
+
+    document.querySelectorAll('.spa-page').forEach(p => p.classList.add('hidden'));
+    document.getElementById('page-' + page).classList.remove('hidden');
+
+    document.querySelectorAll('#main-nav button').forEach(b => b.classList.remove('nav-active'));
+    document.getElementById('nav-' + page).classList.add('nav-active');
+
+    if (page === 'route' && typeof openRoutePage === "function") setTimeout(openRoutePage, 50);
+}
+</script>
+
+
+<script>lucide.createIcons();</script>
 <script src="run.js"></script>
+
 </body>
 </html>
