@@ -1,280 +1,193 @@
-/* ============================
-   기본 공통 스타일
-============================ */
-
-/* iOS bounce 방지 */
-html, body {
-  overscroll-behavior: none;
-}
-
-* {
+/* ============================================================
+   기본 스타일
+============================================================ */
+body {
+  font-family: 'Pretendard', sans-serif;
+  background: #f7f9fb;
+  color: #222;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 스크롤바 최소화 */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-thumb {
-  background: #d0d7de;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* ============================
-   페이지 전환 애니메이션
-============================ */
-
 .page {
-  opacity: 0;
-  transform: translateX(12px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  display: none;
 }
 
-.page-active {
-  opacity: 1 !important;
-  transform: translateX(0) !important;
+.page.active {
+  display: block;
 }
 
-/* ============================
-   네비게이션바 active 스타일
-============================ */
+/* ============================================================
+   POKERUN 공통 요소
+============================================================ */
 
-.nav-btn-active {
-  color: #0284c7 !important;
+/* Glass 효과 */
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.75);
 }
 
-.nav-btn-active .material-icons {
-  color: #0284c7 !important;
+/* 상단/하단 라인 */
+.border-line {
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
-/* ============================
-   모달 공통
-============================ */
-
-.modal {
-  transition: opacity 0.2s ease-out;
+/* Nav 버튼 공통 */
+.nav-btn span {
+  transition: color 0.2s;
 }
 
-.modal.show {
-  opacity: 1;
-  pointer-events: auto;
+.nav-btn svg {
+  transition: color 0.2s, transform 0.2s;
 }
 
-.modal.hidden {
-  opacity: 0;
-  pointer-events: none;
+.nav-active span {
+  color: #000 !important;
 }
 
-/* ============================
-   운동 리스트 / 운동 카드
-============================ */
-
-.exercise-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  padding: 12px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: background 0.15s ease;
+.nav-active svg {
+  color: #000 !important;
+  transform: scale(1.15);
 }
 
-.exercise-card:hover {
-  background: #f0f9ff;
+/* 메인 accent 색 (POKERUN 블루) */
+:root {
+  --accent: #2d8cff;
+  --main: #ffffff;
 }
 
-/* 운동 이미지 (exercises.js 기반) */
-.exercise-thumb {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
+.bg-accent {
+  background-color: var(--accent) !important;
 }
 
-/* ============================
-   세션 세트 카드
-============================ */
-
-.set-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  transition: background 0.25s ease, border 0.25s ease;
+.border-main {
+  border-color: var(--main) !important;
 }
 
-.set-complete {
-  background: #f0faff !important;
-  border-color: #38bdf8 !important;
-  animation: pulseSet 0.3s ease-out;
-}
+/* ============================================================
+   달력(Calendar)
+============================================================ */
 
-@keyframes pulseSet {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.02); }
-  100% { transform: scale(1); }
-}
-
-/* 세트 복사 버튼 */
-.set-copy-btn {
-  font-size: 11px;
-  color: #0369a1;
-}
-
-/* ============================
-   드래그 정렬 (Sortable.js)
-============================ */
-
-.sortable-ghost {
-  opacity: 0.4;
-  background: #e0f2fe !important;
-}
-
-.sortable-chosen {
-  background: #f0f9ff !important;
-}
-
-/* ============================
-   Summary / PR / Timer UI
-============================ */
-
-.pr-badge {
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-/* Floating Timer */
-#floating-timer {
-  animation: floatUp 0.25s ease-out;
-}
-
-@keyframes floatUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ============================
-   캘린더 스타일
-============================ */
-
-.calendar-day {
+#calendar-month-grid button {
   width: 100%;
-  aspect-ratio: 1;
+  height: 42px;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border 0.15s ease;
-}
-
-.calendar-day:hover {
-  background: #f0f9ff;
-}
-
-.calendar-day-today {
-  border: 2px solid #0ea5e9;
-  font-weight: 600;
-  color: #0284c7;
-}
-
-.calendar-day-selected {
-  background: #0ea5e9;
-  color: white;
-  font-weight: 600;
-}
-
-.calendar-day-has-session {
-  background: #e0f2fe;
-  color: #0369a1;
-  font-weight: 600;
-  border: 1px solid #bae6fd;
-}
-
-.calendar-day-disabled {
-  opacity: 0.3;
-  pointer-events: none;
-}
-
-/* ============================
-   통계 페이지
-============================ */
-
-.stats-bodypart-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #fff;
+  background: white;
   border: 1px solid #e5e7eb;
-  align-items: center;
+  font-size: 14px;
 }
 
-.stats-number {
-  font-weight: 600;
-  color: #0284c7;
+#calendar-month-grid button.today {
+  border: 2px solid var(--accent);
 }
 
-/* ============================
-   루틴 템플릿 카드
-============================ */
+#calendar-month-grid button.selected {
+  background: var(--accent);
+  color: white;
+}
 
-.template-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+/* ============================================================
+   홈 — 주간 달력
+============================================================ */
+
+#home-weekly-calendar div {
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-size: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+#home-weekly-calendar .active {
+  background: var(--accent);
+  color: white;
+}
+
+/* ============================================================
+   루틴 리스트
+============================================================ */
+
+.routine-item {
+  background: white;
   padding: 14px;
-  transition: background 0.2s ease;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-.template-card:hover {
-  background: #f0f9ff;
+.routine-item:hover {
+  background: #f0f7ff;
+  cursor: pointer;
 }
 
-/* 템플릿 내부 운동 리스트 */
-.template-exercise-row {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+/* 루틴 생성 모달 */
+#routine-editor-modal input {
+  border: 1px solid #ddd;
+}
+
+.routine-exercise-select {
+  border: 1px solid #ccc;
+  padding: 6px;
+  border-radius: 8px;
+  background: white;
+}
+
+/* 파트 선택 탭 */
+.part-tab {
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #e6e6e6;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.part-tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* ============================================================
+   통계 페이지
+============================================================ */
+
+#stats-bodypart-list .stat-item {
   padding: 10px;
   border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
+  background: white;
+  border: 1px solid #eee;
 }
 
-/* ============================
-   애니메이션 유틸
-============================ */
-
-.fade-in {
-  animation: fadeIn 0.25s ease-out;
+#stats-bodypart-chart {
+  width: 100% !important;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ============================================================
+   Daily Log Modal
+============================================================ */
+#daily-log-modal .log-item {
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #eee;
 }
 
-.slide-up {
-  animation: slideUp 0.25s ease-out;
+/* ============================================================
+   프로필 페이지
+============================================================ */
+
+#reset-data-btn {
+  margin-top: 20px;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ============================================================
+   스크롤바 최소화 (모바일 UX)
+============================================================ */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* 숨김 강제 */
-.hidden-important {
-  display: none !important;
+*::-webkit-scrollbar {
+  display: none;
 }
