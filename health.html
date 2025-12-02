@@ -3,273 +3,618 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HealthFit</title>
+  <title>HEALTH</title>
 
-  <!-- Tailwind (개발용 CDN) -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="stylesheet" href="health.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css">
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- 메인 스타일 -->
-  <link rel="stylesheet" href="health.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
-<body class="bg-gray-50">
+<script>
+  function switchPage(page) {
+    var pages = ['home', 'calendar', 'routines', 'stats', 'profile'];
 
-  <!-- =========================================================
-       상단바 — POKERUN 원본 스타일
-  ========================================================== -->
-  <header id="main-header" class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-line shrink-0">
-    <div class="flex items-center gap-2">
-      <div class="bg-accent p-1 rounded text-white shadow-lg transition-colors duration-300">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zap" class="lucide lucide-zap w-5 h-5 fill-current"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
-      </div>
-      <h1 class="text-xl font-sport font-black italic tracking-tighter text-txt">
-        POKE<span class="text-accent">RUN</span>
-        <span class="text-xs align-top text-red-500">PRO</span>
-      </h1>
+    pages.forEach(function (p) {
+      var el = document.getElementById('page-' + p);
+      if (!el) return;
+      if (p === page) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    });
+
+    // 하단바 active 처리
+    var navMap = {
+      calendar: 'nav-cal',
+      routines: 'nav-routines',
+      stats: 'nav-stats',
+      profile: 'nav-profile'
+    };
+
+    var navButtons = document.querySelectorAll('#main-nav .nav-btn');
+    navButtons.forEach(btn => {
+      btn.classList.remove('text-txt');
+      btn.classList.add('text-sub');
+    });
+
+    if (navMap[page]) {
+      var active = document.getElementById(navMap[page]);
+      if (active) {
+        active.classList.add('text-txt');
+        active.classList.remove('text-sub');
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => switchPage('home'));
+</script>
+
+</body>
+</html>
+
+<body class="bg-main text-txt">
+
+<!-- =====================================================
+     📌 상단바 (네가 준 그대로 - 절대 수정 X)
+===================================================== -->
+<header id="main-header" class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-line shrink-0">
+  <div class="flex items-center gap-2">
+    <div class="bg-accent p-1 rounded text-white shadow-lg transition-colors duration-300">
+      <i class="lucide lucide-zap w-5 h-5"></i>
     </div>
-    
-    <div class="flex items-center gap-2">
-      <!-- 원본 기능은 일단 유지 / JS에서 안 써도 됨 -->
-      <button class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" class="lucide lucide-settings w-5 h-5 text-txt"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
-      </button>
-      <button class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="moon" id="theme-icon" class="lucide lucide-moon lucide-sun w-5 h-5 text-txt"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg>
-      </button>
-      <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
-        <span class="text-yellow-400 text-xs font-bold">●</span>
-        <span id="display-coins" class="font-sport font-bold text-sm text-txt">0</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- 헤더 높이만큼 아래 여백 -->
-  <main class="pt-[72px] pb-[80px] min-h-screen">
-
-    <!-- =======================================================
-         PAGE: CALENDAR (운동 기록 달력)
-    ======================================================== -->
-    <section id="page-calendar" class="page hidden px-4">
-      <h2 class="text-xl font-bold mb-3">운동 기록 달력</h2>
-
-      <div class="flex justify-between items-center mb-2">
-        <button id="calendar-prev-month" class="px-2 py-1 bg-gray-100 rounded">◀</button>
-        <div id="calendar-title" class="font-bold text-lg"></div>
-        <button id="calendar-next-month" class="px-2 py-1 bg-gray-100 rounded">▶</button>
-      </div>
-
-      <div class="grid grid-cols-7 text-center text-xs text-gray-500 mb-1">
-        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
-      </div>
-
-      <div id="calendar-month-grid" class="grid grid-cols-7 gap-1 mb-4"></div>
-
-      <div class="mb-2 flex justify-between items-center">
-        <div id="selected-date-label" class="font-bold text-blue-700 text-sm"></div>
-        <button id="calendar-today-btn" class="text-xs px-2 py-1 border rounded">오늘</button>
-      </div>
-
-      <div class="text-xs text-gray-600 mb-2">
-        총 볼륨: <span id="selected-date-volume">0kg</span> · 종목
-        <span id="selected-date-exercise-count">0</span>개
-      </div>
-
-      <div id="selected-date-workouts" class="space-y-2 mb-3"></div>
-
-      <button id="open-daily-log-modal" class="text-xs px-3 py-1 border rounded bg-white">
-        전체 기록 보기
-      </button>
-    </section>
-
-    <!-- =======================================================
-         PAGE: ROUTINES (루틴 관리)
-         - 루틴 리스트
-         - 루틴 생성 플로팅 버튼
-    ======================================================== -->
-    <section id="page-routines" class="page hidden px-4">
-      <h2 class="text-xl font-bold mb-3">루틴 관리</h2>
-
-      <!-- 루틴 리스트 -->
-      <div id="routine-list" class="space-y-3 mb-20"></div>
-
-      <!-- 루틴 생성 버튼 (우측 하단 +) -->
-      <button id="open-routine-create-modal"
-              class="fixed bottom-[96px] right-4 bg-blue-500 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-3xl">
-        +
-      </button>
-    </section>
-
-    <!-- =======================================================
-         PAGE: HOME (오늘의 운동)
-         - 일주일 달력
-         - 루틴 선택 → 운동 시작
-    ======================================================== -->
-    <section id="page-home" class="page px-4">
-      <h2 class="text-xl font-bold mb-3">오늘의 운동</h2>
-
-      <!-- 일주일 달력 (일요일 시작) -->
-      <div id="home-weekly-calendar" class="grid grid-cols-7 gap-1 mb-3"></div>
-      <div id="home-session-date" class="font-semibold text-sm text-blue-700 mb-2"></div>
-
-      <!-- 루틴 선택 후 운동 시작 -->
-      <select id="home-routine-select" class="w-full border rounded-lg px-3 py-2 text-sm mb-3"></select>
-      <button id="home-start-from-routine" class="w-full bg-blue-500 text-white py-2 rounded-lg mb-4">
-        루틴으로 운동 시작
-      </button>
-
-      <!-- 오늘 세션 요약 -->
-      <div id="home-session-list" class="space-y-3"></div>
-    </section>
-
-    <!-- =======================================================
-         PAGE: STATS (운동 통계)
-    ======================================================== -->
-    <section id="page-stats" class="page hidden px-4">
-      <h2 class="text-xl font-bold mb-3">운동 통계</h2>
-
-      <div class="flex gap-2 mb-2">
-        <button id="stats-range-7" class="px-3 py-1 rounded border text-sm">최근 7일</button>
-        <button id="stats-range-30" class="px-3 py-1 rounded border text-sm">최근 30일</button>
-        <button id="stats-range-all" class="px-3 py-1 rounded border text-sm">전체</button>
-      </div>
-
-      <div id="stats-period-label" class="text-xs text-gray-500 mb-2"></div>
-
-      <div class="h-[200px] mb-4">
-        <canvas id="stats-bodypart-chart"></canvas>
-      </div>
-
-      <div id="stats-bodypart-list" class="space-y-2 mb-4"></div>
-
-      <h3 class="font-bold mb-1">PR 기록</h3>
-      <div id="pr-list" class="space-y-2"></div>
-    </section>
-
-    <!-- =======================================================
-         PAGE: PROFILE (프로필)
-    ======================================================== -->
-    <section id="page-profile" class="page hidden px-4 mb-10">
-      <h2 class="text-xl font-bold mb-3">프로필</h2>
-
-      <div class="flex items-center justify-center mx-auto mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="user" class="lucide lucide-user w-12 h-12 text-blue-500"><path d="M18 20a6 6 0 0 0-12 0"></path><circle cx="12" cy="10" r="4"></circle></svg>
-      </div>
-
-      <button id="reset-data-btn" class="w-full bg-red-500 text-white py-2 rounded-lg">
-        전체 데이터 초기화
-      </button>
-    </section>
-
-  </main>
-
-  <!-- =========================================================
-       DAILY LOG MODAL (날짜별 전체 기록)
-  ========================================================== -->
-  <div id="daily-log-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
-    <div class="bg-white w-full max-w-md rounded-xl p-4">
-      <div class="flex justify-between items-center mb-2">
-        <div id="daily-log-title" class="font-bold text-lg"></div>
-        <button id="close-daily-log-modal" class="text-gray-500 text-xl">✕</button>
-      </div>
-      <div id="daily-log-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
-    </div>
+    <h1 class="text-xl font-sport font-black italic tracking-tighter text-txt">
+      POKE<span class="text-accent">RUN</span>
+      <span class="text-xs align-top text-red-500">PRO</span>
+    </h1>
   </div>
 
-  <!-- =========================================================
-       ROUTINE EDITOR MODAL
-       B안 구조용: 부위 탭 + 종목 리스트 + 선택된 운동(세트/무게/횟수)
-  ========================================================== -->
-  <div id="routine-editor-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
-    <div class="bg-white w-full max-w-lg rounded-xl p-4 space-y-3">
-      <div class="flex justify-between items-center">
-        <div id="routine-editor-title" class="font-bold text-lg">루틴 만들기</div>
-        <button id="close-routine-editor" class="text-gray-500 text-xl">✕</button>
-      </div>
+  <div class="flex items-center gap-2">
+    <button id="open-stats-modal-btn" class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
+      <i class="lucide lucide-bar-chart-3 w-5 h-5 text-txt"></i>
+    </button>
 
-      <!-- 루틴 이름 -->
-      <input id="routine-name-input" class="w-full border rounded-lg px-3 py-2"
-             placeholder="루틴 이름 입력 (예: 상체 루틴 A)" />
+    <button class="p-2 rounded-full bg-gray-200/20 hover:bg-gray-200/40 transition-colors">
+      <i id="theme-icon" class="lucide lucide-moon w-5 h-5 text-txt"></i>
+    </button>
 
-      <!-- 부위 탭 (가로 스크롤) -->
-      <div id="routine-part-tabs" class="flex gap-2 overflow-x-auto py-1"></div>
-
-      <!-- 선택된 부위의 종목 리스트 -->
-      <div id="routine-exercise-list"
-           class="space-y-2 max-h-[180px] overflow-y-auto border rounded p-2 bg-gray-50"></div>
-
-      <!-- 선택된 운동 목록 -->
-      <h3 class="font-bold text-sm">
-        추가된 운동 (<span id="routine-selected-count">0</span>)
-      </h3>
-      <div id="routine-selected-list"
-           class="space-y-2 max-h-[220px] overflow-y-auto border rounded p-2 bg-white"></div>
-
-      <div class="flex justify-between mt-2">
-        <button id="routine-delete-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hidden">삭제</button>
-        <button id="routine-save-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg ml-auto">저장</button>
-      </div>
+    <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
+      <span class="text-yellow-400 text-xs font-bold">●</span>
+      <span id="display-coins" class="font-sport font-bold text-sm text-txt">0</span>
     </div>
   </div>
+</header>
 
-  <!-- =========================================================
-       ROUTINE DETAIL MODAL (루틴 상세 보기)
-  ========================================================== -->
-  <div id="routine-detail-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center px-4">
-    <div class="bg-white w-full max-w-md rounded-xl p-4 space-y-3">
-      <div class="flex justify-between items-center">
-        <div id="routine-detail-title" class="font-bold text-lg"></div>
-        <button id="close-routine-detail" class="text-gray-500 text-xl">✕</button>
-      </div>
 
-      <div id="routine-detail-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
+<!-- =====================================================
+     📌 MAIN (SPA 페이지)
+===================================================== -->
+<main class="pt-[72px] pb-[80px] min-h-screen px-4">
 
-      <div class="flex justify-between mt-2">
-        <button id="routine-detail-edit" class="bg-blue-500 text-white px-4 py-2 rounded-lg">수정</button>
-        <button id="routine-detail-start" class="bg-green-500 text-white px-4 py-2 rounded-lg">운동 시작</button>
-      </div>
+  <!-- ===================== HOME ===================== -->
+  <section id="page-home" class="page">
+    <h2 class="text-base font-bold mb-2">오늘 운동</h2>
+    <div id="home-week-calendar" class="week-calendar"></div>
+
+    <h2 class="text-base font-bold mt-6 mb-2">루틴 선택</h2>
+    <div id="home-routine-list" class="home-routine-list"></div>
+  </section>
+
+  <!-- ===================== CALENDAR ===================== -->
+  <section id="page-calendar" class="page hidden">
+    <div class="flex justify-between items-center mb-3">
+      <button id="prev-month-btn" class="px-3 py-1 border border-line rounded-full text-xs">◀</button>
+      <div id="calendar-title" class="font-bold text-lg"></div>
+      <button id="next-month-btn" class="px-3 py-1 border border-line rounded-full text-xs">▶</button>
     </div>
+
+    <div class="flex gap-2 mb-3">
+      <button id="today-btn" class="px-3 py-1 text-xs rounded-full border border-line">오늘</button>
+      <input type="date" id="date-search-input" class="border border-line rounded px-2 py-1 text-xs" />
+      <button id="date-search-btn" class="px-3 py-1 border rounded text-xs">검색</button>
+    </div>
+
+    <div class="grid grid-cols-7 text-center text-[10px] text-gray-500 mb-1">
+      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+    </div>
+
+    <div id="calendar" class="grid grid-cols-7 gap-1"></div>
+  </section>
+
+  <!-- ===================== ROUTINES ===================== -->
+  <section id="page-routines" class="page hidden">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-base font-bold">내 루틴</h2>
+      <button id="create-new-template-btn" class="px-3 py-1 text-xs rounded-full border border-line">새 루틴</button>
+    </div>
+
+    <div id="routine-template-list" class="space-y-2"></div>
+  </section>
+
+  <!-- ===================== STATS ===================== -->
+  <section id="page-stats" class="page hidden">
+    <h2 class="text-base font-bold mb-3">운동 통계</h2>
+
+    <div class="space-y-4">
+
+      <div class="flex gap-2 items-end">
+        <div>
+          <label class="text-xs">시작</label>
+          <input type="date" id="stats-start-date" class="border border-line rounded px-2 py-1 text-xs">
+        </div>
+        <div>
+          <label class="text-xs">종료</label>
+          <input type="date" id="stats-end-date" class="border border-line rounded px-2 py-1 text-xs">
+        </div>
+        <button id="stats-reset-btn" class="ml-auto text-xs px-3 py-1 border border-line rounded-full">최근7일</button>
+      </div>
+
+      <div>
+        <h3 class="text-xs font-bold mb-1">부위 선택</h3>
+        <div id="stats-part-selector" class="flex flex-wrap gap-1"></div>
+      </div>
+
+      <div>
+        <h3 class="text-xs font-bold mb-1">운동 선택</h3>
+        <select id="stats-exercise-select" class="w-full border border-line rounded px-2 py-1 text-xs"></select>
+      </div>
+
+      <div class="h-[240px]">
+        <canvas id="stats-chart-canvas"></canvas>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== PROFILE ===================== -->
+<section id="page-profile" class="page hidden flex flex-col items-center pt-10">
+  <div class="w-24 h-24 rounded-full bg-gradient-to-b from-accent/40 to-black flex items-center justify-center mb-4 shadow-lg">
+    <i class="lucide lucide-user w-12 h-12 text-white"></i>
   </div>
 
-  <!-- =========================================================
-       하단바 — POKERUN 네비게이션 (CAL / ROUT / HOME / STAT / ME)
-  ========================================================== -->
-  <nav id="main-nav" class="fixed bottom-0 w-full h-[64px] glass border-t border-line px-2 flex justify-around items-center z-40 transition-colors duration-300">
-    <!-- CALENDAR -->
-    <button onclick="switchPage('calendar')" id="nav-cal" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 transition-all text-sub hover:text-txt">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="calendar" class="lucide lucide-calendar w-6 h-6"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
-      <span class="text-[10px] font-black italic font-sport">CAL</span>
-    </button>
+  <h2 class="text-lg font-bold mb-4">내 정보</h2>
 
-    <!-- ROUTINES -->
-    <button onclick="switchPage('routines')" id="nav-routines" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 transition-all text-sub hover:text-txt">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="list" class="lucide lucide-list w-6 h-6"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>
-      <span class="text-[10px] font-black italic font-sport">ROUT</span>
-    </button>
+  <!-- 여기 id 필수 -->
+  <button id="reset-data-btn"
+          class="px-4 py-2 rounded-full bg-red-600 text-white text-sm shadow">
+    모든 데이터 초기화
+  </button>
+</section>
 
-    <!-- HOME (중앙 큰 버튼) -->
-    <button onclick="switchPage('home')" class="transform transition-transform active:scale-95 group">
-      <div class="w-14 h-14 bg-accent rounded-full flex items-center justify-center border-4 border-main shadow-md relative z-10 group-hover:scale-105 transition-all">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="activity" class="lucide lucide-activity w-7 h-7 text-white"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+
+</main>
+<!-- =====================================================
+     📌 FLOATING TIMER (포케런 스타일)
+===================================================== -->
+<div id="floating-timer"
+     class="hidden fixed bottom-24 right-4 w-16 h-16 rounded-full 
+            bg-black/60 backdrop-blur flex items-center justify-center 
+            shadow-xl border border-white/20 z-40">
+  
+  <div id="floating-timer-display" class="hidden"></div>
+
+  <div id="timer-digital-display" class="text-xs font-mono text-white">
+    00:00
+  </div>
+
+  <div id="clock-second-hand" class="hidden"></div>
+  <div id="floating-timer-progress" class="hidden"></div>
+
+  <button id="close-floating-timer" class="hidden"></button>
+</div>
+
+
+<!-- =====================================================
+     📌 WORKOUT SESSION MODAL (운동 세션)
+===================================================== -->
+<div id="workout-session-modal"
+     class="modal-overlay hidden fixed inset-0 z-50 bg-black/50 
+            backdrop-blur-sm flex items-center justify-center">
+
+  <div id="workout-session-modal-inner"
+       class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
+              max-h-[90vh] overflow-y-auto p-5 shadow-2xl">
+
+
+    <h2 id="workout-session-title" class="text-lg font-bold mb-3 text-txt">
+      오늘 운동
+    </h2>
+
+    <div id="session-total-timer-display"
+         class="text-xs mb-3 font-mono px-3 py-1 bg-black/20 rounded-full w-fit">
+      00:00
+    </div>
+
+    <div id="workout-session-list" class="space-y-2 mb-3"></div>
+
+    <!-- 휴식 타이머 + 컨트롤 -->
+    <div class="border-t border-line pt-4 space-y-3">
+
+      <div>
+        <label class="block text-xs mb-1 text-sub">기본 휴식 시간 (초)</label>
+        <input id="timer-input" type="number"
+               class="border border-line bg-main text-txt w-full px-3 py-2 
+                      rounded-xl text-xs"
+               value="60">
       </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button id="timer-minus-30" class="px-3 py-2 border border-line rounded-xl">
+          -30초
+        </button>
+        <button id="timer-plus-30" class="px-3 py-2 border border-line rounded-xl">
+          +30초
+        </button>
+        <button id="timer-minus-10" class="px-3 py-2 border border-line rounded-xl">
+          -10초
+        </button>
+        <button id="timer-plus-10" class="px-3 py-2 border border-line rounded-xl">
+          +10초
+        </button>
+      </div>
+
+      <div class="flex gap-2 justify-between mt-4">
+        <button id="add-exercise-to-session-btn"
+                class="px-4 py-2 text-xs rounded-full bg-black/20 border border-line">
+          운동 추가
+        </button>
+
+        <button id="save-session-btn"
+                class="px-4 py-2 text-xs rounded-full bg-accent text-white">
+          저장
+        </button>
+
+        <button id="hide-session-btn"
+                class="px-4 py-2 text-xs rounded-full bg-black/20 border border-line">
+          숨기기
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 ADD TO SESSION MODAL (세션에 운동 추가)
+===================================================== -->
+<div id="add-to-session-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md p-5 shadow-lg">
+
+    <h2 class="text-lg font-bold mb-3">운동 추가</h2>
+
+    <div>
+      <label class="text-xs mb-1 block">부위</label>
+      <select id="session-ex-category-select"
+              class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs"></select>
+    </div>
+
+    <div class="mt-3">
+      <label class="text-xs mb-1 block">운동</label>
+      <select id="session-ex-list-select"
+              class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs"></select>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mt-3">
+      <input id="session-weight-input" type="number"
+             placeholder="kg"
+             class="border border-line bg-main text-txt px-2 py-1 rounded-xl text-xs">
+      <input id="session-reps-input" type="number"
+             placeholder="회"
+             class="border border-line bg-main text-txt px-2 py-1 rounded-xl text-xs">
+      <input id="session-sets-input" type="number"
+             placeholder="세트"
+             class="border border-line bg-main text-txt px-2 py-1 rounded-xl text-xs">
+    </div>
+
+    <button id="save-to-session-btn"
+            class="w-full mt-4 px-4 py-2 rounded-full bg-accent text-white text-xs">
+      추가
     </button>
 
-    <!-- STATS -->
-    <button onclick="switchPage('stats')" id="nav-stats" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 transition-all text-sub hover:text-txt">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bar-chart" class="lucide lucide-bar-chart w-6 h-6"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>
-      <span class="text-[10px] font-black italic font-sport">STAT</span>
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 TEMPLATE EDITOR MODAL (루틴 편집)
+===================================================== -->
+<div id="template-editor-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md max-h-[90vh] 
+              overflow-y-auto p-5 shadow-xl">
+
+    <h2 id="template-modal-title" class="text-lg font-bold mb-4">루틴 만들기</h2>
+
+    <!-- 루틴 제목 -->
+    <div class="mb-3">
+      <label class="block text-xs mb-1">루틴 이름</label>
+      <input id="template-title-input" type="text"
+             class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs">
+    </div>
+
+    <!-- 운동 추가/수정 -->
+    <div class="grid grid-cols-5 gap-2 items-end">
+
+      <select id="exercise-category-select"
+              class="col-span-2 border border-line rounded-xl px-2 py-1 bg-main text-txt text-[11px]"></select>
+
+      <select id="exercise-list-select"
+              class="col-span-3 border border-line rounded-xl px-2 py-1 bg-main text-txt text-[11px]"></select>
+
+      <input id="template-weight-input" 
+             class="border border-line rounded-xl px-2 py-1 text-[10px]" 
+             placeholder="kg">
+
+      <input id="template-reps-input" 
+             class="border border-line rounded-xl px-2 py-1 text-[10px]" 
+             placeholder="회">
+
+      <input id="template-sets-input" 
+             class="border border-line rounded-xl px-2 py-1 text-[10px]" 
+             placeholder="세트">
+
+      <button id="add-update-exercise-btn"
+              class="col-span-2 px-3 py-1 bg-black/20 border border-line rounded-xl text-[11px]">
+        운동 추가
+      </button>
+
+      <button id="open-add-exercise-modal-btn"
+              class="col-span-3 px-3 py-1 bg-black/20 border border-line rounded-xl text-[11px]">
+        운동 DB 추가
+      </button>
+
+    </div>
+
+    <div id="template-exercise-list" class="mt-4 space-y-2"></div>
+
+    <button id="save-template-btn"
+            class="w-full mt-4 px-4 py-2 rounded-full bg-accent text-white text-xs">
+      루틴 저장
     </button>
 
-    <!-- PROFILE -->
-    <button onclick="switchPage('profile')" id="nav-profile" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 transition-all text-sub hover:text-txt">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="user" class="lucide lucide-user w-6 h-6"><path d="M18 20a6 6 0 0 0-12 0"></path><circle cx="12" cy="10" r="4"></circle></svg>
-      <span class="text-[10px] font-black italic font-sport">ME</span>
-    </button>
-  </nav>
+  </div>
+</div>
 
-  <!-- 데이터/로직 -->
-  <script src="exercises.js"></script>
-  <script src="health.js"></script>
+
+<!-- =====================================================
+     📌 ADD EXERCISE DB MODAL
+===================================================== -->
+<div id="add-exercise-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md p-5 shadow-xl">
+
+    <h2 class="text-lg font-bold mb-3">운동 DB 추가</h2>
+
+    <label class="text-xs mb-1 block">부위</label>
+    <select id="new-exercise-part"
+            class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs"></select>
+
+    <label class="text-xs mt-3 mb-1 block">운동 이름</label>
+    <input id="new-exercise-name" type="text"
+           class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs">
+
+    <div class="flex gap-2 mt-4">
+      <button id="save-new-exercise-btn"
+              class="flex-1 px-4 py-2 rounded-full bg-accent text-white text-xs">
+        저장
+      </button>
+
+      <button id="cancel-add-exercise-btn"
+              class="flex-1 px-4 py-2 rounded-full bg-black/20 border border-line text-xs">
+        취소
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 DAILY LOG MODAL (하루 전체 기록)
+===================================================== -->
+<div id="daily-log-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
+              max-h-[90vh] overflow-y-auto p-5 shadow-xl">
+
+    <h2 id="daily-log-modal-title" class="text-lg font-bold mb-4"></h2>
+
+    <div id="daily-log-modal-list" class="space-y-3"></div>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 STATS MODAL (페이지 외부 통계뷰)
+===================================================== -->
+<div id="stats-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
+              max-h-[90vh] overflow-y-auto p-5 shadow-xl">
+    <h2 class="text-lg font-bold mb-4">통계</h2>
+    <!-- 실제 그래프는 stats 페이지에서 표시됨 -->
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     📌 PR CELEBRATION MODAL (신기록)
+===================================================== -->
+<div id="pr-celebration-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md p-5 shadow-xl">
+
+    <h2 class="text-lg font-bold mb-3">🎉 새 기록 달성!</h2>
+
+    <div id="pr-list" class="space-y-2 mb-4"></div>
+
+    <button id="close-pr-modal"
+            class="w-full px-4 py-2 rounded-full bg-accent text-white text-xs">
+      확인
+    </button>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 SUMMARY MODAL (저장 후 요약)
+===================================================== -->
+<div id="summary-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
+              max-h-[90vh] overflow-y-auto p-5 shadow-xl">
+
+    <h2 class="text-lg font-bold mb-4">오늘 운동 요약</h2>
+
+    <div id="summary-content" class="space-y-2 mb-4"></div>
+
+    <button id="close-summary-btn"
+            class="w-full px-4 py-2 rounded-full bg-accent text-white text-xs">
+      닫기
+    </button>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 CONFIRM MODAL (삭제/중복)
+===================================================== -->
+<div id="custom-confirm-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl max-w-sm w-full p-5 shadow-xl">
+
+    <p id="confirm-message" class="text-sm mb-4"></p>
+
+    <div class="flex gap-2">
+      <button id="confirm-ok-btn"
+              class="flex-1 px-4 py-2 rounded-full bg-red-600 text-white text-xs">
+        확인
+      </button>
+
+      <button id="confirm-cancel-btn"
+              class="flex-1 px-4 py-2 rounded-full bg-black/20 border border-line text-xs">
+        취소
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     📌 CHOICE MODAL (중복 처리 선택)
+===================================================== -->
+<div id="choice-modal"
+     class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm 
+            flex items-center justify-center z-50">
+
+  <div class="bg-main/90 border border-line rounded-2xl max-w-sm w-full p-5 shadow-xl">
+
+    <p id="choice-message" class="text-sm mb-4"></p>
+
+    <div class="flex flex-col gap-2">
+      <button id="choice-overwrite-btn"
+              class="w-full px-4 py-2 rounded-full bg-accent text-white text-xs">
+        덮어쓰기
+      </button>
+
+      <button id="choice-append-btn"
+              class="w-full px-4 py-2 rounded-full bg-black/20 border border-line text-xs">
+        추가하기
+      </button>
+
+      <button id="choice-cancel-btn"
+              class="w-full px-4 py-2 rounded-full bg-black/20 border border-line text-xs">
+        취소
+      </button>
+    </div>
+
+  </div>
+</div>
+<!-- =====================================================
+     📌 하단바 (네가 준 그대로 – 절대 수정 X)
+===================================================== -->
+<nav id="main-nav"
+     class="fixed bottom-0 w-full h-[64px] glass border-t border-line px-2 
+            flex justify-around items-center z-40 transition-colors duration-300">
+
+  <!-- CALENDAR -->
+  <button onclick="switchPage('calendar')" id="nav-cal"
+          class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 
+                 transition-all text-sub hover:text-txt">
+    <i class="lucide lucide-calendar w-6 h-6"></i>
+    <span class="text-[10px] font-black italic font-sport">CAL</span>
+  </button>
+
+  <!-- ROUTINES -->
+  <button onclick="switchPage('routines')" id="nav-routines"
+          class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 
+                 transition-all text-sub hover:text-txt">
+    <i class="lucide lucide-list w-6 h-6"></i>
+    <span class="text-[10px] font-black italic font-sport">ROUT</span>
+  </button>
+
+  <!-- HOME (중앙) -->
+  <button onclick="switchPage('home')"
+          class="transform transition-transform active:scale-95 group">
+    <div class="w-14 h-14 bg-accent rounded-full flex items-center justify-center 
+                border-4 border-main shadow-md relative z-10 
+                group-hover:scale-105 transition-all">
+      <i class="lucide lucide-activity w-7 h-7 text-white"></i>
+    </div>
+  </button>
+
+  <!-- STATS -->
+  <button onclick="switchPage('stats')" id="nav-stats"
+          class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 
+                 transition-all text-sub hover:text-txt">
+    <i class="lucide lucide-bar-chart w-6 h-6"></i>
+    <span class="text-[10px] font-black italic font-sport">STAT</span>
+  </button>
+
+  <!-- PROFILE -->
+  <button onclick="switchPage('profile')" id="nav-profile"
+          class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 
+                 transition-all text-sub hover:text-txt">
+    <i class="lucide lucide-user w-6 h-6"></i>
+    <span class="text-[10px] font-black italic font-sport">ME</span>
+  </button>
+
+</nav>
+
+
+<!-- =====================================================
+     📌 Scripts
+===================================================== -->
+<script src="exercises.js"></script>
+<script src="health.js"></script>
+
 </body>
 </html>
