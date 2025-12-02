@@ -15,53 +15,10 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
-<script>
-  function switchPage(page) {
-    var pages = ['home', 'calendar', 'routines', 'stats', 'profile'];
-
-    pages.forEach(function (p) {
-      var el = document.getElementById('page-' + p);
-      if (!el) return;
-      if (p === page) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    });
-
-    // 하단바 active 처리
-    var navMap = {
-      calendar: 'nav-cal',
-      routines: 'nav-routines',
-      stats: 'nav-stats',
-      profile: 'nav-profile'
-    };
-
-    var navButtons = document.querySelectorAll('#main-nav .nav-btn');
-    navButtons.forEach(btn => {
-      btn.classList.remove('text-txt');
-      btn.classList.add('text-sub');
-    });
-
-    if (navMap[page]) {
-      var active = document.getElementById(navMap[page]);
-      if (active) {
-        active.classList.add('text-txt');
-        active.classList.remove('text-sub');
-      }
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => switchPage('home'));
-</script>
-
-</body>
-</html>
-
 <body class="bg-main text-txt">
 
 <!-- =====================================================
-     📌 상단바 (네가 준 그대로 - 절대 수정 X)
+     📌 상단바 (PokéRun 스타일 고정)
 ===================================================== -->
 <header id="main-header" class="fixed top-0 w-full z-30 px-5 h-[56px] flex justify-between items-center glass border-b border-line shrink-0">
   <div class="flex items-center gap-2">
@@ -83,7 +40,8 @@
       <i id="theme-icon" class="lucide lucide-moon w-5 h-5 text-txt"></i>
     </button>
 
-    <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
+      <button id="back-to-main-btn" class="hidden"></button>
+      <div class="flex items-center gap-2 bg-black/10 px-4 py-1.5 rounded-full border border-line">
       <span class="text-yellow-400 text-xs font-bold">●</span>
       <span id="display-coins" class="font-sport font-bold text-sm text-txt">0</span>
     </div>
@@ -179,7 +137,6 @@
 
   <h2 class="text-lg font-bold mb-4">내 정보</h2>
 
-  <!-- 여기 id 필수 -->
   <button id="reset-data-btn"
           class="px-4 py-2 rounded-full bg-red-600 text-white text-sm shadow">
     모든 데이터 초기화
@@ -189,7 +146,7 @@
 
 </main>
 <!-- =====================================================
-     📌 FLOATING TIMER (포케런 스타일)
+     📌 FLOATING TIMER
 ===================================================== -->
 <div id="floating-timer"
      class="hidden fixed bottom-24 right-4 w-16 h-16 rounded-full 
@@ -220,7 +177,6 @@
        class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
               max-h-[90vh] overflow-y-auto p-5 shadow-2xl">
 
-
     <h2 id="workout-session-title" class="text-lg font-bold mb-3 text-txt">
       오늘 운동
     </h2>
@@ -232,7 +188,6 @@
 
     <div id="workout-session-list" class="space-y-2 mb-3"></div>
 
-    <!-- 휴식 타이머 + 컨트롤 -->
     <div class="border-t border-line pt-4 space-y-3">
 
       <div>
@@ -336,14 +291,12 @@
 
     <h2 id="template-modal-title" class="text-lg font-bold mb-4">루틴 만들기</h2>
 
-    <!-- 루틴 제목 -->
     <div class="mb-3">
       <label class="block text-xs mb-1">루틴 이름</label>
       <input id="template-title-input" type="text"
              class="border border-line w-full px-3 py-2 rounded-xl bg-main text-txt text-xs">
     </div>
 
-    <!-- 운동 추가/수정 -->
     <div class="grid grid-cols-5 gap-2 items-end">
 
       <select id="exercise-category-select"
@@ -450,7 +403,6 @@
   <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
               max-h-[90vh] overflow-y-auto p-5 shadow-xl">
     <h2 class="text-lg font-bold mb-4">통계</h2>
-    <!-- 실제 그래프는 stats 페이지에서 표시됨 -->
   </div>
 
 </div>
@@ -488,7 +440,7 @@
   <div class="bg-main/90 border border-line rounded-2xl w-full max-w-md 
               max-h-[90vh] overflow-y-auto p-5 shadow-xl">
 
-    <h2 class="text-lg font-bold mb-4">오늘 운동 요약</h2>
+    <h2 id="summary-content-title" class="text-lg font-bold mb-4">오늘 운동 요약</h2>
 
     <div id="summary-content" class="space-y-2 mb-4"></div>
 
@@ -558,8 +510,9 @@
 
   </div>
 </div>
+
 <!-- =====================================================
-     📌 하단바 (네가 준 그대로 – 절대 수정 X)
+     📌 하단바 (PokéRun 스타일 고정)
 ===================================================== -->
 <nav id="main-nav"
      class="fixed bottom-0 w-full h-[64px] glass border-t border-line px-2 
@@ -609,6 +562,47 @@
 
 </nav>
 
+<!-- =====================================================
+     📌 SPA 전환 스크립트
+===================================================== -->
+<script>
+  function switchPage(page) {
+    var pages = ['home', 'calendar', 'routines', 'stats', 'profile'];
+
+    pages.forEach(function (p) {
+      var el = document.getElementById('page-' + p);
+      if (!el) return;
+      if (p === page) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    });
+
+    var navMap = {
+      calendar: 'nav-cal',
+      routines: 'nav-routines',
+      stats: 'nav-stats',
+      profile: 'nav-profile'
+    };
+
+    var navButtons = document.querySelectorAll('#main-nav .nav-btn');
+    navButtons.forEach(btn => {
+      btn.classList.remove('text-txt');
+      btn.classList.add('text-sub');
+    });
+
+    if (navMap[page]) {
+      var active = document.getElementById(navMap[page]);
+      if (active) {
+        active.classList.add('text-txt');
+        active.classList.remove('text-sub');
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => switchPage('home'));
+</script>
 
 <!-- =====================================================
      📌 Scripts
