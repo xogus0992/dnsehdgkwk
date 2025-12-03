@@ -1,217 +1,336 @@
-/* ─────────────────────────────
-    GLOBAL
-──────────────────────────────*/
-
-/* 전체 여백 제거 */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
+/* ---------------------------------------------------
+   기본 Reset 보완 (Tailwind와 충돌 없음)
+--------------------------------------------------- */
 html, body {
-    width: 100%;
-    height: 100%;
-    overflow-x: hidden;
-    background: #e9f4ff;
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  background: #ffffff;
 }
 
-/* SPA 페이지 공통 */
-.spa-page {
-    display: block;
-}
-.hidden {
-    display: none !important;
+/* 텍스트 선택 방지 (입력창 제외) */
+:not(input):not(textarea) {
+  user-select: none;
 }
 
-
-/* ─────────────────────────────
-    상단바 (Pokerun 스타일 유지)
-──────────────────────────────*/
-
-#main-header {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid #d9d9d9;
+/* 스크롤바 최소화 */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c2c2c2;
+  border-radius: 4px;
 }
 
-#main-header img {
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+/* ---------------------------------------------------
+   공통 레이아웃 + 페이드 애니메이션
+--------------------------------------------------- */
+#app-pages > section {
+  animation: fade-in 0.2s ease;
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-#main-header i {
-    cursor: pointer;
-    transition: 0.2s;
-}
-#main-header i:hover {
-    opacity: 0.7;
-}
-
-
-/* ─────────────────────────────
-    하단바 (Pokerun 1:1)
-──────────────────────────────*/
-
-#main-nav {
-    background: #ffffff;
-    border-top: 1px solid #d9d9d9;
-    height: 72px;
-    padding-bottom: 10px;
+/* ---------------------------------------------------
+   상단바 / 하단바
+--------------------------------------------------- */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', sans-serif;
+  background: #fff;
 }
 
-/* 기본 버튼 */
-#main-nav .nav-btn {
-    opacity: 0.55;
-    transition: 0.25s;
-}
-#main-nav .nav-btn span {
-    margin-top: 4px;
-    color: #666;
+/* =================== 상단바 =================== */
+
+.topbar {
+  width: 100%;
+  height: 58px;
+  border-bottom: 1px solid #000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  box-sizing: border-box;
+  background: #fff;
 }
 
-/* 활성 탭 */
-#main-nav .nav-active {
-    opacity: 1 !important;
-}
-#main-nav .nav-active svg {
-    stroke: #1A82FF !important;
-}
-#main-nav .nav-active span {
-    color: #1A82FF !important;
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* 가운데 버튼 (HOME) */
-.nav-center-btn {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 50%;
-    background: #1A82FF;
-    border: 4px solid #ffffff;
-    margin-top: -28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.18);
-    transition: 0.25s;
-}
-.nav-center-btn:active {
-    transform: scale(0.95);
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
-
-/* ─────────────────────────────
-    RUN 화면
-──────────────────────────────*/
-
-#run-distance {
-    font-size: 54px;
-    font-weight: 900;
-    color: #165fcc;
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
 }
 
-#run-start-btn {
-    background: #1A82FF;
-    color: white;
-    border-radius: 50px;
-    padding: 14px 40px;
-    font-size: 17px;
-    font-weight: 700;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    transition: 0.2s;
-}
-#run-start-btn:active {
-    transform: scale(0.97);
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* 지도 컨테이너 */
-#run-map,
-#route-map {
-    width: 100%;
-    height: 100%;
+/* 토글스위치 */
+.toggle {
+  position: relative;
+  width: 60px;
+  height: 28px;
+  background: #D9D9D9;
+  border-radius: 14px;
+  cursor: pointer;
 }
 
-/* 지도 모서리 둥글게 */
+.toggle input {
+  display: none;
+}
+
+.toggle .slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  background: #FFD700;
+  border-radius: 50%;
+  transition: .25s;
+}
+
+.toggle input:checked + .slider {
+  transform: translateX(32px);
+}
+
+/* =================== 하단바 =================== */
+
+.bottombar {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 87px;
+  border-top: 1px solid #000;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 26px;
+  box-sizing: border-box;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 14px;
+}
+
+.tab-icon {
+  font-size: 22px;
+}
+
+.tab-center {
+  width: 64px;
+  height: 64px;
+}
+
+.center-icon {
+  width: 64px;
+  height: 64px;
+}
+
+/* ---------------------------------------------------
+   지도 공용 스타일
+--------------------------------------------------- */
+
+#shared-map {
+  width: 100%;
+  height: 100%;
+  background: #dcdcdc;
+}
+
+/* RUN과 ROUTE에서 shared-map을 이동시키기 위해 wrapper는 overflow-hidden */
+#map-container-run,
+#map-container-route {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 지도 위에 polyline이 겹칠 때 라운드 유지 */
 .leaflet-container {
-    border-radius: 16px;
+  border-radius: 12px;
 }
 
-
-/* ─────────────────────────────
-    ROUTE 화면
-──────────────────────────────*/
-
-#route-goal {
-    border-radius: 14px;
-    font-size: 16px;
-    padding: 14px;
-    border: 1px solid #d4d4d4;
-    background: #ffffff;
-    outline: none;
-    transition: 0.2s;
-}
-#route-goal:focus {
-    border-color: #1A82FF;
+/* ---------------------------------------------------
+   RUN 탭 영역
+--------------------------------------------------- */
+#page-run #run-distance {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -1px;
 }
 
-
-/* + 버튼 (코스 생성 전용) */
-#open-course-gen {
-    background: #1A82FF !important;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
-    transition: 0.2s;
+/* START / PAUSE / STOP 버튼 */
+#btn-run-start,
+#btn-run-pause,
+#btn-run-stop {
+  box-shadow: 0 2px 0 0 #000;
+  transition: transform 0.1s ease;
 }
-#open-course-gen:active {
-    transform: scale(0.95);
-}
-
-
-/* ─────────────────────────────
-    HOME
-──────────────────────────────*/
-
-#home-latest {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.07);
+#btn-run-start:active,
+#btn-run-pause:active,
+#btn-run-stop:active {
+  transform: scale(0.96);
 }
 
+/* ---------------------------------------------------
+   ROUTE(코스) 탭
+--------------------------------------------------- */
 
-/* ─────────────────────────────
-    RECORD
-──────────────────────────────*/
-
-#record-list .record-item {
-    background: white;
-    padding: 14px;
-    border-radius: 12px;
-    box-shadow: 0 2px 7px rgba(0,0,0,0.08);
+/* 목표거리 숫자 클릭 가능하게 포인터 변경 */
+#route-distance-display {
+  cursor: pointer;
 }
 
-
-/* ─────────────────────────────
-    PROFILE
-──────────────────────────────*/
-
-#page-profile i {
-    opacity: 0.6;
+/* 자동완성 리스트 */
+#start-suggestions,
+#end-suggestions {
+  border-radius: 12px;
+  border: 1px solid #000;
+  padding: 4px 0;
+  background: white;
+  display: none;
+  z-index: 30;
+  position: absolute;
+  width: calc(100% - 2px);
+}
+#start-suggestions li,
+#end-suggestions li {
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: 0.1s;
+}
+#start-suggestions li:hover,
+#end-suggestions li:hover {
+  background: #f0f0f0;
 }
 
-
-
-/* ─────────────────────────────
-    Leaflet Override (VWorld 타일 스타일에도 영향 없음)
-──────────────────────────────*/
-
-/* 줌 버튼 제거 (모바일에서 불필요) */
-.leaflet-control-zoom {
-    display: none !important;
+/* 상태 메시지 */
+#status-summary {
+  min-height: 16px;
 }
 
-/* Attribution 제거 */
-.leaflet-control-attribution {
-    display: none !important;
+/* ---------------------------------------------------
+   RECORDS(기록) 탭
+--------------------------------------------------- */
+
+/* 기록 아이템 */
+.record-item {
+  transition: 0.15s ease;
+}
+.record-item:active {
+  transform: scale(0.97);
+}
+
+/* polyline 썸네일 (전문 앱 기준으로 개선 적용) */
+.record-item .thumb,
+#record-list .thumb {
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid #d0d0d0;
+  overflow: hidden;
+}
+
+/* 캔버스 기반 polyline은 1px 까지 선명하게*/
+.thumb canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------
+   기록 상세 모달
+--------------------------------------------------- */
+
+#modal-record-detail,
+#modal-route-list,
+#modal-route-save {
+  animation: modal-fade 0.18s ease;
+}
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 모달 내부 박스 */
+#modal-record-detail > div,
+#modal-route-list > div,
+#modal-route-save > div {
+  box-shadow: 0 3px 0 0 #000;
+}
+
+/* 닫기 버튼 */
+#btn-modal-record-close,
+#btn-modal-route-list-close,
+#btn-modal-route-save-close {
+  transition: 0.15s ease;
+}
+#btn-modal-record-close:active,
+#btn-modal-route-list-close:active,
+#btn-modal-route-save-close:active {
+  transform: scale(0.86);
+}
+
+/* ---------------------------------------------------
+   PROFILE(설정)
+--------------------------------------------------- */
+
+#btn-reset-all {
+  transition: 0.15s;
+  box-shadow: 0 3px 0 0 #000;
+}
+#btn-reset-all:active {
+  transform: scale(0.94);
+}
+
+/* ---------------------------------------------------
+   HOME 탭 월간 달력
+--------------------------------------------------- */
+#page-home .calendar-box {
+  border-radius: 12px;
+  border: 1px solid #000;
+  background: #e5e5e5;
+}
+
+/* ---------------------------------------------------
+   전역 Utility
+--------------------------------------------------- */
+
+/* 숨김 */
+.hidden { display: none !important; }
+
+/* 클릭 시 약간 눌리는 효과 */
+.pressed:active {
+  transform: scale(0.97);
+}
+
+/* 금지 영역 선택 방지 */
+.noselect {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 세부 텍스트 정렬 */
+.text-tight {
+  line-height: 1.1;
 }
