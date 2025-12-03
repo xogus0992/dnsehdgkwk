@@ -1,0 +1,807 @@
+/* ------------------------------
+   RESET & BASE
+------------------------------ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  color: #000;
+  overflow: hidden;
+}
+
+.app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 반응형 스케일링(412 기준) */
+:root {
+  --base-width: 412;
+}
+
+@media screen and (max-width: 412px) {
+  body {
+    transform: scale(calc(100vw / 412));
+    transform-origin: top left;
+    width: 412px;
+    height: auto;
+  }
+}
+
+/* 공통 버튼 스타일 */
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* 공통 라운드 */
+.round-12 {
+  border-radius: 12px;
+}
+
+/* 숨김 */
+.hidden {
+  display: none !important;
+}
+
+/* ------------------------------
+   상단바 스타일 (높이 56px)
+------------------------------ */
+.app-header {
+  width: 100%;
+  height: 56px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  background: #ffffff;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo svg {
+  height: 28px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon-btn {
+  font-size: 22px;
+}
+
+.header-toggle {
+  width: 48px;
+  height: 24px;
+  background: #d1d1d1;
+  border-radius: 20px;
+  position: relative;
+}
+
+.header-toggle .toggle-thumb {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  background: yellow;
+  border-radius: 50%;
+}
+
+/* ------------------------------
+   화면 컨테이너 (탭 슬라이드)
+------------------------------ */
+.screen-container {
+  position: absolute;
+  top: 56px;
+  bottom: 64px;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.tab-screen {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  padding: 16px;
+  overflow-y: auto;
+  background: white;
+}
+
+.tab-screen.is-active {
+  left: 0;
+}
+
+/* ------------------------------
+   하단바 (높이 64px)
+------------------------------ */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 64px;
+  width: 100%;
+  border-top: 1px solid #dcdcdc;
+  background: #fff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.nav-item {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: #333;
+}
+
+.nav-item .nav-icon {
+  font-size: 22px;
+}
+
+.nav-item.is-active {
+  color: #1e6fff;
+  font-weight: 600;
+}
+
+/* 플로팅 버튼 가운데 배치 */
+.nav-item-center {
+  position: relative;
+  bottom: 18px;
+}
+
+.floating-btn svg {
+  width: 64px;
+  height: 64px;
+}
+/* ------------------------------
+   러닝 탭 - 거리 표시 영역
+------------------------------ */
+
+/* 상단바에서 줄까지 130px 유지 → margin-top 사용 */
+.running-distance-block {
+  width: 100%;
+  margin-top: 130px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.running-distance-block .distance-value {
+  font-size: 80px; /* 80pt 기반 px */
+  line-height: 1;
+}
+
+.running-distance-block .distance-unit {
+  font-size: 40px;
+  font-weight: 900;
+  margin-left: 4px;
+}
+
+/* 거리와 지표 사이의 가로 선 */
+.running-divider {
+  width: 100%;
+  height: 1px;
+  background: #000;
+  margin: 12px 0 20px 0;
+}
+
+/* ------------------------------
+   6개 지표 그리드
+------------------------------ */
+.running-stats-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: 18px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.stat-item .stat-number {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.stat-item .stat-label {
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* ------------------------------
+   지도 (Leaflet)
+------------------------------ */
+.running-map-box {
+  width: 380px;
+  height: 380px;
+  margin: 0 auto;
+  background: #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+#runningMap {
+  width: 100%;
+  height: 100%;
+}
+
+/* ------------------------------
+   START / PAUSE / STOP 버튼
+   크기: 156×52 px
+------------------------------ */
+.running-start-btn-area {
+  margin-top: 22px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.running-start-btn {
+  width: 156px;
+  height: 52px;
+  border-radius: 12px;
+  background: #1e6fff;
+  color: #fff;
+  font-size: 22px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+
+/* START 후 버튼 두 개(좌/우 배치) */
+.running-dual-btn-wrap {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.pause-btn {
+  width: 156px;
+  height: 52px;
+  background: #ffdd33;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stop-btn {
+  width: 156px;
+  height: 52px;
+  background: #ff4d4d;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+/* -----------------------------------------
+   코스 탭 상단 목표거리 입력 영역
+----------------------------------------- */
+
+.route-goal-box {
+  margin-top: 130px; /* 러닝 탭과 동일 룰 */
+  width: 100%;
+  text-align: center;
+}
+
+.route-goal-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 목표거리 숫자 (러닝탭 거리와 크기 동일 규칙 필요해 보이지만
+   코스탭은 0.00km가 더 작게 보이므로 별도 스타일 적용) */
+
+.route-goal-value {
+  font-size: 48px;
+  font-weight: 900;
+}
+
+.route-goal-unit {
+  font-size: 24px;
+  font-weight: 900;
+  margin-left: 4px;
+}
+
+/* + / - 버튼 */
+.route-goal-btn {
+  width: 44px;
+  height: 44px;
+  background: #f3f3f3;
+  border-radius: 12px;
+  font-size: 28px;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 목표거리 아래 구분선 */
+.route-divider {
+  width: 100%;
+  height: 1px;
+  background: black;
+  margin: 16px 0 18px 0;
+}
+
+/* -----------------------------------------
+   편도 / 왕복 / 추천 + GPS 버튼
+----------------------------------------- */
+
+.route-mode-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.route-mode-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d1d1;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #fefefe;
+}
+
+.route-mode-btn.active {
+  background: #1e6fff;
+  color: white;
+  border-color: #1e6fff;
+}
+
+/* GPS 버튼 */
+.route-gps-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #1e6fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.route-gps-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: #fff;
+}
+
+/* -----------------------------------------
+   출발지 / 도착지 input
+----------------------------------------- */
+
+.route-input-section {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.route-input-section input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  font-size: 16px;
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+}
+
+/* -----------------------------------------
+   거리 정보 표시 (검색거리 / 실제거리)
+----------------------------------------- */
+
+.route-distance-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0 20px 0;
+}
+
+.route-distance-info .distance-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.route-distance-info .distance-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* -----------------------------------------
+   지도 (러닝과 동일 380×380)
+----------------------------------------- */
+
+.route-map-box {
+  width: 380px;
+  height: 380px;
+  margin: 0 auto 16px auto;
+  background: #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+#routeMap {
+  width: 100%;
+  height: 100%;
+}
+
+/* -----------------------------------------
+   코스 생성 버튼
+----------------------------------------- */
+
+.route-create-btn {
+  width: 100%;
+  height: 52px;
+  background: #1e6fff;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 12px;
+  margin: 0 auto 18px auto;
+}
+
+/* -----------------------------------------
+   하단 3 버튼 (다운로드 / START / 업로드)
+----------------------------------------- */
+
+.route-bottom-btns {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.route-small-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #f2f2f2;
+  font-size: 26px;
+  font-weight: 800;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 중앙 START는 러닝 탭과 동일한 크기 156×52를 유지 */
+.route-start-center {
+  width: 156px;
+  height: 52px;
+  background: #1e6fff;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+/* -----------------------------------------
+   홈 탭 - 월간 달력
+----------------------------------------- */
+.home-calendar {
+  width: 380px;
+  margin: 100px auto 20px auto;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* 월 이동 상단바 */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.calendar-header button {
+  font-size: 20px;
+  padding: 2px 6px;
+}
+
+/* 7 x 5 달력 그리드 */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 10px;
+  text-align: center;
+}
+
+.calendar-day {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 날짜 셀 */
+.calendar-cell {
+  height: 46px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 오늘 날짜 강조 (파란 원형) */
+.calendar-cell.today {
+  background: #1e6fff;
+  color: #fff;
+  border-radius: 50%;
+}
+
+/* 날짜 아래 총 km 표시 */
+.calendar-cell .km-text {
+  font-size: 12px;
+  color: #1e6fff;
+  margin-top: 2px;
+}
+
+/* -----------------------------------------
+   홈 탭 - 친구 기록 카드
+----------------------------------------- */
+
+.home-record-list {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.friend-card {
+  width: 100%;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border: 1px solid #e5e5e5;
+}
+
+.friend-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.friend-card-stats {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.friend-card-stats span {
+  font-weight: 600;
+}
+/* -----------------------------------------
+   주간 통계(막대그래프)
+----------------------------------------- */
+
+.week-stats-box {
+  width: 100%;
+  margin: 100px auto 20px auto;
+  padding: 16px;
+  background: #f2f2f2;
+  border-radius: 12px;
+}
+
+.week-bar-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 140px;
+}
+
+/* 개별 bar */
+.week-bar {
+  width: 22px;
+  background: #1e6fff;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.3s;
+}
+
+.week-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+/* -----------------------------------------
+   기록 리스트 카드
+----------------------------------------- */
+
+.history-list {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.history-card {
+  width: 100%;
+  background: #fafafa;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  margin-bottom: 14px;
+}
+
+/* 날짜 + 시간 */
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 시간 / 페이스 / 거리 */
+.history-details {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mini-polyline-box {
+  width: 100%;
+  height: 90px;
+  margin-top: 10px;
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+}
+
+#polylineCanvas {
+  width: 100%;
+  height: 100%;
+}
+/* -----------------------------------------
+   팝업 전체 배경
+----------------------------------------- */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 412px;
+  height: 100%;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+/* 팝업 카드 (너비 380px + 위아래 margin 존재) */
+.popup-card {
+  width: 380px;
+  max-height: 80%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* 닫기 버튼 */
+.popup-close {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+/* 팝업 날짜/시간 */
+.popup-header {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* 실제 경로 지도 없이 polyline만 */
+.popup-polyline-box {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid #dcdcdc;
+  margin: 12px 0;
+  background: #fff;
+  overflow: hidden;
+}
+
+#popupPolylineCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 상세 정보 */
+.popup-stats {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* 삭제 / 공유 버튼 */
+.popup-btn-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.popup-btn-delete {
+  width: 48%;
+  height: 48px;
+  background: #ff4d4d;
+  color: white;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.popup-btn-share {
+  width: 48%;
+  height: 48px;
+  background: #1ebe78;
+  color: white;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+/* -----------------------------------------
+   설정 탭
+----------------------------------------- */
+
+.settings-wrapper {
+  margin-top: 130px;
+  width: 100%;
+  text-align: center;
+}
+
+/* 프로필 이미지 */
+.settings-profile {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 30px auto;
+  border-radius: 50%;
+  background: #e5e5e5;
+}
+
+/* 휴지통 버튼 */
+.settings-reset-btn {
+  width: 68px;
+  height: 68px;
+  background: #f44336;
+  color: #fff;
+  border-radius: 12px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32px;
+  font-weight: 700;
+}

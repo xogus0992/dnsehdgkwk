@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="runcss.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <title>POKERUN</title>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- 상단바 -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <!-- 로고 그대로 -->
+          <svg width="169" height="41" viewBox="0 0 169 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- svg 생략 (너가 준 그대로 사용) -->
+          </svg>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="header-icon-btn">⚙</button>
+        <button class="header-icon-btn">🌙</button>
+        <button class="header-toggle">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 화면 컨테이너 -->
+    <main class="screen-container">
+
+      <!-- ⭐ 러닝 탭 -->
+      <section class="tab-screen is-active" data-tab="running">
+
+        <!-- 거리 표시 -->
+        <div class="running-distance-block">
+          <span class="distance-value">
+            <span class="distance-number" id="run-km">0.00</span>
+            <span class="distance-unit">KM</span>
+          </span>
+        </div>
+
+        <div class="running-divider"></div>
+
+        <!-- 6개 지표 -->
+        <div class="running-stats-grid">
+          <div class="stat-item">
+            <div class="stat-number" id="run-pace">0'00"</div>
+            <div class="stat-label">평균 페이스</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="run-avg">0</div>
+            <div class="stat-label">평균 속도</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="run-cad">0</div>
+            <div class="stat-label">케이던스</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="run-time">0:00</div>
+            <div class="stat-label">시간</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="run-cur">0</div>
+            <div class="stat-label">현재 속도</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="run-cal">0</div>
+            <div class="stat-label">칼로리</div>
+          </div>
+        </div>
+
+        <!-- 지도 -->
+        <div class="running-map-box">
+          <div id="runningMap"></div>
+        </div>
+
+        <!-- 버튼 -->
+        <div class="running-start-btn-area">
+          <button class="running-start-btn" id="startRunBtn">START</button>
+        </div>
+
+        <div class="running-dual-btn-wrap hidden" id="runningDualBtns">
+          <button class="pause-btn" id="pauseRunBtn">PAUSE</button>
+          <button class="stop-btn" id="stopRunBtn">STOP</button>
+        </div>
+      </section>
+
+      <!-- ⭐ 코스 탭 -->
+      <section class="tab-screen" data-tab="course">
+
+        <div class="route-goal-box">
+          <div class="route-goal-wrapper">
+            <button class="route-goal-btn" id="goalMinusBtn">-</button>
+            <span class="route-goal-value" id="goalValue">5.00</span>
+            <span class="route-goal-unit">km</span>
+            <button class="route-goal-btn" id="goalPlusBtn">+</button>
+          </div>
+        </div>
+
+        <div class="route-divider"></div>
+
+        <!-- 편도/왕복/추천 + GPS -->
+        <div class="route-mode-row">
+          <button class="route-mode-btn active" data-type="oneway">편도</button>
+          <button class="route-mode-btn" data-type="roundtrip">왕복</button>
+          <button class="route-mode-btn" data-type="recommend">추천</button>
+
+          <button class="route-gps-btn" id="btnRouteGps">
+            <svg width="24" height="24">
+              <circle cx="12" cy="12" r="11" fill="white" stroke="blue"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 입력 -->
+        <div class="route-input-section">
+          <input id="startInput" placeholder="출발지 입력" />
+        </div>
+        <div class="route-input-section">
+          <input id="endInput" placeholder="도착지 입력" />
+        </div>
+
+        <!-- 거리 정보 -->
+        <div class="route-distance-info">
+          <div>
+            <div class="distance-label">검색 거리</div>
+            <div class="distance-value" id="searchDistance">0.00</div>
+          </div>
+
+          <div>
+            <div class="distance-label">실제 거리</div>
+            <div class="distance-value" id="realDistance">0.00</div>
+          </div>
+        </div>
+
+        <!-- 지도 -->
+        <div class="route-map-box">
+          <div id="routeMap"></div>
+        </div>
+
+        <!-- 코스 생성 -->
+        <button class="route-create-btn" id="generateBtn">코스 생성하기</button>
+
+        <!-- 하단 3 버튼 -->
+        <div class="route-bottom-btns">
+          <button class="route-small-btn">⬇</button>
+          <button class="route-start-center" id="routeToRunBtn">START</button>
+          <button class="route-small-btn">⬆</button>
+        </div>
+      </section>
+
+      <!-- ⭐ 홈 탭 -->
+      <section class="tab-screen" data-tab="home">
+
+        <div class="home-calendar">
+          <div class="calendar-header">
+            <button>◀</button>
+            <div id="calendarTitle">2025.07</div>
+            <button>▶</button>
+          </div>
+
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="home-record-list">
+          <div class="friend-card">
+            <div class="friend-card-header">
+              <span>친구1</span>
+              <span>25.03.10 / 19:32</span>
+            </div>
+
+            <div class="friend-card-stats">
+              <span>4.12 km</span>
+              <span>평균 페이스: 3'45"</span>
+              <span>시간: 5:34</span>
+              <span>케이던스: 179</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⭐ 기록 탭 -->
+      <section class="tab-screen" data-tab="history">
+        <div class="week-stats-box">
+          <div class="week-bar-wrapper" id="weeklyStats"></div>
+        </div>
+
+        <div class="history-list" id="historyList"></div>
+      </section>
+
+      <!-- ⭐ 설정 탭 -->
+      <section class="tab-screen" data-tab="settings">
+        <div class="settings-wrapper">
+          <div class="settings-profile"></div>
+          <button class="settings-reset-btn">🗑</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 하단바 -->
+    <nav class="bottom-nav">
+      <button class="nav-item is-active" data-tab-target="running">러닝</button>
+      <button class="nav-item" data-tab-target="course">코스</button>
+      <button class="nav-item nav-item-center" data-tab-target="home">홈</button>
+      <button class="nav-item" data-tab-target="history">기록</button>
+      <button class="nav-item" data-tab-target="settings">설정</button>
+    </nav>
+
+  </div>
+<!-- JS 로딩 -->
+<script defer src="js/app.js"></script>
+<script defer src="js/map.js"></script>
+<script defer src="js/run.js"></script>
+<script defer src="js/route.js"></script>
+<script defer src="js/history.js"></script>
+<script defer src="js/storage.js"></script>
+<script defer src="js/api-service.js"></script>
+
+<!-- Kakao API -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+
+</body>
+</html>
