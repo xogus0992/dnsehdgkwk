@@ -7,9 +7,34 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* 기본 설정 */
-        :root { --bg-main: #000000; --bg-card: #111111; --text-main: #ffffff; --border-color: #262626; --accent: #FFB3BA; }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); }
+        /* --- 1. 기본 테마 (다크 모드) 변수 --- */
+        :root { 
+            --bg-main: #000000; 
+            --bg-card: #111111; 
+            --text-main: #ffffff; 
+            --border-color: #262626; 
+            --accent: #FFB3BA; 
+            --text-sub: #9ca3af; /* 서브 텍스트 (플레이스홀더, 비활성 아이콘 등) */
+            --bg-sub: #262626;  /* 디자인 버튼 활성화 배경 */
+        }
+        
+        /* ⚪ 2. 화이트 모드 디자인 변수 적용 (추가) */
+        [data-theme="light"] {
+            --bg-main: #f0f4f8;       
+            --bg-card: #ffffff;       
+            --text-main: #1a1a1a;     
+            --border-color: #cccccc;  
+            --text-sub: #6b7280;      
+            --bg-sub: #e5e7eb;        
+        }
+
+        /* body 설정에 transition 추가 및 변수 사용 */
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: var(--bg-main); 
+            color: var(--text-main); 
+            transition: background-color 0.3s, color 0.3s; /* 전환 효과 추가 */
+        }
         
         .nrc-font { font-family: 'Inter', sans-serif; font-style: italic; }
         .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -20,23 +45,35 @@
         /* 컬러 피커 버튼 */
         .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
         .color-btn:hover { transform: scale(1.1); }
-        .color-btn.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        /* [수정] active 상태 변수 적용 */
+        .color-btn.active { border-color: var(--text-main); transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
-        /* 디자인 버튼 */
-        .design-btn.active { background-color: var(--border-color); color: white; border-color: white; }
+        /* [수정] 디자인 버튼 active 상태 변수 적용 */
+        .design-btn.active { 
+            background-color: var(--bg-sub); 
+            color: var(--text-main); 
+            border-color: var(--text-main); 
+        }
     </style>
 </head>
 <body class="flex justify-center h-screen bg-[var(--bg-main)]">
     <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col">
-        <header class="p-4 border-b border-[var(--border-color)]"><h1 class="text-xl font-bold">기록 공유하기</h1></header>
+        
+        <header class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+            <h1 class="text-xl font-bold">기록 공유하기</h1>
+            <button onclick="toggleTheme()" class="text-[var(--text-main)] hover:text-[var(--accent)] transition-colors p-1 rounded-full active:bg-[var(--bg-card)]">
+                <i id="theme-icon" data-lucide="sun-moon" class="w-6 h-6"></i>
+            </button>
+        </header>
         
         <div class="p-4 flex-1 overflow-y-auto pb-32">
             <div id="image-container" class="relative w-full bg-[var(--bg-card)] rounded-xl border-2 border-dashed border-[var(--border-color)] flex flex-col items-center justify-center mb-4 overflow-hidden transition-all duration-300">
                 <input type="file" id="upload-file-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 z-30 cursor-pointer" onchange="previewImage(this)">
                 
                 <div id="upload-placeholder" class="flex flex-col items-center z-10 pointer-events-none py-20">
-                    <i data-lucide="image-plus" class="w-10 h-10 mb-2 text-gray-400"></i>
-                    <span class="text-gray-400 text-sm">사진을 선택하세요 (원본 비율)</span>
+                    <i data-lucide="image-plus" class="w-10 h-10 mb-2 text-[var(--text-sub)]"></i>
+                    <span class="text-[var(--text-sub)] text-sm">사진을 선택하세요 (원본 비율)</span>
                 </div>
                 
                 <img id="upload-preview" class="w-full h-auto object-contain hidden z-10 block" style="max-height: 80vh;">
@@ -121,39 +158,39 @@
 
             <div class="space-y-4 mb-6">
                 <div class="flex gap-2">
-                    <button onclick="setDesign('style-a')" id="btn-style-a" class="design-btn active flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE A</button>
-                    <button onclick="setDesign('style-b')" id="btn-style-b" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE B</button>
-                    <button onclick="setDesign('style-c')" id="btn-style-c" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE C</button>
+                    <button onclick="setDesign('style-a')" id="btn-style-a" class="design-btn active flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-[var(--text-sub)] transition-all">TYPE A</button>
+                    <button onclick="setDesign('style-b')" id="btn-style-b" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-[var(--text-sub)] transition-all">TYPE B</button>
+                    <button onclick="setDesign('style-c')" id="btn-style-c" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-[var(--text-sub)] transition-all">TYPE C</button>
                 </div>
 
                 <div class="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)]">
-                    <span class="text-xs font-bold text-gray-500 mr-2">COLOR</span>
+                    <span class="text-xs font-bold text-[var(--text-sub)] mr-2">COLOR</span>
                     <div class="flex gap-3">
                         <div onclick="setAccent('#FFB3BA')" class="color-btn active" style="background-color: #FFB3BA;"></div> <div onclick="setAccent('#BAFFC9')" class="color-btn" style="background-color: #BAFFC9;"></div> <div onclick="setAccent('#BAE1FF')" class="color-btn" style="background-color: #BAE1FF;"></div> <div onclick="setAccent('#FFFFBA')" class="color-btn" style="background-color: #FFFFBA;"></div> <div onclick="setAccent('#E2F0CB')" class="color-btn" style="background-color: #E2F0CB;"></div> </div>
                 </div>
 
                 <div class="bg-[var(--bg-card)] px-4 py-3 rounded-xl border border-[var(--border-color)] flex items-center gap-3">
                     <i data-lucide="type" class="w-5 h-5 text-[var(--accent)]"></i>
-                    <input type="text" id="custom-text-input" placeholder="사진에 넣을 문구를 적어보세요 (예: 오운완!)" class="bg-transparent w-full text-white text-sm outline-none placeholder-gray-600" oninput="updateOverlay()">
+                    <input type="text" id="custom-text-input" placeholder="사진에 넣을 문구를 적어보세요 (예: 오운완!)" class="bg-transparent w-full text-[var(--text-main)] text-sm outline-none placeholder-[var(--text-sub)]" oninput="updateOverlay()">
                 </div>
             </div>
 
             <div class="grid grid-cols-3 gap-3 mb-4">
                 <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
-                    <label class="text-[10px] text-gray-500 font-bold mb-1">TIME</label>
-                    <input type="text" id="upload-time" placeholder="00:00" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                    <label class="text-[10px] text-[var(--text-sub)] font-bold mb-1">TIME</label>
+                    <input type="text" id="upload-time" placeholder="00:00" class="bg-transparent text-center w-full text-[var(--text-main)] font-bold outline-none text-xl placeholder-[var(--text-sub)]" oninput="updateOverlay()">
                 </div>
                 <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
-                    <label class="text-[10px] text-gray-500 font-bold mb-1">DIST (KM)</label>
-                    <input type="text" id="upload-dist" placeholder="0.0" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                    <label class="text-[10px] text-[var(--text-sub)] font-bold mb-1">DIST (KM)</label>
+                    <input type="text" id="upload-dist" placeholder="0.0" class="bg-transparent text-center w-full text-[var(--text-main)] font-bold outline-none text-xl placeholder-[var(--text-sub)]" oninput="updateOverlay()">
                 </div>
                 <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
-                    <label class="text-[10px] text-gray-500 font-bold mb-1">CAL</label>
-                    <input type="text" id="upload-cal" placeholder="0" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                    <label class="text-[10px] text-[var(--text-sub)] font-bold mb-1">CAL</label>
+                    <input type="text" id="upload-cal" placeholder="0" class="bg-transparent text-center w-full text-[var(--text-main)] font-bold outline-none text-xl placeholder-[var(--text-sub)]" oninput="updateOverlay()">
                 </div>
             </div>
             
-            <textarea id="upload-content" class="w-full bg-[var(--bg-card)] p-4 rounded-xl text-white outline-none h-24 border border-[var(--border-color)] resize-none" placeholder="오늘 러닝은 어떠셨나요?"></textarea>
+            <textarea id="upload-content" class="w-full bg-[var(--bg-card)] p-4 rounded-xl text-[var(--text-main)] outline-none h-24 border border-[var(--border-color)] resize-none placeholder-[var(--text-sub)]" placeholder="오늘 러닝은 어떠셨나요?"></textarea>
             
             <button onclick="handleUpload()" class="w-full bg-white text-black font-bold py-4 mt-4 rounded-xl hover:bg-gray-200 transition-colors shadow-lg">업로드</button>
         </div>
@@ -194,11 +231,52 @@
 
         let currentDesign = 'style-a';
         let currentAccent = '#FFB3BA';
+        
+        // --- ⚙️ 테마 전환 기능 (추가) ---
+        function updateThemeIcon(isLight) {
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                 if(isLight) {
+                    icon.setAttribute('data-lucide', 'moon'); // 화이트 모드일 때 달 아이콘
+                 } else {
+                    icon.setAttribute('data-lucide', 'sun-moon'); // 다크 모드일 때 해/달 아이콘
+                 }
+                 lucide.createIcons(); 
+            }
+        }
+        
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const isLight = savedTheme === 'light';
+            if (isLight) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+            // --accent 색상 변수도 CSS 변수로 관리되므로, 여기에선 별도 로드 로직 불필요
+            updateThemeIcon(isLight);
+        }
+
+        window.toggleTheme = () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon(false);
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon(true);
+            }
+        };
+        // ----------------------------------------------------
+
 
         window.setDesign = (styleId) => {
             currentDesign = styleId;
             document.querySelectorAll('.overlay-style').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.design-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.design-btn').forEach(btn => {
+                 // [수정] 비활성화 시 text-[var(--text-sub)]가 적용되도록 클래스명 정리
+                btn.classList.remove('active');
+            });
             
             const imgPreview = document.getElementById('upload-preview');
             if (!imgPreview.classList.contains('hidden')) {
@@ -277,6 +355,7 @@
                     const msgTxt = customText || "";
                     
                     ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor="rgba(0,0,0,0)"; ctx.shadowBlur=0; // 캔버스 그리기 전 쉐도우 초기화
 
                     if (style === 'style-a') {
                         // TYPE A
@@ -294,6 +373,7 @@
                             ctx.fillStyle = "rgba(255,255,255,0.9)";
                             ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=5;
                             ctx.fillText(msgTxt, canvas.width/2, bottomY - 200*s);
+                            ctx.shadowBlur=0;
                         }
 
                         ctx.textAlign = "left";
@@ -343,6 +423,7 @@
                             ctx.fillStyle = "#ffffff";
                             ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=10;
                             ctx.fillText(msgTxt, cx, cy - safeRadius - 50*s);
+                            ctx.shadowBlur=0;
                         }
 
                         ctx.fillStyle = "rgba(0,0,0,0.4)";
@@ -410,6 +491,7 @@
                         ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=10;
                         ctx.font = `italic 900 ${250*s}px sans-serif`;
                         ctx.fillText(distTxt, 50*s, bottomY);
+                        ctx.shadowBlur=0;
                         
                         const dw = ctx.measureText(distTxt).width;
                         ctx.font = `normal ${60*s}px sans-serif`;
@@ -495,7 +577,11 @@
             };
             reader.readAsDataURL(fileInput.files[0]);
         };
+        
         lucide.createIcons();
+        
+        // ⭐️ 페이지 로드 시 테마 적용 (추가)
+        document.addEventListener('DOMContentLoaded', loadTheme);
     </script>
 </body>
 </html>

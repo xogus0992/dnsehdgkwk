@@ -7,60 +7,95 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --volt: #ccff00; --bg-main: #000000; --text-main: #ffffff; --border-color: #262626; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-main); color: var(--text-main); }
+        /* ------------------ 테마 설정 ------------------ */
+        /* 기본 다크 모드 설정 (Base Theme) */
+        :root { 
+            --volt: #ccff00;  /* 액센트 색상은 유지 */
+            --bg-main: #000000; /* 배경 */
+            --text-main: #ffffff; /* 기본 텍스트 */
+            --border-color: #262626; /* 보더/구분선 */
+            --bg-card: #111111; /* 카드/모달 배경 (다크) */
+            --bg-sub: #1f2937; /* 입력창/호버 배경 (다크) */
+            --text-sub: #9ca3af; /* 서브 텍스트 */
+        }
+
+        /* 화이트 모드 오버라이드 (White Mode Theme) */
+        .white-mode {
+            --volt:#2563eb;
+            --bg-main: #f8f8f8;
+            --text-main: #1f2937;
+            --border-color: #e5e7eb;
+            --bg-card: #ffffff;
+            --bg-sub: #f3f4f6; /* 입력창/호버 배경 (화이트) */
+            --text-sub: #6b7280;
+        }
+        
+        /* ------------------ 기본 스타일 ------------------ */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg-main); 
+            color: var(--text-main); 
+        }
+        
         .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; word-wrap: break-word; line-height: 1.4; }
         .msg-me { background: var(--volt); color: black; border-bottom-right-radius: 4px; align-self: flex-end; font-weight: 500; }
-        .msg-other { background: #333; color: white; border-bottom-left-radius: 4px; align-self: flex-start; }
+        .msg-other { 
+            background: var(--bg-sub); /* 다크/화이트 모드에 맞춰 배경색 변경 */
+            color: var(--text-main); 
+            border-bottom-left-radius: 4px; 
+            align-self: flex-start; 
+        }
         
-        /* 모달 스타일 */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        /* 모달 스타일 - 오버레이는 유지 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="flex justify-center h-screen bg-black">
-    <div class="w-full max-w-md h-full relative bg-black flex flex-col overflow-hidden shadow-2xl border-x border-[#222]">
+<body class="flex justify-center h-screen">
+    <div class="w-full max-w-md h-full relative bg-[var(--bg-card)] flex flex-col overflow-hidden shadow-2xl border-x border-[var(--border-color)]">
         
-        <header class="px-5 py-4 border-b border-[#222] bg-black z-10 shrink-0">
+        <header class="px-5 py-4 border-b border-[var(--border-color)] bg-[var(--bg-card)] z-10 shrink-0">
             <div class="flex items-center justify-between mb-4">
-                <button onclick="location.href='log.html'" class="active:scale-95 transition"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-300"></i></button>
-                <span class="font-bold text-lg tracking-tight">MESSAGES</span>
+                <button onclick="location.href='log.html'" class="active:scale-95 transition"><i data-lucide="arrow-left" class="w-6 h-6 text-[var(--text-sub)]"></i></button>
+                <span class="font-bold text-lg tracking-tight text-[var(--text-main)]">MESSAGES</span>
                 <div class="flex gap-4">
+                    <button id="theme-toggle-btn" onclick="toggleTheme()" class="active:scale-95 transition">
+                        </button>
                     <button onclick="openFriendModal()" class="relative active:scale-95 transition">
                         <i data-lucide="contact" class="w-6 h-6 text-[var(--volt)]"></i>
                     </button>
                     <button onclick="openGroupCreateModal()" class="active:scale-95 transition">
-                        <i data-lucide="message-square-plus" class="w-6 h-6 text-white"></i>
+                        <i data-lucide="message-square-plus" class="w-6 h-6 text-[var(--text-main)]"></i>
                     </button>
                 </div>
             </div>
             
             <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4">
-                <button onclick="enterOpenChat('running')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🏃 런닝</button>
-                <button onclick="enterOpenChat('weight')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💪 웨이트</button>
-                <button onclick="enterOpenChat('pokemon')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🐱 포켓몬</button>
-                <button onclick="enterOpenChat('etc')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💬 자유</button>
+                <button onclick="enterOpenChat('running')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--bg-sub)] text-xs font-bold border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🏃 런닝</button>
+                <button onclick="enterOpenChat('weight')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--bg-sub)] text-xs font-bold border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💪 웨이트</button>
+                <button onclick="enterOpenChat('pokemon')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--bg-sub)] text-xs font-bold border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🐱 포켓몬</button>
+                <button onclick="enterOpenChat('etc')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[var(--bg-sub)] text-xs font-bold border border-[var(--border-color)] text-[var(--text-main)] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💬 자유</button>
             </div>
 
             <div class="relative">
-                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
-                <input type="text" id="chat-search" onkeyup="filterChats()" placeholder="대화방 이름 검색" class="w-full bg-[#111] border border-[#333] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-[var(--volt)] transition">
+                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-sub)]"></i>
+                <input type="text" id="chat-search" onkeyup="filterChats()" placeholder="대화방 이름 검색" class="w-full bg-[var(--bg-sub)] border border-[var(--border-color)] rounded-lg pl-9 pr-3 py-2.5 text-sm text-[var(--text-main)] outline-none focus:border-[var(--volt)] transition">
             </div>
         </header>
 
         <div id="chat-list" class="flex-1 overflow-y-auto">
-            <div class="text-center text-gray-600 py-20 text-sm">불러오는 중...</div>
+            <div class="text-center text-[var(--text-sub)] py-20 text-sm">불러오는 중...</div>
         </div>
 
-        <div id="chat-room" class="absolute inset-0 bg-black z-40 flex flex-col transform translate-x-full transition-transform duration-300">
-            <div class="px-4 py-3 border-b border-[#222] flex items-center justify-between bg-black/95 backdrop-blur">
+        <div id="chat-room" class="absolute inset-0 bg-[var(--bg-main)] z-40 flex flex-col transform translate-x-full transition-transform duration-300">
+            <div class="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-card)]/95 backdrop-blur">
                 <div class="flex items-center gap-3">
-                    <button onclick="closeChatRoom()"><i data-lucide="chevron-left" class="w-8 h-8 text-gray-300"></i></button>
+                    <button onclick="closeChatRoom()"><i data-lucide="chevron-left" class="w-8 h-8 text-[var(--text-sub)]"></i></button>
                     <div>
-                        <div id="chat-room-title" class="font-bold text-base">Chat</div>
+                        <div id="chat-room-title" class="font-bold text-base text-[var(--text-main)]">Chat</div>
                         <div id="chat-room-type" class="text-[10px] text-[var(--volt)] font-medium tracking-wider"></div>
                     </div>
                 </div>
@@ -68,30 +103,30 @@
             
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth"></div>
             
-            <div class="p-3 border-t border-[#222] flex gap-2 bg-black safe-area-bottom">
-                <input type="text" id="msg-input" onkeypress="if(event.key==='Enter') sendMessage()" class="flex-1 bg-[#1a1a1a] border border-[#333] rounded-full px-5 py-3 outline-none text-sm text-white focus:border-[var(--volt)]" placeholder="메시지를 입력하세요">
+            <div class="p-3 border-t border-[var(--border-color)] flex gap-2 bg-[var(--bg-card)] safe-area-bottom">
+                <input type="text" id="msg-input" onkeypress="if(event.key==='Enter') sendMessage()" class="flex-1 bg-[var(--bg-sub)] border border-[var(--border-color)] rounded-full px-5 py-3 outline-none text-sm text-[var(--text-main)] focus:border-[var(--volt)]" placeholder="메시지를 입력하세요">
                 <button onclick="sendMessage()" class="bg-[var(--volt)] text-black rounded-full p-3 hover:opacity-80 transition"><i data-lucide="send" class="w-5 h-5"></i></button>
             </div>
         </div>
 
         <div id="modal-friend" class="modal-overlay">
-            <div class="bg-[#111] w-[90%] max-w-sm rounded-2xl p-6 border border-[#333] flex flex-col max-h-[85vh] shadow-2xl">
+            <div class="bg-[var(--bg-card)] w-[90%] max-w-sm rounded-2xl p-6 border border-[var(--border-color)] flex flex-col max-h-[85vh] shadow-2xl">
                 <div class="flex justify-between items-center mb-5">
-                    <h3 class="font-bold text-xl text-white">친구 관리</h3>
-                    <button onclick="closeModal('modal-friend')" class="text-gray-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+                    <h3 class="font-bold text-xl text-[var(--text-main)]">친구 관리</h3>
+                    <button onclick="closeModal('modal-friend')" class="text-[var(--text-sub)]"><i data-lucide="x" class="w-6 h-6"></i></button>
                 </div>
                 
                 <div class="flex gap-2 mb-2">
-                    <input type="text" id="friend-search-input" placeholder="친구 닉네임 검색" class="flex-1 bg-[#222] px-4 py-3 rounded-lg text-sm outline-none border border-[#333] focus:border-[var(--volt)]">
+                    <input type="text" id="friend-search-input" placeholder="친구 닉네임 검색" class="flex-1 bg-[var(--bg-sub)] px-4 py-3 rounded-lg text-sm outline-none border border-[var(--border-color)] focus:border-[var(--volt)] text-[var(--text-main)]">
                     <button onclick="searchFriend()" class="bg-[var(--volt)] text-black font-bold px-4 rounded-lg text-sm whitespace-nowrap">검색</button>
                 </div>
-                <div id="friend-search-result" class="text-xs text-gray-400 mb-6 min-h-[24px] flex items-center ml-1"></div>
+                <div id="friend-search-result" class="text-xs text-[var(--text-sub)] mb-6 min-h-[24px] flex items-center ml-1"></div>
 
-                <div class="h-px bg-[#222] w-full mb-4"></div>
+                <div class="h-px bg-[var(--border-color)] w-full mb-4"></div>
 
                 <div class="flex justify-between items-end mb-2">
-                    <h4 class="text-sm font-bold text-gray-300">내 친구 목록 <span id="friend-count" class="text-[var(--volt)] text-xs ml-1">0</span></h4>
-                    <span class="text-[10px] text-gray-600">등록된 친구만 보입니다</span>
+                    <h4 class="text-sm font-bold text-[var(--text-main)]">내 친구 목록 <span id="friend-count" class="text-[var(--volt)] text-xs ml-1">0</span></h4>
+                    <span class="text-[10px] text-[var(--text-sub)]">등록된 친구만 보입니다</span>
                 </div>
                 
                 <div id="my-friend-list" class="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[200px] mb-4">
@@ -100,22 +135,22 @@
         </div>
 
         <div id="modal-group" class="modal-overlay">
-            <div class="bg-[#111] w-[90%] max-w-sm rounded-2xl p-6 border border-[#333] flex flex-col max-h-[85vh]">
-                <h3 class="font-bold text-lg mb-4 text-white">새 채팅방 만들기</h3>
+            <div class="bg-[var(--bg-card)] w-[90%] max-w-sm rounded-2xl p-6 border border-[var(--border-color)] flex flex-col max-h-[85vh]">
+                <h3 class="font-bold text-lg mb-4 text-[var(--text-main)]">새 채팅방 만들기</h3>
                 
-                <label class="text-xs text-gray-500 mb-1 block ml-1">채팅방 이름</label>
-                <input type="text" id="new-group-name" placeholder="예: 주말 런닝 모임" class="w-full bg-[#222] px-4 py-3 rounded-lg text-sm outline-none border border-[#333] focus:border-[var(--volt)] mb-5 text-white">
+                <label class="text-xs text-[var(--text-sub)] mb-1 block ml-1">채팅방 이름</label>
+                <input type="text" id="new-group-name" placeholder="예: 주말 런닝 모임" class="w-full bg-[var(--bg-sub)] px-4 py-3 rounded-lg text-sm outline-none border border-[var(--border-color)] focus:border-[var(--volt)] mb-5 text-[var(--text-main)]">
                 
                 <div class="flex justify-between items-center mb-2">
-                    <div class="text-xs text-gray-400 ml-1">대화 상대로 초대하기</div>
+                    <div class="text-xs text-[var(--text-sub)] ml-1">대화 상대로 초대하기</div>
                     <button onclick="loadFriendListForGroup()" class="text-[10px] text-[var(--volt)] underline font-bold cursor-pointer">목록 새로고침</button>
                 </div>
 
-                <div id="friend-list-select" class="flex-1 overflow-y-auto border border-[#222] bg-[#1a1a1a] rounded-lg p-3 mb-5 space-y-2 max-h-[200px]">
+                <div id="friend-list-select" class="flex-1 overflow-y-auto border border-[var(--border-color)] bg-[var(--bg-sub)] rounded-lg p-3 mb-5 space-y-2 max-h-[200px]">
                     </div>
 
                 <div class="flex gap-3">
-                    <button onclick="closeModal('modal-group')" class="flex-1 py-3 bg-[#222] rounded-lg text-sm text-gray-300 font-medium">취소</button>
+                    <button onclick="closeModal('modal-group')" class="flex-1 py-3 bg-[var(--border-color)] rounded-lg text-sm text-[var(--text-main)] font-medium">취소</button>
                     <button onclick="createGroupChat()" class="flex-1 py-3 bg-[var(--volt)] text-black font-bold rounded-lg text-sm shadow-[0_0_10px_rgba(204,255,0,0.3)]">방 만들기</button>
                 </div>
             </div>
@@ -137,6 +172,41 @@
         let myNickname = "Unknown";
 
         lucide.createIcons();
+        
+        // 0. [추가] 테마 관리 기능
+        window.currentTheme = localStorage.getItem('theme') || 'white-mode'; // 화이트 모드를 기본값으로 설정
+        const body = document.body;
+        const themeButton = document.getElementById('theme-toggle-btn');
+
+        function updateThemeIcon() {
+            if (!themeButton) return;
+            // 현재 테마에 따라 아이콘 변경 (white-mode -> dark-mode 전환 시 'moon' 표시)
+            const icon = currentTheme === 'white-mode' ? 'moon' : 'sun';
+            themeButton.innerHTML = `<i data-lucide="${icon}" class="w-6 h-6 text-[var(--text-main)]"></i>`;
+            lucide.createIcons();
+        }
+
+        function applyTheme(theme) {
+            // 기존 테마 클래스 제거
+            body.className = body.className.split(' ').filter(c => c !== 'white-mode').join(' ');
+            
+            if (theme === 'white-mode') {
+                body.classList.add('white-mode');
+            }
+            currentTheme = theme;
+            localStorage.setItem('theme', theme);
+            updateThemeIcon();
+        }
+
+        window.toggleTheme = () => {
+            const newTheme = currentTheme === 'white-mode' ? 'dark-mode' : 'white-mode';
+            applyTheme(newTheme);
+        };
+        
+        // 페이지 로드 시 테마 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(currentTheme);
+        });
 
         // 1. 로그인 상태 확인 및 초기화
         onAuthStateChanged(auth, (user) => {
@@ -167,7 +237,7 @@
                 const data = snap.val();
 
                 if(!data) {
-                    list.innerHTML = "<div class='text-center py-20 text-gray-600 text-sm'>진행 중인 대화가 없습니다.<br>새로운 친구를 사귀어보세요!</div>";
+                    list.innerHTML = "<div class='text-center py-20 text-[var(--text-sub)] text-sm'>진행 중인 대화가 없습니다.<br>새로운 친구를 사귀어보세요!</div>";
                     return;
                 }
 
@@ -186,15 +256,18 @@
 
         function renderChatItem(container, key, g) {
             const div = document.createElement('div');
-            div.className = "chat-item w-full flex items-center gap-4 p-4 hover:bg-[#111] active:bg-[#1a1a1a] cursor-pointer border-b border-[#1a1a1a] group transition-colors";
+            // 호버 색상, 보더 색상에 변수 적용
+            div.className = "chat-item w-full flex items-center gap-4 p-4 hover:bg-[var(--bg-sub)] active:opacity-90 cursor-pointer border-b border-[var(--border-color)] group transition-colors";
             div.dataset.name = g.name; 
             
-            let iconColor = "bg-gray-800 text-gray-300";
+            // 아이콘 배경 및 텍스트 색상 변경
+            let iconBgColor = "bg-[var(--bg-sub)] text-[var(--text-sub)]";
             let typeTag = "GROUP";
-            let typeColor = "text-gray-500 border-gray-700";
+            // 타입 태그 보더 및 텍스트 색상 변경
+            let typeColor = "text-[var(--text-sub)] border-[var(--text-sub)]";
             
             if(key.startsWith('open_')) { 
-                iconColor = "bg-[var(--volt)] text-black"; 
+                iconBgColor = "bg-[var(--volt)] text-black"; 
                 typeTag = "OPEN"; 
                 typeColor = "text-[var(--volt)] border-[var(--volt)]";
             } else if (g.type === 'private') {
@@ -205,17 +278,17 @@
             const timeStr = g.lastTime ? new Date(g.lastTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
 
             div.innerHTML = `
-                <div class="w-12 h-12 rounded-full ${iconColor} flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                <div class="w-12 h-12 rounded-full ${iconBgColor} flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
                     ${g.name.slice(0,2)}
                 </div>
                 <div class="flex-1 min-w-0" onclick="openChatRoom('${key}', '${g.name}', '${typeTag}')">
                     <div class="flex justify-between items-center mb-0.5">
-                        <div class="font-bold truncate text-sm text-gray-200">${g.name} <span class="text-[9px] ${typeColor} border px-1 rounded ml-1 align-middle">${typeTag}</span></div>
-                        <div class="text-[10px] text-gray-500">${timeStr}</div>
+                        <div class="font-bold truncate text-sm text-[var(--text-main)]">${g.name} <span class="text-[9px] ${typeColor} border px-1 rounded ml-1 align-middle">${typeTag}</span></div>
+                        <div class="text-[10px] text-[var(--text-sub)]">${timeStr}</div>
                     </div>
-                    <div class="text-sm text-gray-400 truncate pr-2">${g.lastMsg || '대화를 시작해보세요.'}</div>
+                    <div class="text-sm text-[var(--text-sub)] truncate pr-2">${g.lastMsg || '대화를 시작해보세요.'}</div>
                 </div>
-                <button onclick="leaveChat('${key}')" class="p-2 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="나가기">
+                <button onclick="leaveChat('${key}')" class="p-2 text-[var(--text-sub)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="나가기">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                 </button>
             `;
@@ -240,7 +313,7 @@
                         container.innerHTML += `
                             <div class="w-full flex ${isMe ? 'justify-end' : 'justify-start'}">
                                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
-                                    <span class="text-[10px] text-gray-500 mb-1 px-1 ${isMe ? 'hidden' : 'block'}">${m.nickname}</span>
+                                    <span class="text-[10px] text-[var(--text-sub)] mb-1 px-1 ${isMe ? 'hidden' : 'block'}">${m.nickname}</span>
                                     <div class="msg-bubble ${isMe ? 'msg-me' : 'msg-other'} shadow-sm">
                                         ${m.text}
                                     </div>
@@ -320,13 +393,14 @@
 
                 if(foundUid) {
                     if(foundUid === myUid) {
-                        resDiv.innerHTML = "<span class='text-yellow-500'>본인입니다.</span>";
+                        resDiv.innerHTML = "<span class='text-[var(--volt)]'>본인입니다.</span>";
                     } else {
+                        // 검색 결과 UI 배경색/보더색/아바타 배경색/텍스트색 변수 적용
                         resDiv.innerHTML = `
-                            <div class="flex items-center justify-between w-full p-3 bg-[#222] rounded-lg border border-[#333]">
+                            <div class="flex items-center justify-between w-full p-3 bg-[var(--bg-sub)] rounded-lg border border-[var(--border-color)]">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">${foundData.nickname[0]}</div>
-                                    <span class="font-bold text-sm text-white">${foundData.nickname}</span>
+                                    <div class="w-8 h-8 rounded-full bg-[var(--border-color)] flex items-center justify-center text-[var(--text-main)] text-xs">${foundData.nickname[0]}</div>
+                                    <span class="font-bold text-sm text-[var(--text-main)]">${foundData.nickname}</span>
                                 </div>
                                 <button onclick="addFriend('${foundUid}', '${foundData.nickname}')" class="bg-[var(--volt)] text-black text-xs px-3 py-1.5 rounded font-bold hover:brightness-110">친구 추가</button>
                             </div>`;
@@ -356,7 +430,7 @@
                 listDiv.innerHTML = "";
                 if(!snap.exists()) {
                     countSpan.innerText = "0";
-                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>등록된 친구가 없습니다.<br>검색해서 추가해보세요!</div>";
+                    listDiv.innerHTML = "<div class='text-center text-xs text-[var(--text-sub)] py-6'>등록된 친구가 없습니다.<br>검색해서 추가해보세요!</div>";
                     return;
                 }
                 
@@ -369,22 +443,23 @@
 
                     validCount++;
                     const item = document.createElement('div');
-                    item.className = "flex items-center justify-between p-3 bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] hover:border-[#444] transition";
+                    // 친구 목록 아이템 배경색/보더색에 변수 적용
+                    item.className = "flex items-center justify-between p-3 bg-[var(--bg-sub)] rounded-xl border border-[var(--border-color)] hover:border-[var(--text-sub)] transition";
                     item.innerHTML = `
                         <div class="flex items-center gap-3 flex-1">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-sm font-bold text-white border border-[#444]">
+                            <div class="w-10 h-10 rounded-full bg-[var(--border-color)] flex items-center justify-center text-sm font-bold text-[var(--text-main)] border border-[var(--text-sub)]">
                                 ${name.slice(0,1)}
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-sm font-bold text-white">${name}</span>
+                                <span class="text-sm font-bold text-[var(--text-main)]">${name}</span>
                                 <span class="text-[10px] text-[var(--volt)]">친구</span>
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="startPrivateChat('${uid}', '${name}')" class="bg-[#333] hover:bg-[var(--volt)] hover:text-black text-white p-2 rounded-lg transition" title="1:1 대화">
+                            <button onclick="startPrivateChat('${uid}', '${name}')" class="bg-[var(--border-color)] hover:bg-[var(--volt)] hover:text-black text-[var(--text-main)] p-2 rounded-lg transition" title="1:1 대화">
                                 <i data-lucide="message-circle" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="deleteFriend('${uid}')" class="bg-[#333] hover:bg-red-500/20 hover:text-red-500 text-gray-400 p-2 rounded-lg transition" title="친구 삭제">
+                            <button onclick="deleteFriend('${uid}')" class="bg-[var(--border-color)] hover:bg-red-500/20 hover:text-red-500 text-[var(--text-sub)] p-2 rounded-lg transition" title="친구 삭제">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -435,12 +510,12 @@
 
         window.loadFriendListForGroup = () => {
             const listDiv = document.getElementById('friend-list-select');
-            listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-4'>로딩 중...</div>";
+            listDiv.innerHTML = "<div class='text-center text-xs text-[var(--text-sub)] py-4'>로딩 중...</div>";
 
             get(ref(db, `users/${myUid}/friends`)).then((snap) => {
                 listDiv.innerHTML = "";
                 if(!snap.exists()) {
-                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>초대할 친구가 없습니다.</div>";
+                    listDiv.innerHTML = "<div class='text-center text-xs text-[var(--text-sub)] py-6'>초대할 친구가 없습니다.</div>";
                     return;
                 }
                 
@@ -453,18 +528,18 @@
 
                     hasValidFriends = true;
                     listDiv.innerHTML += `
-                        <label class="flex items-center gap-3 p-2 hover:bg-[#222] rounded-lg cursor-pointer transition">
+                        <label class="flex items-center gap-3 p-2 hover:bg-[var(--border-color)] rounded-lg cursor-pointer transition">
                             <input type="checkbox" name="group-member" value="${uid}" class="accent-[var(--volt)] w-4 h-4 rounded">
                             <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">${name[0]}</div>
-                                <span class="text-sm text-gray-200">${name}</span>
+                                <div class="w-6 h-6 rounded-full bg-[var(--border-color)] flex items-center justify-center text-[10px] text-[var(--text-main)]">${name[0]}</div>
+                                <span class="text-sm text-[var(--text-main)]">${name}</span>
                             </div>
                         </label>
                     `;
                 });
 
                 if(!hasValidFriends) {
-                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>표시할 친구가 없습니다.<br>(잘못된 데이터가 필터링되었습니다)</div>";
+                    listDiv.innerHTML = "<div class='text-center text-xs text-[var(--text-sub)] py-6'>표시할 친구가 없습니다.<br>(잘못된 데이터가 필터링되었습니다)</div>";
                 }
             });
         };

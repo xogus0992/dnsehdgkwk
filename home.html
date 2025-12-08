@@ -8,24 +8,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        :root { --volt: #ccff00; --bg-main: #000000; --bg-card: #111111; --text-main: #ffffff; --border-color: #333333; }
-        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        /* 1. 기본 테마 (다크 모드) 변수 */
+        :root { 
+            --volt: #ccff00;         /* 네온 그린 */
+            --bg-main: #000000;       /* 검정 */
+            --bg-card: #111111;       /* 짙은 회색 카드 */
+            --text-main: #ffffff;     /* 흰색 텍스트 */
+            --border-color: #333333;  /* 경계선 */
+            --text-sub: #9ca3af;     /* 서브 텍스트 */
+        }
+        
+        /* 2. ⚪ 화이트 모드 디자인 변수 적용 */
+        [data-theme="light"] {
+            --volt: #2563eb;          /* 선명한 파랑 (강조색) */
+            --bg-main: #f0f4f8;       /* 밝은 배경 */
+            --bg-card: #ffffff;       /* 흰색 카드 */
+            --text-main: #1a1a1a;     /* 검정 텍스트 */
+            --border-color: #cccccc;  /* 밝은 경계선 */
+            --text-sub: #4b5563;      /* 어두운 서브 텍스트 */
+        }
+
+        /* 3. 테마 변수를 사용하도록 스타일 수정 */
+        body { 
+            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            overflow: hidden; 
+            transition: background-color 0.3s, color 0.3s; /* 전환 효과 추가 */
+        }
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
         
         /* 모달 (팝업창) */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 50; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 50; display: none; 
+            justify-content: center; align-items: center; padding: 20px; 
+            backdrop-filter: blur(5px);
         }
         .modal-content {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
-            width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative;
+            background: var(--bg-card); /* 변수 사용 */
+            border: 1px solid var(--border-color); /* 변수 사용 */
+            color: var(--text-main); /* 변수 사용 */
+            border-radius: 16px; width: 100%; max-width: 420px; max-height: 90vh; 
+            overflow-y: auto; padding: 24px; position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: background 0.3s, color 0.3s, border-color 0.3s;
         }
 
-        /* 입력창 디자인 */
+        /* 입력 필드 스타일 */
         .input-group { margin-bottom: 10px; position: relative; }
         .input-dark {
-            width: 100%; background: #000; border: 1px solid var(--border-color); color: white;
+            width: 100%; background: var(--bg-card); /* 변수 사용 */
+            border: 1px solid var(--border-color); /* 변수 사용 */
+            color: var(--text-main); /* 변수 사용 */
             padding: 8px 10px; border-radius: 6px; outline: none; transition: 0.2s; font-size: 13px;
         }
         .input-dark:focus { border-color: var(--volt); }
@@ -35,28 +70,42 @@
         /* 중복확인 버튼 */
         .btn-check {
             position: absolute; right: 5px; top: 26px;
-            background: #222; color: #ccc; z-index: 10;
-            padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid #444;
+            background: var(--border-color); /* 변수 사용 */
+            color: var(--text-sub); /* 변수 사용 */
+            padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid var(--border-color);
         }
-        .btn-check:hover { background: var(--volt); color: black; border-color: var(--volt); }
+        .btn-check:hover { background: var(--volt); color: var(--bg-main); border-color: var(--volt); }
         
         .msg-validate { font-size: 11px; margin-top: 2px; display: none; font-weight: bold; }
         
         /* 탭 버튼 */
-        .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-bottom: 2px solid #333; color: #666; }
-        .tab-btn.active { border-color: var(--volt); color: var(--volt); font-weight: bold; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-bottom: 2px solid var(--border-color); color: var(--text-sub); }
+        .tab-btn.active { border-color: var(--volt); color: var(--text-main); font-weight: bold; }
+
+        /* 찾기 결과 박스 (하드코딩된 색상도 변수로 대체) */
+        .find-result-box {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border-color: var(--border-color) !important;
+        }
 
         select.input-dark { 
             appearance: none; 
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); 
+            /* 화살표 색상도 테마에 따라 변경되도록 수정 */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); 
             background-repeat: no-repeat; 
             background-position: right 0.5rem center; 
             background-size: 0.8em; 
             padding-right: 2rem;
         }
+        [data-theme="light"] select.input-dark {
+            /* 화이트 모드일 때 화살표를 검은색으로 변경 */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        }
     </style>
 
     <script type="module">
+        // Firebase 기능은 그대로 유지 (건드리지 않음)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -78,6 +127,58 @@
 
         let isIdChecked = false;
         let isNickChecked = false;
+
+        // --- ⚙️ 테마 전환 기능 (black white.html에서 추출) ---
+        function updateThemeIcon(isLight) {
+            const icon = document.getElementById('theme-icon');
+            // 화이트 모드일 때 달(🌙) 아이콘, 다크 모드일 때 해(🔆) 아이콘 표시
+            if (icon) icon.innerText = isLight ? '🌙' : '🔆'; 
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                updateThemeIcon(true);
+            } else {
+                // 기본값은 dark
+                updateThemeIcon(false);
+            }
+            // 초기 로드 시 현재 테마에 맞게 배경 오버레이를 설정
+            updateBackgroundOverlay(savedTheme === 'light');
+        }
+
+        function updateBackgroundOverlay(isLight) {
+             const overlay = document.getElementById('bg-overlay');
+             if (overlay) {
+                 if (isLight) {
+                     // 화이트 모드 배경
+                     overlay.className = "absolute inset-0 bg-gradient-to-b from-white/50 via-white/90 to-white";
+                 } else {
+                     // 다크 모드 배경 (기존 값)
+                     overlay.className = "absolute inset-0 bg-gradient-to-b from-black/50 via-black/90 to-black";
+                 }
+             }
+        }
+
+        window.toggleTheme = () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                // 다크 모드로 전환
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon(false);
+                updateBackgroundOverlay(false);
+            } else {
+                // 화이트 모드로 전환
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon(true);
+                updateBackgroundOverlay(true);
+            }
+        };
+        // ----------------------------------------------------
+
 
         // --- 로그인 로직 ---
         window.handleLogin = async () => {
@@ -214,7 +315,7 @@
                             <div class="text-center">
                                 <p class="text-sm text-gray-400 mb-2">회원님의 아이디는</p>
                                 <b class="text-[var(--volt)] text-2xl block mb-6">${data.userId}</b>
-                                <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl hover:bg-white transition-colors">
+                                <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
                                     로그인 하러 가기
                                 </button>
                             </div>
@@ -250,7 +351,7 @@
                                 <div class="text-center">
                                     <p class="text-sm text-gray-400 mb-2">회원님의 비밀번호는</p>
                                     <b class="text-[var(--volt)] text-2xl block mb-6">${data.password}</b>
-                                    <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl hover:bg-white transition-colors">
+                                    <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
                                         로그인 하러 가기
                                     </button>
                                 </div>
@@ -296,78 +397,84 @@
             for(let i=curr; i>=1950; i--) y.add(new Option(i+'년', i));
             for(let i=1; i<=12; i++) m.add(new Option(i+'월', i));
             for(let i=1; i<=31; i++) d.add(new Option(i+'일', i));
+            
+            // ⭐️ 테마 로딩 추가
+            loadTheme();
         }
     </script>
 </head>
 <body class="flex justify-center h-screen w-full bg-[var(--bg-main)] text-[var(--text-main)]">
 
     <div class="w-full max-w-md h-full relative overflow-hidden bg-[var(--bg-main)] shadow-2xl">
+        <button onclick="toggleTheme()" class="absolute top-4 right-4 z-20 text-xl text-[var(--text-main)] hover:text-[var(--volt)] transition-colors">
+            <span id="theme-icon">🔆</span>
+        </button>
+        
         <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516724562728-afc824a36e84?q=80&w=1000')] bg-cover bg-center opacity-30"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black"></div>
+        <div id="bg-overlay" class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/90 to-black"></div>
 
         <div id="login-screen" class="relative z-10 w-full h-full flex flex-col items-center justify-center p-6 text-center">
-            <h1 class="text-5xl font-sport font-black italic tracking-tighter text-white mb-2">
+            <h1 class="text-5xl font-sport font-black italic tracking-tighter text-[var(--text-main)] mb-2">
                 POKE<span class="text-[var(--volt)]">RUN</span>
             </h1>
-            <p class="text-gray-300 mb-10 text-sm">Run, Battle, and Socialize.</p>
+            <p class="text-[var(--text-sub)] mb-10 text-sm">Run, Battle, and Socialize.</p>
 
             <div class="w-full space-y-3">
-                <input type="email" id="login-email" class="input-dark bg-black/50 backdrop-blur-sm" placeholder="이메일">
-                <input type="password" id="login-pw" class="input-dark bg-black/50 backdrop-blur-sm" placeholder="비밀번호">
+                <input type="email" id="login-email" class="input-dark" placeholder="이메일">
+                <input type="password" id="login-pw" class="input-dark" placeholder="비밀번호">
                 
-                <button onclick="handleLogin()" class="w-full bg-[var(--volt)] text-black font-bold py-3.5 rounded-xl hover:bg-white transition-colors mt-2">
+                <button onclick="handleLogin()" class="w-full bg-[var(--volt)] text-black font-bold py-3.5 rounded-xl hover:opacity-80 transition-opacity mt-2">
                     로그인
                 </button>
 
-                <div class="flex justify-between text-xs text-gray-400 px-1 mt-2">
-                    <button onclick="openModal('modal-find'); switchTab('id');" class="hover:text-white">아이디/비번 찾기</button>
+                <div class="flex justify-between text-xs text-[var(--text-sub)] px-1 mt-2">
+                    <button onclick="openModal('modal-find'); switchTab('id');" class="hover:text-[var(--text-main)]">아이디/비번 찾기</button>
                     <button onclick="openModal('modal-signup')" class="hover:text-[var(--volt)]">회원가입</button>
                 </div>
             </div>
         </div>
-
-        </div>
+    </div>
 
     <div id="modal-signup" class="modal-overlay">
         <div class="modal-content scrollbar-hide">
-            <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
+            <div class="flex justify-between items-center mb-6 border-b border-[var(--border-color)] pb-2">
                 <h2 class="text-xl font-bold">회원가입</h2>
-                <button onclick="closeModal('modal-signup')" class="text-gray-500 text-xl">✕</button>
+                <button onclick="closeModal('modal-signup')" class="text-[var(--text-sub)] text-xl">✕</button>
             </div>
             
             <div class="space-y-2">
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">이메일 (로그인용)</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">이메일 (로그인용)</label>
                     <input type="email" id="reg-email" class="input-dark" placeholder="example@email.com">
                 </div>
                 
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">아이디</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">아이디</label>
                     <input type="text" id="reg-custom-id" class="input-dark" placeholder="4자 이상">
                     <button class="btn-check" onclick="checkDuplicateID()">중복확인</button>
                     <p id="msg-id" class="msg-validate"></p>
                 </div>
 
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">닉네임</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">닉네임</label>
                     <input type="text" id="reg-nick" class="input-dark" placeholder="2자 이상">
                     <button class="btn-check" onclick="checkDuplicateNick()">중복확인</button>
                     <p id="msg-nick" class="msg-validate"></p>
                 </div>
 
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">비밀번호</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">비밀번호</label>
                     <input type="password" id="reg-pw" class="input-dark" placeholder="6자리 이상" oninput="checkPwMatch()">
                 </div>
 
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">비밀번호 확인</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">비밀번호 확인</label>
                     <input type="password" id="reg-pw2" class="input-dark" placeholder="재입력" oninput="checkPwMatch()">
                     <p id="msg-pw" class="msg-validate"></p>
                 </div>
 
                 <div class="input-group">
-                    <label class="text-xs text-gray-400 block mb-1">생년월일</label>
+                    <label class="text-xs text-[var(--text-sub)] block mb-1">생년월일</label>
                     <div class="flex gap-2">
                         <select id="reg-year" class="input-dark w-full"></select>
                         <select id="reg-month" class="input-dark w-full"></select>
@@ -377,11 +484,11 @@
 
                 <div class="grid grid-cols-2 gap-2">
                     <div class="input-group">
-                        <label class="text-xs text-gray-400 block mb-1">이름</label>
+                        <label class="text-xs text-[var(--text-sub)] block mb-1">이름</label>
                         <input type="text" id="reg-name" class="input-dark">
                     </div>
                     <div class="input-group">
-                        <label class="text-xs text-gray-400 block mb-1">전화번호</label>
+                        <label class="text-xs text-[var(--text-sub)] block mb-1">전화번호</label>
                         <input type="text" id="reg-phone" class="input-dark">
                     </div>
                 </div>
@@ -395,7 +502,7 @@
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">계정 찾기</h2>
-                <button onclick="closeModal('modal-find')" class="text-gray-500 text-xl">✕</button>
+                <button onclick="closeModal('modal-find')" class="text-[var(--text-sub)] text-xl">✕</button>
             </div>
 
             <div class="flex mb-4">
@@ -404,20 +511,20 @@
             </div>
 
             <div id="tab-id" class="tab-content">
-                <p class="text-xs text-gray-400 mb-2">가입 이메일</p>
+                <p class="text-xs text-[var(--text-sub)] mb-2">가입 이메일</p>
                 <input type="email" id="find-id-email" class="input-dark mb-3" placeholder="email@example.com">
-                <button onclick="findID()" class="w-full bg-white text-black font-bold py-3 rounded-xl">확인</button>
-                <div id="find-result-text-id" class="mt-4 text-center text-sm border border-[#333] p-3 rounded-lg bg-black">
+                <button onclick="findID()" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl">확인</button>
+                <div id="find-result-text-id" class="mt-4 text-center text-sm border border-[var(--border-color)] p-3 rounded-lg find-result-box">
                     결과 표시
                 </div>
             </div>
 
             <div id="tab-pw" class="tab-content" style="display:none;">
-                <p class="text-xs text-gray-400 mb-2">아이디 & 이메일</p>
+                <p class="text-xs text-[var(--text-sub)] mb-2">아이디 & 이메일</p>
                 <input type="text" id="find-pw-id" class="input-dark mb-2" placeholder="아이디">
                 <input type="email" id="find-pw-email" class="input-dark mb-3" placeholder="이메일">
                 <button onclick="findPW()" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl">확인</button>
-                <div id="find-result-text-pw" class="mt-4 text-center text-sm border border-[#333] p-3 rounded-lg bg-black">
+                <div id="find-result-text-pw" class="mt-4 text-center text-sm border border-[var(--border-color)] p-3 rounded-lg find-result-box">
                     결과 표시
                 </div>
             </div>
