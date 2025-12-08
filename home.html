@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POKE RUN: ACCESS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --volt: #ccff00; --bg-main: #000000; --bg-card: #111111; --text-main: #ffffff; --border-color: #333333; }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        
+        /* 모달 (팝업창) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 50; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
+            width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative;
+        }
+
+        /* 입력창 디자인 */
+        .input-group { margin-bottom: 10px; position: relative; }
+        .input-dark {
+            width: 100%; background: #000; border: 1px solid var(--border-color); color: white;
+            padding: 8px 10px; border-radius: 6px; outline: none; transition: 0.2s; font-size: 13px;
+        }
+        .input-dark:focus { border-color: var(--volt); }
+        .input-error { border-color: #ef4444 !important; }
+        .input-success { border-color: #22c55e !important; }
+
+        /* 중복확인 버튼 */
+        .btn-check {
+            position: absolute; right: 5px; top: 26px;
+            background: #222; color: #ccc; z-index: 10;
+            padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid #444;
+        }
+        .btn-check:hover { background: var(--volt); color: black; border-color: var(--volt); }
+        
+        .msg-validate { font-size: 11px; margin-top: 2px; display: none; font-weight: bold; }
+        
+        /* 탭 버튼 */
+        .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-bottom: 2px solid #333; color: #666; }
+        .tab-btn.active { border-color: var(--volt); color: var(--volt); font-weight: bold; }
+
+        select.input-dark { 
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); 
+            background-repeat: no-repeat; 
+            background-position: right 0.5rem center; 
+            background-size: 0.8em; 
+            padding-right: 2rem;
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
+            authDomain: "pokbattle.firebaseapp.com",
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
+            projectId: "pokbattle",
+            storageBucket: "pokbattle.firebasestorage.app",
+            messagingSenderId: "445300582484",
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1",
+            measurementId: "G-PNXLYD0D0X"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let isIdChecked = false;
+        let isNickChecked = false;
+
+        // --- 로그인 로직 ---
+        window.handleLogin = async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const pw = document.getElementById('login-pw').value;
+            if(!email || !pw) return alert("이메일과 비밀번호를 입력해주세요.");
+            try {
+                // 로그인 시도 -> 성공 시 onAuthStateChanged가 반응함
+                await signInWithEmailAndPassword(auth, email, pw);
+            } catch(e) {
+                alert("로그인 실패!\n" + e.message);
+            }
+        };
+
+        // --- 상태 변화 감지 (핵심 변경 부분) ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // [변경] 로그인 성공 시 성공 화면 없이 즉시 이동
+                window.location.href = "log.html";
+            } else {
+                // 로그인이 안 된 상태면 로그인 화면 표시
+                document.getElementById('login-screen').style.display = 'flex';
+            }
+        });
+
+        // --- 회원가입 및 찾기 기능 (기존 유지) ---
+        window.checkDuplicateID = async () => {
+            const idInput = document.getElementById('reg-custom-id');
+            const val = idInput.value.trim();
+            const msg = document.getElementById('msg-id');
+            
+            if(val.length < 4) { alert("아이디는 4글자 이상이어야 합니다."); idInput.focus(); return; }
+            
+            try {
+                const q = query(ref(db, 'users'), orderByChild('userId'), equalTo(val));
+                const snap = await get(q);
+                msg.style.display = 'block';
+                if(snap.exists()) {
+                    msg.innerText = "이미 존재하는 아이디입니다."; msg.style.color = "#ef4444"; isIdChecked = false;
+                } else {
+                    msg.innerText = "사용 가능한 아이디입니다."; msg.style.color = "#22c55e"; isIdChecked = true;
+                }
+            } catch(e) {
+                if(e.message.includes("Index not defined")) {
+                    alert("⚠️ 개발자 설정 필요: 파이어베이스 규칙(Rules)에 .indexOn을 추가해야 합니다.");
+                } else {
+                    alert("오류: " + e.message);
+                }
+            }
+        };
+
+        window.checkDuplicateNick = async () => {
+            const val = document.getElementById('reg-nick').value.trim();
+            const msg = document.getElementById('msg-nick');
+            if(val.length < 2) { alert("2글자 이상 입력하세요."); return; }
+
+            const q = query(ref(db, 'users'), orderByChild('nickname'), equalTo(val));
+            const snap = await get(q);
+            msg.style.display = 'block';
+            if(snap.exists()) {
+                msg.innerText = "이미 존재하는 닉네임입니다."; msg.style.color = "#ef4444"; isNickChecked = false;
+            } else {
+                msg.innerText = "사용 가능합니다."; msg.style.color = "#22c55e"; isNickChecked = true;
+            }
+        };
+
+        window.checkPwMatch = () => {
+            const pw = document.getElementById('reg-pw').value;
+            const pw2 = document.getElementById('reg-pw2').value;
+            const msg = document.getElementById('msg-pw');
+            if(pw2 === "") { msg.style.display = 'none'; return; }
+            msg.style.display = 'block';
+            if(pw === pw2) {
+                msg.innerText = "일치합니다."; msg.style.color = "#22c55e";
+            } else {
+                msg.innerText = "불일치합니다."; msg.style.color = "#ef4444";
+            }
+        };
+
+        window.handleSignup = async () => {
+            const email = document.getElementById('reg-email').value.trim();
+            const customId = document.getElementById('reg-custom-id').value.trim();
+            const nick = document.getElementById('reg-nick').value.trim();
+            const pw = document.getElementById('reg-pw').value;
+            const pw2 = document.getElementById('reg-pw2').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+            
+            const y = document.getElementById('reg-year').value;
+            const m = document.getElementById('reg-month').value;
+            const d = document.getElementById('reg-day').value;
+            const dob = `${y}-${m}-${d}`;
+
+            if(!email || !pw || !name || !phone) return alert("필수 정보를 입력하세요.");
+            if(!customId) return alert("아이디를 입력하세요.");
+            if(!isIdChecked) return alert("아이디 중복확인 필수.");
+            if(!isNickChecked) return alert("닉네임 중복확인 필수.");
+            if(pw !== pw2) return alert("비밀번호 불일치.");
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pw);
+                await set(ref(db, 'users/' + cred.user.uid), {
+                    userId: customId,
+                    nickname: nick,
+                    email: email,
+                    realName: name,
+                    phone: phone,
+                    dob: dob,
+                    password: pw,
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nick}`
+                });
+                alert("가입 완료! 자동 로그인됩니다.");
+                closeModal('modal-signup');
+            } catch(e) {
+                alert("가입 오류: " + e.message);
+            }
+        };
+
+        window.findID = async () => {
+            const email = document.getElementById('find-id-email').value.trim();
+            const resultBox = document.getElementById('find-result-text-id');
+            
+            if(!email) return alert("이메일을 입력하세요.");
+            resultBox.innerHTML = "확인 중...";
+
+            try {
+                const q = query(ref(db, 'users'), orderByChild('email'), equalTo(email));
+                const snap = await get(q);
+                
+                if(snap.exists()) {
+                    const data = Object.values(snap.val())[0];
+                    if (data.userId) {
+                        resultBox.innerHTML = `
+                            <div class="text-center">
+                                <p class="text-sm text-gray-400 mb-2">회원님의 아이디는</p>
+                                <b class="text-[var(--volt)] text-2xl block mb-6">${data.userId}</b>
+                                <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl hover:bg-white transition-colors">
+                                    로그인 하러 가기
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        resultBox.innerHTML = `<span style="color:#ef4444">이 계정은 오래되어 아이디 정보가 없습니다.<br>새로 가입해주세요.</span>`;
+                    }
+                } else {
+                    resultBox.innerHTML = `<span style="color:#ef4444">가입된 정보가 없습니다.</span>`;
+                }
+            } catch(e) {
+                handleFindError(e, resultBox);
+            }
+        };
+
+        window.findPW = async () => {
+            const targetId = document.getElementById('find-pw-id').value.trim();
+            const targetEmail = document.getElementById('find-pw-email').value.trim();
+            const resultBox = document.getElementById('find-result-text-pw');
+
+            if(!targetId || !targetEmail) return alert("모두 입력하세요.");
+            resultBox.innerHTML = "확인 중...";
+
+            try {
+                const q = query(ref(db, 'users'), orderByChild('userId'), equalTo(targetId));
+                const snap = await get(q);
+
+                if(snap.exists()) {
+                    const data = Object.values(snap.val())[0];
+                    if(data.email === targetEmail) {
+                        if (data.password) {
+                             resultBox.innerHTML = `
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-400 mb-2">회원님의 비밀번호는</p>
+                                    <b class="text-[var(--volt)] text-2xl block mb-6">${data.password}</b>
+                                    <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl hover:bg-white transition-colors">
+                                        로그인 하러 가기
+                                    </button>
+                                </div>
+                             `;
+                        } else {
+                             resultBox.innerHTML = `<span style="color:#ef4444">비밀번호 정보가 손상되었습니다.</span>`;
+                        }
+                    } else {
+                        resultBox.innerHTML = `<span style="color:#ef4444">이메일 정보가 일치하지 않습니다.</span>`;
+                    }
+                } else {
+                    resultBox.innerHTML = `<span style="color:#ef4444">존재하지 않는 아이디입니다.</span>`;
+                }
+            } catch(e) {
+                handleFindError(e, resultBox);
+            }
+        };
+
+        function handleFindError(e, box) {
+            if(e.message.includes("Index not defined")) {
+                box.innerHTML = "<span style='color:red'>DB 설정 오류</span>";
+                alert("⚠️ 중요: 파이어베이스 콘솔 -> Realtime Database -> [규칙] 탭에 .indexOn 설정을 추가해야 합니다.");
+            } else {
+                box.innerHTML = "오류 발생";
+                alert("오류: " + e.message);
+            }
+        }
+
+        window.openModal = (id) => document.getElementById(id).style.display = 'flex';
+        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+            document.getElementById(`btn-${tab}`).classList.add('active');
+        }
+
+        window.onload = () => {
+            const y = document.getElementById('reg-year');
+            const m = document.getElementById('reg-month');
+            const d = document.getElementById('reg-day');
+            const curr = new Date().getFullYear();
+            for(let i=curr; i>=1950; i--) y.add(new Option(i+'년', i));
+            for(let i=1; i<=12; i++) m.add(new Option(i+'월', i));
+            for(let i=1; i<=31; i++) d.add(new Option(i+'일', i));
+        }
+    </script>
+</head>
+<body class="flex justify-center h-screen w-full bg-[var(--bg-main)] text-[var(--text-main)]">
+
+    <div class="w-full max-w-md h-full relative overflow-hidden bg-[var(--bg-main)] shadow-2xl">
+        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516724562728-afc824a36e84?q=80&w=1000')] bg-cover bg-center opacity-30"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black"></div>
+
+        <div id="login-screen" class="relative z-10 w-full h-full flex flex-col items-center justify-center p-6 text-center">
+            <h1 class="text-5xl font-sport font-black italic tracking-tighter text-white mb-2">
+                POKE<span class="text-[var(--volt)]">RUN</span>
+            </h1>
+            <p class="text-gray-300 mb-10 text-sm">Run, Battle, and Socialize.</p>
+
+            <div class="w-full space-y-3">
+                <input type="email" id="login-email" class="input-dark bg-black/50 backdrop-blur-sm" placeholder="이메일">
+                <input type="password" id="login-pw" class="input-dark bg-black/50 backdrop-blur-sm" placeholder="비밀번호">
+                
+                <button onclick="handleLogin()" class="w-full bg-[var(--volt)] text-black font-bold py-3.5 rounded-xl hover:bg-white transition-colors mt-2">
+                    로그인
+                </button>
+
+                <div class="flex justify-between text-xs text-gray-400 px-1 mt-2">
+                    <button onclick="openModal('modal-find'); switchTab('id');" class="hover:text-white">아이디/비번 찾기</button>
+                    <button onclick="openModal('modal-signup')" class="hover:text-[var(--volt)]">회원가입</button>
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+    <div id="modal-signup" class="modal-overlay">
+        <div class="modal-content scrollbar-hide">
+            <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
+                <h2 class="text-xl font-bold">회원가입</h2>
+                <button onclick="closeModal('modal-signup')" class="text-gray-500 text-xl">✕</button>
+            </div>
+            
+            <div class="space-y-2">
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">이메일 (로그인용)</label>
+                    <input type="email" id="reg-email" class="input-dark" placeholder="example@email.com">
+                </div>
+                
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">아이디</label>
+                    <input type="text" id="reg-custom-id" class="input-dark" placeholder="4자 이상">
+                    <button class="btn-check" onclick="checkDuplicateID()">중복확인</button>
+                    <p id="msg-id" class="msg-validate"></p>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">닉네임</label>
+                    <input type="text" id="reg-nick" class="input-dark" placeholder="2자 이상">
+                    <button class="btn-check" onclick="checkDuplicateNick()">중복확인</button>
+                    <p id="msg-nick" class="msg-validate"></p>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">비밀번호</label>
+                    <input type="password" id="reg-pw" class="input-dark" placeholder="6자리 이상" oninput="checkPwMatch()">
+                </div>
+
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">비밀번호 확인</label>
+                    <input type="password" id="reg-pw2" class="input-dark" placeholder="재입력" oninput="checkPwMatch()">
+                    <p id="msg-pw" class="msg-validate"></p>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-xs text-gray-400 block mb-1">생년월일</label>
+                    <div class="flex gap-2">
+                        <select id="reg-year" class="input-dark w-full"></select>
+                        <select id="reg-month" class="input-dark w-full"></select>
+                        <select id="reg-day" class="input-dark w-full"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="input-group">
+                        <label class="text-xs text-gray-400 block mb-1">이름</label>
+                        <input type="text" id="reg-name" class="input-dark">
+                    </div>
+                    <div class="input-group">
+                        <label class="text-xs text-gray-400 block mb-1">전화번호</label>
+                        <input type="text" id="reg-phone" class="input-dark">
+                    </div>
+                </div>
+
+                <button onclick="handleSignup()" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl mt-2">가입 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-find" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">계정 찾기</h2>
+                <button onclick="closeModal('modal-find')" class="text-gray-500 text-xl">✕</button>
+            </div>
+
+            <div class="flex mb-4">
+                <div id="btn-id" class="tab-btn active" onclick="switchTab('id')">아이디 찾기</div>
+                <div id="btn-pw" class="tab-btn" onclick="switchTab('pw')">비밀번호 찾기</div>
+            </div>
+
+            <div id="tab-id" class="tab-content">
+                <p class="text-xs text-gray-400 mb-2">가입 이메일</p>
+                <input type="email" id="find-id-email" class="input-dark mb-3" placeholder="email@example.com">
+                <button onclick="findID()" class="w-full bg-white text-black font-bold py-3 rounded-xl">확인</button>
+                <div id="find-result-text-id" class="mt-4 text-center text-sm border border-[#333] p-3 rounded-lg bg-black">
+                    결과 표시
+                </div>
+            </div>
+
+            <div id="tab-pw" class="tab-content" style="display:none;">
+                <p class="text-xs text-gray-400 mb-2">아이디 & 이메일</p>
+                <input type="text" id="find-pw-id" class="input-dark mb-2" placeholder="아이디">
+                <input type="email" id="find-pw-email" class="input-dark mb-3" placeholder="이메일">
+                <button onclick="findPW()" class="w-full bg-[var(--volt)] text-black font-bold py-3 rounded-xl">확인</button>
+                <div id="find-result-text-pw" class="mt-4 text-center text-sm border border-[#333] p-3 rounded-lg bg-black">
+                    결과 표시
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

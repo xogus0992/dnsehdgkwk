@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>POKE RUN: Message & Friends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --volt: #ccff00; --bg-main: #000000; --text-main: #ffffff; --border-color: #262626; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-main); color: var(--text-main); }
+        .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; word-wrap: break-word; line-height: 1.4; }
+        .msg-me { background: var(--volt); color: black; border-bottom-right-radius: 4px; align-self: flex-end; font-weight: 500; }
+        .msg-other { background: #333; color: white; border-bottom-left-radius: 4px; align-self: flex-start; }
+        
+        /* 모달 스타일 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex justify-center h-screen bg-black">
+    <div class="w-full max-w-md h-full relative bg-black flex flex-col overflow-hidden shadow-2xl border-x border-[#222]">
+        
+        <header class="px-5 py-4 border-b border-[#222] bg-black z-10 shrink-0">
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="location.href='log.html'" class="active:scale-95 transition"><i data-lucide="arrow-left" class="w-6 h-6 text-gray-300"></i></button>
+                <span class="font-bold text-lg tracking-tight">MESSAGES</span>
+                <div class="flex gap-4">
+                    <button onclick="openFriendModal()" class="relative active:scale-95 transition">
+                        <i data-lucide="contact" class="w-6 h-6 text-[var(--volt)]"></i>
+                    </button>
+                    <button onclick="openGroupCreateModal()" class="active:scale-95 transition">
+                        <i data-lucide="message-square-plus" class="w-6 h-6 text-white"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4">
+                <button onclick="enterOpenChat('running')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🏃 런닝</button>
+                <button onclick="enterOpenChat('weight')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💪 웨이트</button>
+                <button onclick="enterOpenChat('pokemon')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">🐱 포켓몬</button>
+                <button onclick="enterOpenChat('etc')" class="whitespace-nowrap px-4 py-2 rounded-full bg-[#1a1a1a] text-xs font-bold border border-[#333] hover:border-[var(--volt)] hover:text-[var(--volt)] transition">💬 자유</button>
+            </div>
+
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
+                <input type="text" id="chat-search" onkeyup="filterChats()" placeholder="대화방 이름 검색" class="w-full bg-[#111] border border-[#333] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-[var(--volt)] transition">
+            </div>
+        </header>
+
+        <div id="chat-list" class="flex-1 overflow-y-auto">
+            <div class="text-center text-gray-600 py-20 text-sm">불러오는 중...</div>
+        </div>
+
+        <div id="chat-room" class="absolute inset-0 bg-black z-40 flex flex-col transform translate-x-full transition-transform duration-300">
+            <div class="px-4 py-3 border-b border-[#222] flex items-center justify-between bg-black/95 backdrop-blur">
+                <div class="flex items-center gap-3">
+                    <button onclick="closeChatRoom()"><i data-lucide="chevron-left" class="w-8 h-8 text-gray-300"></i></button>
+                    <div>
+                        <div id="chat-room-title" class="font-bold text-base">Chat</div>
+                        <div id="chat-room-type" class="text-[10px] text-[var(--volt)] font-medium tracking-wider"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth"></div>
+            
+            <div class="p-3 border-t border-[#222] flex gap-2 bg-black safe-area-bottom">
+                <input type="text" id="msg-input" onkeypress="if(event.key==='Enter') sendMessage()" class="flex-1 bg-[#1a1a1a] border border-[#333] rounded-full px-5 py-3 outline-none text-sm text-white focus:border-[var(--volt)]" placeholder="메시지를 입력하세요">
+                <button onclick="sendMessage()" class="bg-[var(--volt)] text-black rounded-full p-3 hover:opacity-80 transition"><i data-lucide="send" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+
+        <div id="modal-friend" class="modal-overlay">
+            <div class="bg-[#111] w-[90%] max-w-sm rounded-2xl p-6 border border-[#333] flex flex-col max-h-[85vh] shadow-2xl">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="font-bold text-xl text-white">친구 관리</h3>
+                    <button onclick="closeModal('modal-friend')" class="text-gray-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="friend-search-input" placeholder="친구 닉네임 검색" class="flex-1 bg-[#222] px-4 py-3 rounded-lg text-sm outline-none border border-[#333] focus:border-[var(--volt)]">
+                    <button onclick="searchFriend()" class="bg-[var(--volt)] text-black font-bold px-4 rounded-lg text-sm whitespace-nowrap">검색</button>
+                </div>
+                <div id="friend-search-result" class="text-xs text-gray-400 mb-6 min-h-[24px] flex items-center ml-1"></div>
+
+                <div class="h-px bg-[#222] w-full mb-4"></div>
+
+                <div class="flex justify-between items-end mb-2">
+                    <h4 class="text-sm font-bold text-gray-300">내 친구 목록 <span id="friend-count" class="text-[var(--volt)] text-xs ml-1">0</span></h4>
+                    <span class="text-[10px] text-gray-600">등록된 친구만 보입니다</span>
+                </div>
+                
+                <div id="my-friend-list" class="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[200px] mb-4">
+                    </div>
+            </div>
+        </div>
+
+        <div id="modal-group" class="modal-overlay">
+            <div class="bg-[#111] w-[90%] max-w-sm rounded-2xl p-6 border border-[#333] flex flex-col max-h-[85vh]">
+                <h3 class="font-bold text-lg mb-4 text-white">새 채팅방 만들기</h3>
+                
+                <label class="text-xs text-gray-500 mb-1 block ml-1">채팅방 이름</label>
+                <input type="text" id="new-group-name" placeholder="예: 주말 런닝 모임" class="w-full bg-[#222] px-4 py-3 rounded-lg text-sm outline-none border border-[#333] focus:border-[var(--volt)] mb-5 text-white">
+                
+                <div class="flex justify-between items-center mb-2">
+                    <div class="text-xs text-gray-400 ml-1">대화 상대로 초대하기</div>
+                    <button onclick="loadFriendListForGroup()" class="text-[10px] text-[var(--volt)] underline font-bold cursor-pointer">목록 새로고침</button>
+                </div>
+
+                <div id="friend-list-select" class="flex-1 overflow-y-auto border border-[#222] bg-[#1a1a1a] rounded-lg p-3 mb-5 space-y-2 max-h-[200px]">
+                    </div>
+
+                <div class="flex gap-3">
+                    <button onclick="closeModal('modal-group')" class="flex-1 py-3 bg-[#222] rounded-lg text-sm text-gray-300 font-medium">취소</button>
+                    <button onclick="createGroupChat()" class="flex-1 py-3 bg-[var(--volt)] text-black font-bold rounded-lg text-sm shadow-[0_0_10px_rgba(204,255,0,0.3)]">방 만들기</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, update, get, set, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        
+        const app = initializeApp({ apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle" });
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        let currentChatId = null;
+        let myUid = null;
+        let myNickname = "Unknown";
+
+        lucide.createIcons();
+
+        // 1. 로그인 상태 확인 및 초기화
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                myUid = user.uid;
+                // 사용자 정보 확인 및 자동 등록 (DB)
+                const userRef = ref(db, `users/${myUid}`);
+                get(userRef).then(snap => {
+                    if(!snap.exists()) {
+                        myNickname = user.displayName || "User" + myUid.slice(-4);
+                        update(userRef, { nickname: myNickname, uid: myUid });
+                    } else {
+                        myNickname = snap.val().nickname;
+                    }
+                });
+                loadChatList(); // 채팅 목록 불러오기
+            } else {
+                document.getElementById('chat-list').innerHTML = "<div class='flex flex-col items-center justify-center h-full text-gray-500 gap-2'><i data-lucide='lock' class='w-6 h-6'></i><span>로그인이 필요합니다.</span></div>";
+                lucide.createIcons();
+            }
+        });
+
+        // 2. 채팅 목록 불러오기 (비공개 필터링 포함)
+        function loadChatList() {
+            onValue(ref(db, 'groups'), (snap) => {
+                const list = document.getElementById('chat-list');
+                list.innerHTML = "";
+                const data = snap.val();
+
+                if(!data) {
+                    list.innerHTML = "<div class='text-center py-20 text-gray-600 text-sm'>진행 중인 대화가 없습니다.<br>새로운 친구를 사귀어보세요!</div>";
+                    return;
+                }
+
+                // 정렬: 최신 메시지 시간 순 (내림차순)
+                const sortedChats = Object.entries(data).sort((a, b) => (b[1].lastTime || 0) - (a[1].lastTime || 0));
+
+                sortedChats.forEach(([key, g]) => {
+                    // [중요] 개인정보 보호: 멤버에 내가 포함되어 있거나, 오픈채팅('open_')인 경우만 표시
+                    if ((g.members && g.members[myUid]) || key.startsWith('open_')) {
+                        renderChatItem(list, key, g);
+                    }
+                });
+                lucide.createIcons();
+            });
+        }
+
+        function renderChatItem(container, key, g) {
+            const div = document.createElement('div');
+            div.className = "chat-item w-full flex items-center gap-4 p-4 hover:bg-[#111] active:bg-[#1a1a1a] cursor-pointer border-b border-[#1a1a1a] group transition-colors";
+            div.dataset.name = g.name; 
+            
+            let iconColor = "bg-gray-800 text-gray-300";
+            let typeTag = "GROUP";
+            let typeColor = "text-gray-500 border-gray-700";
+            
+            if(key.startsWith('open_')) { 
+                iconColor = "bg-[var(--volt)] text-black"; 
+                typeTag = "OPEN"; 
+                typeColor = "text-[var(--volt)] border-[var(--volt)]";
+            } else if (g.type === 'private') {
+                typeTag = "1:1";
+            }
+
+            // 시간 포맷팅
+            const timeStr = g.lastTime ? new Date(g.lastTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+            div.innerHTML = `
+                <div class="w-12 h-12 rounded-full ${iconColor} flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                    ${g.name.slice(0,2)}
+                </div>
+                <div class="flex-1 min-w-0" onclick="openChatRoom('${key}', '${g.name}', '${typeTag}')">
+                    <div class="flex justify-between items-center mb-0.5">
+                        <div class="font-bold truncate text-sm text-gray-200">${g.name} <span class="text-[9px] ${typeColor} border px-1 rounded ml-1 align-middle">${typeTag}</span></div>
+                        <div class="text-[10px] text-gray-500">${timeStr}</div>
+                    </div>
+                    <div class="text-sm text-gray-400 truncate pr-2">${g.lastMsg || '대화를 시작해보세요.'}</div>
+                </div>
+                <button onclick="leaveChat('${key}')" class="p-2 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="나가기">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        }
+
+        // 3. 채팅방 진입 & 메시지 전송
+        window.openChatRoom = (id, title, typeLabel) => {
+            currentChatId = id;
+            document.getElementById('chat-room-title').innerText = title;
+            document.getElementById('chat-room-type').innerText = typeLabel === 'OPEN' ? '오픈 채팅방' : '비공개 채팅방';
+            document.getElementById('chat-room').style.transform = "translateX(0)";
+            
+            // 메시지 실시간 로드
+            onValue(ref(db, `messages/${id}`), (snap) => {
+                const container = document.getElementById('chat-messages');
+                container.innerHTML = "";
+                const data = snap.val();
+                if(data) {
+                    Object.values(data).forEach(m => {
+                        const isMe = m.uid === myUid;
+                        container.innerHTML += `
+                            <div class="w-full flex ${isMe ? 'justify-end' : 'justify-start'}">
+                                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
+                                    <span class="text-[10px] text-gray-500 mb-1 px-1 ${isMe ? 'hidden' : 'block'}">${m.nickname}</span>
+                                    <div class="msg-bubble ${isMe ? 'msg-me' : 'msg-other'} shadow-sm">
+                                        ${m.text}
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                }
+                container.scrollTop = container.scrollHeight;
+            });
+        };
+
+        window.closeChatRoom = () => {
+            document.getElementById('chat-room').style.transform = "translateX(100%)";
+            currentChatId = null;
+        };
+
+        window.sendMessage = () => {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if(!text || !currentChatId) return;
+            
+            push(ref(db, `messages/${currentChatId}`), { 
+                uid: myUid, 
+                nickname: myNickname, 
+                text, 
+                timestamp: Date.now() 
+            });
+            update(ref(db, `groups/${currentChatId}`), { 
+                lastMsg: text, 
+                lastTime: Date.now() 
+            });
+            input.value = "";
+            input.focus();
+        };
+
+        // 4. 오픈 채팅 입장 (자동 생성/입장)
+        window.enterOpenChat = (type) => {
+            const chatMap = {
+                'running': { id: 'open_running', name: '🏃 런닝 커뮤니티' },
+                'weight': { id: 'open_weight', name: '💪 헬창들의 수다' },
+                'pokemon': { id: 'open_pokemon', name: '🐱 포켓몬 정보공유' },
+                'etc': { id: 'open_etc', name: '💬 자유 잡담방' }
+            };
+            const target = chatMap[type];
+            if(!target) return;
+
+            const groupRef = ref(db, `groups/${target.id}`);
+            get(groupRef).then((snap) => {
+                if(!snap.exists()) {
+                    set(groupRef, { name: target.name, type: 'open', lastMsg: '오픈채팅 시작', members: { [myUid]: true } });
+                } else {
+                    update(ref(db, `groups/${target.id}/members`), { [myUid]: true });
+                }
+                openChatRoom(target.id, target.name, 'OPEN');
+            });
+        };
+
+        // 5. 친구 관리 로직 (프로필, 1:1, 삭제)
+        window.openFriendModal = () => {
+            document.getElementById('modal-friend').classList.add('active');
+            loadMyFriendList();
+        };
+
+        window.searchFriend = () => {
+            const input = document.getElementById('friend-search-input').value.trim();
+            const resDiv = document.getElementById('friend-search-result');
+            if(!input) return;
+            resDiv.innerHTML = "🔍 찾는 중...";
+            
+            get(ref(db, 'users')).then((snap) => {
+                if(!snap.exists()) return resDiv.innerHTML = "가입된 유저가 없습니다.";
+                let foundUid = null, foundData = null;
+                
+                snap.forEach(child => {
+                    if(child.val().nickname === input) { foundUid = child.key; foundData = child.val(); }
+                });
+
+                if(foundUid) {
+                    if(foundUid === myUid) {
+                        resDiv.innerHTML = "<span class='text-yellow-500'>본인입니다.</span>";
+                    } else {
+                        resDiv.innerHTML = `
+                            <div class="flex items-center justify-between w-full p-3 bg-[#222] rounded-lg border border-[#333]">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">${foundData.nickname[0]}</div>
+                                    <span class="font-bold text-sm text-white">${foundData.nickname}</span>
+                                </div>
+                                <button onclick="addFriend('${foundUid}', '${foundData.nickname}')" class="bg-[var(--volt)] text-black text-xs px-3 py-1.5 rounded font-bold hover:brightness-110">친구 추가</button>
+                            </div>`;
+                    }
+                } else {
+                    resDiv.innerHTML = "<span class='text-red-500'>사용자를 찾을 수 없습니다.</span>";
+                }
+            });
+        };
+
+        window.addFriend = (fUid, fNick) => {
+            update(ref(db, `users/${myUid}/friends`), { [fUid]: fNick })
+            .then(() => {
+                alert(`${fNick}님이 친구 목록에 추가되었습니다!`);
+                loadMyFriendList();
+                document.getElementById('friend-search-input').value = "";
+                document.getElementById('friend-search-result').innerHTML = "";
+            });
+        };
+
+        // 친구 목록 불러오기 (UI 개선: 프로필 + 1:1 버튼 + 삭제)
+        window.loadMyFriendList = () => {
+            const listDiv = document.getElementById('my-friend-list');
+            const countSpan = document.getElementById('friend-count');
+            
+            onValue(ref(db, `users/${myUid}/friends`), (snap) => {
+                listDiv.innerHTML = "";
+                if(!snap.exists()) {
+                    countSpan.innerText = "0";
+                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>등록된 친구가 없습니다.<br>검색해서 추가해보세요!</div>";
+                    return;
+                }
+                
+                const friends = snap.val();
+                let validCount = 0;
+
+                Object.entries(friends).forEach(([uid, name]) => {
+                    // [버그 수정] 잘못된 데이터(boolean 등) 필터링
+                    if (typeof name !== 'string' || !name) return;
+
+                    validCount++;
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-3 bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] hover:border-[#444] transition";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-sm font-bold text-white border border-[#444]">
+                                ${name.slice(0,1)}
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-white">${name}</span>
+                                <span class="text-[10px] text-[var(--volt)]">친구</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="startPrivateChat('${uid}', '${name}')" class="bg-[#333] hover:bg-[var(--volt)] hover:text-black text-white p-2 rounded-lg transition" title="1:1 대화">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteFriend('${uid}')" class="bg-[#333] hover:bg-red-500/20 hover:text-red-500 text-gray-400 p-2 rounded-lg transition" title="친구 삭제">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    listDiv.appendChild(item);
+                });
+                countSpan.innerText = validCount;
+                lucide.createIcons();
+            });
+        };
+
+        // 친구 삭제 로직 (확실하게 처리)
+        window.deleteFriend = (fUid) => {
+            if(!confirm("정말 이 친구를 삭제하시겠습니까?\n더 이상 그룹에 초대할 수 없습니다.")) return;
+            
+            remove(ref(db, `users/${myUid}/friends/${fUid}`))
+            .then(() => {
+                // UI는 onValue 리스너에 의해 자동 갱신됨
+            })
+            .catch(err => alert("삭제 중 오류가 발생했습니다: " + err.message));
+        };
+
+        // 1:1 비공개 채팅 시작
+        window.startPrivateChat = (fUid, fName) => {
+            // 나와 친구만 있는 방 생성
+            const roomName = `${myNickname}, ${fName}`;
+            const members = { [myUid]: true, [fUid]: true };
+            
+            const newGroupRef = push(ref(db, 'groups'));
+            update(newGroupRef, {
+                name: roomName,
+                type: 'private', // 프라이빗 태그
+                members: members,
+                lastMsg: '1:1 대화가 시작되었습니다.',
+                lastTime: Date.now()
+            }).then(() => {
+                closeModal('modal-friend'); // 친구창 닫고
+                openChatRoom(newGroupRef.key, roomName, '1:1'); // 바로 입장
+            });
+        };
+
+
+        // 6. 그룹 채팅 생성 (친구 초대 목록: 잘못된 데이터 제거)
+        window.openGroupCreateModal = () => {
+            document.getElementById('modal-group').classList.add('active');
+            loadFriendListForGroup();
+        };
+
+        window.loadFriendListForGroup = () => {
+            const listDiv = document.getElementById('friend-list-select');
+            listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-4'>로딩 중...</div>";
+
+            get(ref(db, `users/${myUid}/friends`)).then((snap) => {
+                listDiv.innerHTML = "";
+                if(!snap.exists()) {
+                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>초대할 친구가 없습니다.</div>";
+                    return;
+                }
+                
+                const friends = snap.val();
+                let hasValidFriends = false;
+
+                Object.entries(friends).forEach(([uid, name]) => {
+                    // [중요] 'undefinedtrue' 방지: 이름이 정상적인 문자열이 아니거나 true/false 값이면 건너뜀
+                    if (typeof name !== 'string' || name === 'true' || !name) return;
+
+                    hasValidFriends = true;
+                    listDiv.innerHTML += `
+                        <label class="flex items-center gap-3 p-2 hover:bg-[#222] rounded-lg cursor-pointer transition">
+                            <input type="checkbox" name="group-member" value="${uid}" class="accent-[var(--volt)] w-4 h-4 rounded">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">${name[0]}</div>
+                                <span class="text-sm text-gray-200">${name}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+
+                if(!hasValidFriends) {
+                    listDiv.innerHTML = "<div class='text-center text-xs text-gray-500 py-6'>표시할 친구가 없습니다.<br>(잘못된 데이터가 필터링되었습니다)</div>";
+                }
+            });
+        };
+
+        window.createGroupChat = () => {
+            const nameInput = document.getElementById('new-group-name');
+            const name = nameInput.value.trim();
+            if(!name) return alert("채팅방 이름을 입력해주세요.");
+            
+            const checks = document.querySelectorAll('input[name="group-member"]:checked');
+            if(checks.length === 0) {
+                if(!confirm("초대할 친구를 선택하지 않았습니다.\n혼자 있는 방을 만드시겠습니까?")) return;
+            }
+
+            const members = { [myUid]: true };
+            checks.forEach(chk => members[chk.value] = true);
+
+            const newGroupRef = push(ref(db, 'groups'));
+            update(newGroupRef, {
+                name: name,
+                type: 'private', // 기본적으로 비공개
+                members: members,
+                lastMsg: '그룹 채팅방 생성됨',
+                lastTime: Date.now()
+            }).then(() => {
+                closeModal('modal-group');
+                nameInput.value = "";
+                openChatRoom(newGroupRef.key, name, 'GROUP');
+            });
+        };
+
+        // 기타 기능
+        window.leaveChat = (chatId) => {
+            if(!confirm("대화방을 나가시겠습니까?\n목록에서 사라집니다.")) return;
+            remove(ref(db, `groups/${chatId}/members/${myUid}`));
+        };
+        
+        window.filterChats = () => {
+            const query = document.getElementById('chat-search').value.toLowerCase();
+            document.querySelectorAll('.chat-item').forEach(item => {
+                const name = item.dataset.name.toLowerCase();
+                item.style.display = name.includes(query) ? "flex" : "none";
+            });
+        };
+
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    </script>
+</body>
+</html>

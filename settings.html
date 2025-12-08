@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>POKE RUN: SETTINGS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --volt: #ccff00; --bg-main: #000000; --bg-card: #111111; --text-main: #ffffff; --text-sub: #9ca3af; --border-color: #262626; }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background: var(--bg-main); color: var(--text-main); -webkit-font-smoothing: antialiased; }
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        
+        .toggle-checkbox:checked { right: 0; border-color: var(--volt); }
+        .toggle-checkbox:checked + .toggle-label { background-color: var(--volt); }
+        .input-mini { background: #000; border: 1px solid var(--border-color); color: white; padding: 4px 8px; border-radius: 6px; width: 60px; text-align: center; font-size: 14px; }
+        
+        /* 페이지 전환용 클래스 (전체화면 오버레이) */
+        .full-page-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-main); z-index: 100; /* 네비게이션바(z-30)보다 높게 설정 */
+            display: none; flex-direction: column;
+            overflow: hidden; /* 내부 스크롤 별도 지정 */
+        }
+        .full-page-overlay.active { display: flex; }
+    </style>
+</head>
+<body class="flex justify-center h-screen bg-[var(--bg-main)]">
+    <div class="w-full max-w-md h-full bg-[var(--bg-main)] flex flex-col relative border-x border-[var(--border-color)] sm:border-x-0 overflow-hidden">
+        
+        <main class="flex-1 overflow-y-auto pb-24 scrollbar-hide relative w-full p-5">
+            <h2 class="text-2xl font-black italic mb-6 font-sport tracking-tighter">SETTINGS</h2>
+            
+            <div class="flex flex-col items-center pt-2 pb-6 border-b border-[var(--border-color)] mb-6">
+                <div class="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500 mb-3 relative group">
+                    <img id="setting-img" class="w-full h-full rounded-full bg-[var(--bg-card)] object-cover">
+                </div>
+                <h2 id="setting-name" class="text-xl font-bold mb-1">-</h2>
+                <p id="setting-email" class="text-xs text-gray-500">-</p>
+                <p id="setting-phone" class="text-xs text-gray-500 mb-4">-</p>
+                <button onclick="location.href='profile.html'" class="bg-[var(--bg-card)] px-5 py-2 rounded-full text-xs font-bold border border-[var(--border-color)] hover:border-gray-500 transition">프로필 편집</button>
+            </div>
+
+            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">HEALTH GOALS</div>
+            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-gray-500 mb-1">현재 체중</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="input-weight" class="input-mini" placeholder="0">
+                            <span class="text-xs">kg</span>
+                        </div>
+                    </div>
+                    <i data-lucide="arrow-right" class="text-gray-600"></i>
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-gray-500 mb-1">목표 체중</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="input-goal" class="input-mini" placeholder="0">
+                            <span class="text-xs">kg</span>
+                        </div>
+                    </div>
+                    <button onclick="saveWeight()" class="bg-[var(--volt)] text-black text-xs font-bold px-3 py-2 rounded-lg ml-2">저장</button>
+                </div>
+                <div class="bg-black/50 rounded-lg p-3 text-center border border-[var(--border-color)]">
+                    <span class="text-xs text-gray-400">목표까지</span>
+                    <span id="weight-diff" class="text-[var(--volt)] font-bold ml-1 text-sm">- kg</span>
+                    <span class="text-xs text-gray-400 ml-1">남았습니다! 🔥</span>
+                </div>
+            </div>
+
+            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">EVENT</div>
+            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 mb-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-20 h-20 bg-[var(--volt)] opacity-5 blur-2xl rounded-full"></div>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i data-lucide="calendar-check" class="text-[var(--volt)] w-4 h-4"></i>
+                            매일매일 출석체크
+                        </h3>
+                        <p id="attendance-msg" class="text-xs text-gray-500 mt-1">오늘도 러닝하러 오셨군요!</p>
+                    </div>
+                    <button id="btn-attendance" onclick="checkAttendance()" class="bg-[#222] hover:bg-[var(--volt)] hover:text-black transition text-white text-xs font-bold px-4 py-2 rounded-lg border border-[var(--border-color)]">
+                        출석하기
+                    </button>
+                </div>
+                <div class="mt-3 text-xs text-gray-400">
+                    누적 출석일: <span id="attendance-count" class="text-white font-bold">0</span>일
+                </div>
+            </div>
+
+            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">GENERAL</div>
+            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] overflow-hidden mb-8">
+                <div class="w-full flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
+                        <span class="text-sm">알림 설정</span>
+                    </div>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="toggle" id="toggle-noti" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300"/>
+                        <label for="toggle-noti" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-800 cursor-pointer border border-gray-700"></label>
+                    </div>
+                </div>
+
+                <button onclick="openPage('privacy')" class="w-full flex items-center justify-between p-4 border-b border-[var(--border-color)] hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="shield" class="w-5 h-5 text-gray-400"></i>
+                        <span class="text-sm">개인정보 처리방침</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
+                </button>
+
+                <button onclick="openPage('terms')" class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="file-text" class="w-5 h-5 text-gray-400"></i>
+                        <span class="text-sm">이용약관</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
+                </button>
+            </div>
+            
+            <button onclick="handleLogout()" class="w-full text-red-500/80 hover:text-red-500 text-sm py-4 font-bold transition">로그아웃</button>
+            <div class="text-center text-[10px] text-gray-700 mt-2">v1.0.3</div>
+        </main>
+
+        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30 relative">
+            <button onclick="location.href='log.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">피드</span>
+            </button>
+            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="clapperboard" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">릴스</span>
+            </button>
+            <div class="relative w-16 flex justify-center z-10">
+                <button onclick="location.href='upload.html'" class="absolute bottom-2 bg-[var(--volt)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)] shadow-lg active:scale-95 transition-transform">
+                    <i data-lucide="plus" class="w-7 h-7"></i>
+                </button>
+            </div>
+            <button onclick="location.href='profile.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">프로필</span>
+            </button>
+            <button onclick="location.reload()" class="flex-1 flex flex-col items-center gap-1 text-[var(--volt)] pb-1">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">설정</span>
+            </button>
+        </nav>
+
+        <div id="page-privacy" class="full-page-overlay">
+            <div class="sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md border-b border-[var(--border-color)] p-4 flex items-center gap-4 z-50">
+                <button onclick="closePage('privacy')"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <h2 class="font-bold text-lg">개인정보 처리방침</h2>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 text-sm text-gray-300 leading-relaxed space-y-4 pb-10">
+                <p class="font-bold text-white">제1조 (목적)</p>
+                <p>POKE RUN(이하 '회사')은 회원의 개인정보를 중요시하며, "정보통신망 이용촉진 및 정보보호"에 관한 법률을 준수하고 있습니다.</p>
+                
+                <p class="font-bold text-white">제2조 (수집하는 개인정보 항목)</p>
+                <p>회사는 서비스 제공을 위해 아래와 같은 개인정보를 수집하고 있습니다.<br>
+                - 필수항목: 이메일, 닉네임, 비밀번호, 프로필 사진<br>
+                - 선택항목: 신체정보(체중), 운동 기록</p>
+                
+                <p class="font-bold text-white">제3조 (개인정보의 보유 및 이용기간)</p>
+                <p>회사는 원칙적으로 개인정보 수집 및 이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 관계법령의 규정에 의하여 보존할 필요가 있는 경우 회사는 아래와 같이 관계법령에서 정한 일정한 기간 동안 회원정보를 보관합니다.<br>
+                - 접속 로그 등 서비스 이용 기록: 3개월</p>
+
+                <p class="font-bold text-white">제4조 (이용자의 권리)</p>
+                <p>이용자는 언제든지 등록되어 있는 자신의 개인정보를 조회하거나 수정할 수 있으며 가입해지를 요청할 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div id="page-terms" class="full-page-overlay">
+            <div class="sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md border-b border-[var(--border-color)] p-4 flex items-center gap-4 z-50">
+                <button onclick="closePage('terms')"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <h2 class="font-bold text-lg">이용약관</h2>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 text-sm text-gray-300 leading-relaxed space-y-4 pb-10">
+                <p class="font-bold text-white">제1조 (목적)</p>
+                <p>이 약관은 POKE RUN이 제공하는 운동 기록 및 소셜 네트워크 서비스(이하 '서비스')의 이용조건 및 절차, 이용자와 회사의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+                
+                <p class="font-bold text-white">제2조 (계정 관리의 의무)</p>
+                <p>회원의 ID와 비밀번호에 관한 관리책임은 회원에게 있으며, 이를 제3자가 이용하도록 하여서는 안 됩니다. 회사는 회원의 귀책사유로 인한 서비스 이용의 장애에 대하여 책임을 지지 않습니다.</p>
+                
+                <p class="font-bold text-white">제3조 (서비스 이용 제한)</p>
+                <p>회사는 회원이 다음 각 호에 해당하는 행위를 하였을 경우 사전 통지 없이 이용 계약을 해지하거나 또는 기간을 정하여 서비스 이용을 중지할 수 있습니다.<br>
+                1. 타인의 명의를 도용한 경우<br>
+                2. 공공질서 및 미풍양속에 저해되는 내용을 고의로 유포시킨 경우<br>
+                3. 타인의 명예를 손상시키거나 불이익을 주는 행위를 한 경우</p>
+
+                <p class="font-bold text-white">제4조 (책임의 한계)</p>
+                <p>회사는 무료로 제공되는 서비스 이용과 관련하여 관련법에 특별한 규정이 없는 한 책임을 지지 않습니다.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
+            authDomain: "pokbattle.firebaseapp.com", 
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
+            projectId: "pokbattle" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        let currentUser = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if(user) {
+                currentUser = user;
+                document.getElementById('setting-name').innerText = user.displayName || "러너";
+                document.getElementById('setting-email').innerText = user.email;
+                
+                const userRef = ref(db, `users/${user.uid}`);
+                onValue(userRef, (snap) => {
+                    const data = snap.val();
+                    if(data) {
+                        const avatar = data.avatar || user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
+                        document.getElementById('setting-img').src = avatar;
+                        document.getElementById('setting-phone').innerText = data.phone || "전화번호 없음";
+
+                        if(data.weight) document.getElementById('input-weight').value = data.weight;
+                        if(data.goalWeight) document.getElementById('input-goal').value = data.goalWeight;
+                        updateWeightDiff();
+
+                        const today = new Date().toDateString();
+                        const attendanceCount = data.attendanceCount || 0;
+                        document.getElementById('attendance-count').innerText = attendanceCount;
+                        
+                        const btn = document.getElementById('btn-attendance');
+                        const msg = document.getElementById('attendance-msg');
+                        
+                        if(data.lastAttendanceDate === today) {
+                            btn.innerText = "완료";
+                            btn.disabled = true;
+                            btn.classList.add('bg-gray-700', 'text-gray-400');
+                            btn.classList.remove('bg-[#222]', 'text-white', 'hover:bg-[var(--volt)]');
+                            msg.innerText = "오늘 출석을 완료했습니다! 🎉";
+                            msg.style.color = "var(--volt)";
+                        } else {
+                            btn.innerText = "출석하기";
+                            btn.disabled = false;
+                            btn.classList.remove('bg-gray-700', 'text-gray-400');
+                            btn.classList.add('bg-[#222]', 'text-white');
+                            msg.innerText = "오늘도 힘차게 달려볼까요?";
+                            msg.style.color = "#6b7280";
+                        }
+                    }
+                });
+            } else { 
+                location.href = 'home.html'; 
+            }
+        });
+
+        window.saveWeight = async () => {
+            if(!currentUser) return;
+            const weight = document.getElementById('input-weight').value;
+            const goalWeight = document.getElementById('input-goal').value;
+            
+            try {
+                await update(ref(db, `users/${currentUser.uid}`), {
+                    weight: weight,
+                    goalWeight: goalWeight
+                });
+                alert("건강 목표가 저장되었습니다.");
+                updateWeightDiff();
+            } catch(e) {
+                alert("저장 실패: " + e.message);
+            }
+        };
+
+        function updateWeightDiff() {
+            const w = parseFloat(document.getElementById('input-weight').value) || 0;
+            const g = parseFloat(document.getElementById('input-goal').value) || 0;
+            const diffSpan = document.getElementById('weight-diff');
+            
+            if(w > 0 && g > 0) {
+                const diff = (w - g).toFixed(1);
+                if(diff > 0) diffSpan.innerText = `${diff}kg 감량`;
+                else if(diff < 0) diffSpan.innerText = `${Math.abs(diff)}kg 증량`;
+                else diffSpan.innerText = "목표 달성!";
+            } else {
+                diffSpan.innerText = "- kg";
+            }
+        }
+
+        window.checkAttendance = async () => {
+            if(!currentUser) return;
+            const today = new Date().toDateString();
+            const btn = document.getElementById('btn-attendance');
+            btn.innerText = "처리 중...";
+            
+            try {
+                const snap = await get(ref(db, `users/${currentUser.uid}`));
+                let currentCount = 0;
+                if(snap.exists() && snap.val().attendanceCount) {
+                    currentCount = snap.val().attendanceCount;
+                }
+                await update(ref(db, `users/${currentUser.uid}`), {
+                    lastAttendanceDate: today,
+                    attendanceCount: currentCount + 1
+                });
+                alert("출석체크 완료! 🎁");
+            } catch(e) {
+                console.error(e);
+                alert("출석체크 오류 발생");
+                btn.innerText = "출석하기";
+            }
+        };
+
+        // [수정] 오버레이 페이지 제어 함수
+        window.openPage = (pageName) => {
+            const page = document.getElementById(`page-${pageName}`);
+            page.classList.add('active'); // active 클래스로 제어
+        };
+
+        window.closePage = (pageName) => {
+            const page = document.getElementById(`page-${pageName}`);
+            page.classList.remove('active');
+        };
+
+        window.handleLogout = () => signOut(auth).then(() => location.href='home.html');
+        lucide.createIcons();
+    </script>
+</body>
+</html>

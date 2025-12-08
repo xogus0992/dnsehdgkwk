@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>POKE RUN: UPLOAD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 기본 설정 */
+        :root { --bg-main: #000000; --bg-card: #111111; --text-main: #ffffff; --border-color: #262626; --accent: #FFB3BA; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); }
+        
+        .nrc-font { font-family: 'Inter', sans-serif; font-style: italic; }
+        .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        
+        /* [중요] 이미지 렌더링 최적화 (흐림 방지) */
+        img, canvas { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+
+        /* 컬러 피커 버튼 */
+        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+        /* 디자인 버튼 */
+        .design-btn.active { background-color: var(--border-color); color: white; border-color: white; }
+    </style>
+</head>
+<body class="flex justify-center h-screen bg-[var(--bg-main)]">
+    <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col">
+        <header class="p-4 border-b border-[var(--border-color)]"><h1 class="text-xl font-bold">기록 공유하기</h1></header>
+        
+        <div class="p-4 flex-1 overflow-y-auto pb-32">
+            <div id="image-container" class="relative w-full bg-[var(--bg-card)] rounded-xl border-2 border-dashed border-[var(--border-color)] flex flex-col items-center justify-center mb-4 overflow-hidden transition-all duration-300">
+                <input type="file" id="upload-file-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 z-30 cursor-pointer" onchange="previewImage(this)">
+                
+                <div id="upload-placeholder" class="flex flex-col items-center z-10 pointer-events-none py-20">
+                    <i data-lucide="image-plus" class="w-10 h-10 mb-2 text-gray-400"></i>
+                    <span class="text-gray-400 text-sm">사진을 선택하세요 (원본 비율)</span>
+                </div>
+                
+                <img id="upload-preview" class="w-full h-auto object-contain hidden z-10 block" style="max-height: 80vh;">
+                
+                <div id="style-a" class="overlay-style absolute inset-0 z-20 hidden pointer-events-none flex flex-col justify-end">
+                    <div class="w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 pt-20">
+                        <div class="custom-text-display text-white text-lg font-bold mb-4 text-shadow opacity-90 text-center"></div>
+                        
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <div class="text-[10px] text-[var(--accent)] font-bold mb-1 tracking-widest">DISTANCE</div>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="val-dist text-6xl font-black italic text-white tracking-tighter">0.0</span>
+                                    <span class="text-xl font-bold italic text-white">KM</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="flex gap-4">
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-[10px] text-[var(--accent)] font-bold tracking-widest">TIME</span>
+                                        <span class="val-time text-2xl font-bold italic text-white">00:00</span>
+                                    </div>
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-[10px] text-[var(--accent)] font-bold tracking-widest">CAL</span>
+                                        <span class="val-cal text-2xl font-bold italic text-white">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full h-1.5 mt-4 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]"></div>
+                    </div>
+                </div>
+
+                <div id="style-b" class="overlay-style absolute inset-0 z-20 hidden pointer-events-none flex flex-col items-center justify-center">
+                    <div class="absolute inset-0 bg-black/20"></div>
+                    
+                    <div class="custom-text-display absolute top-10 w-full text-center text-white text-xl font-bold text-shadow px-4"></div>
+
+                    <div class="relative flex flex-col items-center justify-center w-64 h-64 border-4 border-[var(--accent)] rounded-full bg-black/30 backdrop-blur-sm shadow-lg">
+                        <div class="text-[var(--accent)] font-bold text-sm tracking-[0.3em] mb-1">RUNNING</div>
+                        <div class="val-dist text-7xl font-black italic text-white tracking-tighter leading-none">0.0</div>
+                        <div class="text-white font-bold italic text-lg mb-4">KM</div>
+                        
+                        <div class="w-12 h-0.5 bg-white/50 mb-3"></div>
+                        
+                        <div class="flex gap-4">
+                            <div class="text-center">
+                                <span class="block text-[9px] text-gray-300">TIME</span>
+                                <span class="val-time text-lg font-bold text-white">00:00</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-[9px] text-gray-300">CAL</span>
+                                <span class="val-cal text-lg font-bold text-white">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="style-c" class="overlay-style absolute inset-0 z-20 hidden pointer-events-none p-6 flex flex-col justify-between">
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"></div>
+                    
+                    <div class="relative border-l-4 border-[var(--accent)] pl-4 py-2 mt-4">
+                        <div class="text-xs font-bold text-[var(--accent)] mb-1">TODAY'S RUN</div>
+                        <div class="custom-text-display text-white text-xl font-bold italic leading-tight">Run for fun</div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="val-dist text-[5rem] font-black italic text-white tracking-tighter leading-none text-shadow">0.0<span class="text-2xl ml-2 not-italic text-[var(--accent)]">KM</span></div>
+                        <div class="flex items-center gap-6 mt-2">
+                            <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/20">
+                                <i data-lucide="clock" class="w-3 h-3 text-[var(--accent)]"></i>
+                                <span class="val-time text-sm font-bold text-white">00:00</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/20">
+                                <i data-lucide="flame" class="w-3 h-3 text-[var(--accent)]"></i>
+                                <span class="val-cal text-sm font-bold text-white">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="flex gap-2">
+                    <button onclick="setDesign('style-a')" id="btn-style-a" class="design-btn active flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE A</button>
+                    <button onclick="setDesign('style-b')" id="btn-style-b" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE B</button>
+                    <button onclick="setDesign('style-c')" id="btn-style-c" class="design-btn flex-1 py-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-xs font-bold text-gray-400 transition-all">TYPE C</button>
+                </div>
+
+                <div class="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)]">
+                    <span class="text-xs font-bold text-gray-500 mr-2">COLOR</span>
+                    <div class="flex gap-3">
+                        <div onclick="setAccent('#FFB3BA')" class="color-btn active" style="background-color: #FFB3BA;"></div> <div onclick="setAccent('#BAFFC9')" class="color-btn" style="background-color: #BAFFC9;"></div> <div onclick="setAccent('#BAE1FF')" class="color-btn" style="background-color: #BAE1FF;"></div> <div onclick="setAccent('#FFFFBA')" class="color-btn" style="background-color: #FFFFBA;"></div> <div onclick="setAccent('#E2F0CB')" class="color-btn" style="background-color: #E2F0CB;"></div> </div>
+                </div>
+
+                <div class="bg-[var(--bg-card)] px-4 py-3 rounded-xl border border-[var(--border-color)] flex items-center gap-3">
+                    <i data-lucide="type" class="w-5 h-5 text-[var(--accent)]"></i>
+                    <input type="text" id="custom-text-input" placeholder="사진에 넣을 문구를 적어보세요 (예: 오운완!)" class="bg-transparent w-full text-white text-sm outline-none placeholder-gray-600" oninput="updateOverlay()">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
+                    <label class="text-[10px] text-gray-500 font-bold mb-1">TIME</label>
+                    <input type="text" id="upload-time" placeholder="00:00" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                </div>
+                <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
+                    <label class="text-[10px] text-gray-500 font-bold mb-1">DIST (KM)</label>
+                    <input type="text" id="upload-dist" placeholder="0.0" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                </div>
+                <div class="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)] flex flex-col items-center">
+                    <label class="text-[10px] text-gray-500 font-bold mb-1">CAL</label>
+                    <input type="text" id="upload-cal" placeholder="0" class="bg-transparent text-center w-full text-white font-bold outline-none text-xl" oninput="updateOverlay()">
+                </div>
+            </div>
+            
+            <textarea id="upload-content" class="w-full bg-[var(--bg-card)] p-4 rounded-xl text-white outline-none h-24 border border-[var(--border-color)] resize-none" placeholder="오늘 러닝은 어떠셨나요?"></textarea>
+            
+            <button onclick="handleUpload()" class="w-full bg-white text-black font-bold py-4 mt-4 rounded-xl hover:bg-gray-200 transition-colors shadow-lg">업로드</button>
+        </div>
+
+        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30 fixed bottom-0 max-w-md">
+            <button onclick="location.href='log.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">피드</span>
+            </button>
+            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="clapperboard" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">릴스</span>
+            </button>
+            <div class="relative w-16 flex justify-center z-10">
+                <button onclick="location.reload()" class="absolute bottom-2 bg-[var(--accent)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)] shadow-lg active:scale-95 transition-transform">
+                    <i data-lucide="plus" class="w-7 h-7"></i>
+                </button>
+            </div>
+            <button onclick="location.href='profile.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">프로필</span>
+            </button>
+            <button onclick="location.href='settings.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">설정</span>
+            </button>
+        </nav>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        
+        const app = initializeApp({ apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle", storageBucket: "pokbattle.firebasestorage.app", messagingSenderId: "445300582484", appId: "1:445300582484:web:f8f1373a3bbf643face5c1" });
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let currentDesign = 'style-a';
+        let currentAccent = '#FFB3BA';
+
+        window.setDesign = (styleId) => {
+            currentDesign = styleId;
+            document.querySelectorAll('.overlay-style').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.design-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const imgPreview = document.getElementById('upload-preview');
+            if (!imgPreview.classList.contains('hidden')) {
+                document.getElementById(styleId).classList.remove('hidden');
+            }
+            document.getElementById('btn-' + styleId).classList.add('active');
+        };
+
+        window.setAccent = (color) => {
+            currentAccent = color;
+            document.documentElement.style.setProperty('--accent', color);
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        };
+
+        window.updateOverlay = () => {
+            const dist = document.getElementById('upload-dist').value || "0.0";
+            const time = document.getElementById('upload-time').value || "00:00";
+            const cal = document.getElementById('upload-cal').value || "0";
+            const customText = document.getElementById('custom-text-input').value;
+
+            document.querySelectorAll('.val-dist').forEach(el => el.innerText = dist);
+            document.querySelectorAll('.val-time').forEach(el => el.innerText = time);
+            document.querySelectorAll('.val-cal').forEach(el => el.innerText = cal);
+            document.querySelectorAll('.custom-text-display').forEach(el => el.innerText = customText);
+        };
+
+        // [핵심 수정: 이미지가 로드될 때 컨테이너 크기 자동 조절]
+        window.previewImage = (input) => {
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.getElementById('upload-preview');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                    
+                    // 컨테이너 스타일 리셋 (이미지 크기에 맞춤)
+                    const container = document.getElementById('image-container');
+                    container.style.height = 'auto'; 
+                    container.style.minHeight = '0';
+                    
+                    document.getElementById(currentDesign).classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        const generateCompositeImage = (imageSrc, stats, style, accentColor, customText) => {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                // [화질 저하 방지] CORS 및 렌더링 옵션
+                img.crossOrigin = "anonymous";
+                
+                img.onload = () => {
+                    // 1. 원본 해상도 그대로 사용 (Crop 방지)
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // 2. 고화질 렌더링 설정
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    // 3. 이미지 그리기
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    // 4. 스케일 계산 (너비 기준)
+                    const s = canvas.width / 1000;
+                    
+                    const distTxt = stats.dist || "0.0";
+                    const timeTxt = stats.time || "00:00";
+                    const calTxt = stats.cal || "0";
+                    const msgTxt = customText || "";
+                    
+                    ctx.fillStyle = "#ffffff";
+
+                    if (style === 'style-a') {
+                        // TYPE A
+                        const grad = ctx.createLinearGradient(0, canvas.height - (500*s), 0, canvas.height);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,0.8)");
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, canvas.height - (500*s), canvas.width, 500*s);
+
+                        const bottomY = canvas.height - 80*s;
+
+                        if(msgTxt) {
+                            ctx.textAlign = "center";
+                            ctx.font = `bold ${50*s}px sans-serif`;
+                            ctx.fillStyle = "rgba(255,255,255,0.9)";
+                            ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=5;
+                            ctx.fillText(msgTxt, canvas.width/2, bottomY - 200*s);
+                        }
+
+                        ctx.textAlign = "left";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${30*s}px sans-serif`;
+                        ctx.fillText("DISTANCE", 50*s, bottomY - 140*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic 900 ${150*s}px sans-serif`;
+                        ctx.fillText(distTxt, 50*s, bottomY - 20*s);
+                        const dw = ctx.measureText(distTxt).width;
+                        ctx.font = `italic 700 ${50*s}px sans-serif`;
+                        ctx.fillText("KM", 50*s + dw + 15*s, bottomY - 20*s);
+
+                        ctx.textAlign = "right";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("TIME", canvas.width - 200*s, bottomY - 90*s);
+                        ctx.fillText("CAL", canvas.width - 50*s, bottomY - 90*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic bold ${45*s}px sans-serif`;
+                        ctx.fillText(timeTxt, canvas.width - 200*s, bottomY - 40*s);
+                        ctx.fillText(calTxt, canvas.width - 50*s, bottomY - 40*s);
+
+                        ctx.fillStyle = accentColor;
+                        ctx.shadowColor = accentColor; ctx.shadowBlur = 10;
+                        ctx.beginPath();
+                        ctx.roundRect(50*s, bottomY + 20*s, canvas.width - 100*s, 15*s, 10*s);
+                        ctx.fill();
+
+                    } else if (style === 'style-b') {
+                        // TYPE B
+                        ctx.fillStyle = "rgba(0,0,0,0.2)";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        const cx = canvas.width / 2;
+                        const cy = canvas.height / 2;
+                        const radius = 350*s; // 원 크기
+
+                        // 안전장치: 화면이 너무 작으면 원 크기 줄임
+                        const safeRadius = Math.min(radius, Math.min(canvas.width, canvas.height) / 2 - 20*s);
+
+                        if(msgTxt) {
+                            ctx.textAlign = "center";
+                            ctx.font = `bold ${60*s}px sans-serif`;
+                            ctx.fillStyle = "#ffffff";
+                            ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=10;
+                            ctx.fillText(msgTxt, cx, cy - safeRadius - 50*s);
+                        }
+
+                        ctx.fillStyle = "rgba(0,0,0,0.4)";
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = accentColor;
+                        ctx.lineWidth = 10*s;
+                        ctx.stroke();
+
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.letterSpacing = "5px";
+                        ctx.fillText("RUNNING", cx, cy - 150*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic 900 ${220*s}px sans-serif`;
+                        ctx.fillText(distTxt, cx, cy + 20*s);
+
+                        ctx.font = `italic bold ${50*s}px sans-serif`;
+                        ctx.fillText("KM", cx, cy + 90*s);
+
+                        ctx.fillStyle = "rgba(255,255,255,0.5)";
+                        ctx.fillRect(cx - 50*s, cy + 130*s, 100*s, 4*s);
+
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillStyle = "#cccccc";
+                        ctx.fillText("TIME", cx - 120*s, cy + 180*s);
+                        ctx.fillText("CAL", cx + 120*s, cy + 180*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${50*s}px sans-serif`;
+                        ctx.fillText(timeTxt, cx - 120*s, cy + 230*s);
+                        ctx.fillText(calTxt, cx + 120*s, cy + 230*s);
+
+                    } else if (style === 'style-c') {
+                        // TYPE C
+                        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                        grad.addColorStop(0, "rgba(0,0,0,0.4)");
+                        grad.addColorStop(0.5, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,0.6)");
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        const topY = 100*s;
+                        ctx.fillStyle = accentColor;
+                        ctx.fillRect(50*s, topY, 10*s, 150*s);
+                        
+                        ctx.textAlign = "left";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${30*s}px sans-serif`;
+                        ctx.fillText("TODAY'S RUN", 80*s, topY + 40*s);
+                        
+                        if(msgTxt) {
+                            ctx.fillStyle = "#ffffff";
+                            ctx.font = `italic bold ${60*s}px sans-serif`;
+                            ctx.fillText(msgTxt, 80*s, topY + 110*s);
+                        }
+
+                        const bottomY = canvas.height - 100*s;
+                        
+                        ctx.fillStyle = "#ffffff";
+                        ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=10;
+                        ctx.font = `italic 900 ${250*s}px sans-serif`;
+                        ctx.fillText(distTxt, 50*s, bottomY);
+                        
+                        const dw = ctx.measureText(distTxt).width;
+                        ctx.font = `normal ${60*s}px sans-serif`;
+                        ctx.fillStyle = accentColor;
+                        ctx.fillText("KM", 50*s + dw + 20*s, bottomY);
+
+                        const infoY = bottomY + 50*s;
+                        const capsuleH = 60*s;
+                        const capsuleW = 220*s;
+                        
+                        ctx.fillStyle = "rgba(0,0,0,0.5)";
+                        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                        ctx.lineWidth = 2*s;
+                        ctx.beginPath();
+                        ctx.roundRect(50*s, infoY, capsuleW, capsuleH, 30*s);
+                        ctx.fill(); ctx.stroke();
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.fillText(timeTxt, 110*s, infoY + 42*s);
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("T", 70*s, infoY + 40*s);
+
+                        const calX = 50*s + capsuleW + 30*s;
+                        ctx.fillStyle = "rgba(0,0,0,0.5)";
+                        ctx.beginPath();
+                        ctx.roundRect(calX, infoY, capsuleW, capsuleH, 30*s);
+                        ctx.fill(); ctx.stroke();
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.fillText(calTxt, calX + 60*s, infoY + 42*s);
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("C", calX + 20*s, infoY + 40*s);
+                    }
+
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.src = imageSrc;
+            });
+        };
+
+        window.handleUpload = async () => {
+            const user = auth.currentUser;
+            if(!user) return alert("로그인이 필요합니다.");
+            
+            const fileInput = document.getElementById('upload-file-input');
+            const content = document.getElementById('upload-content').value;
+            const customText = document.getElementById('custom-text-input').value;
+            
+            const stats = {
+                time: document.getElementById('upload-time').value,
+                dist: document.getElementById('upload-dist').value,
+                cal: document.getElementById('upload-cal').value
+            };
+            
+            if(!fileInput.files[0]) return alert("사진을 선택해주세요.");
+
+            const btn = document.querySelector('button[onclick="handleUpload()"]');
+            btn.innerText = "이미지 처리중...";
+            btn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const originalImage = e.target.result;
+                const finalImage = await generateCompositeImage(originalImage, stats, currentDesign, currentAccent, customText);
+
+                const newPostRef = push(ref(db, 'posts'));
+                set(newPostRef, {
+                    author: user.uid,
+                    authorName: user.displayName,
+                    authorAvatar: user.photoURL || "",
+                    content: content,
+                    stats: stats,
+                    image: finalImage,
+                    timestamp: Date.now()
+                }).then(() => {
+                    alert("업로드 완료!");
+                    location.href = "log.html";
+                });
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        };
+        lucide.createIcons();
+    </script>
+</body>
+</html>

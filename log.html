@@ -1,205 +1,524 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>RUN: LIMIT BREAK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  
-  <!-- 폰트 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
-  
-  <!-- Kakao Maps SDK -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
-  
-  <style>
-    /* 화이트 테마 */
-    :root {
-      --accent: #ccff00;
-      --bg: #000000;
-      --font-sport: 'Chakra Petch', sans-serif;
-      --font-base: 'Noto Sans KR', sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; font-family: var(--font-base); background: #000; color: #fff; overflow: hidden; }
-
-    /* 인트로 & 로그인 */
-    #landing-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display: flex; flex-direction: column; transition: opacity 0.5s ease; }
-    #bg-slider { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background-size: cover; background-position: center; opacity: 0.6; transition: transform 4s linear; }
-    .zooming { animation: zoomEffect 4s linear forwards; }
-    @keyframes zoomEffect { 0% { transform: scale(1); } 100% { transform: scale(1.2); } }
-
-    .slogan-container { position: absolute; z-index: 10; top: 55%; left: 8%; text-align: left; }
-    .slogan-main { font-family: var(--font-base); font-weight: 900; font-style: italic; font-size: 2.8rem; line-height: 1.1; color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 10px; }
-    .slogan-sub { font-family: var(--font-sport); font-size: 1.2rem; color: var(--accent); letter-spacing: 2px; font-weight: 700; }
-
-    .auth-buttons { position: absolute; bottom: 40px; left: 0; right: 0; z-index: 10; display: flex; gap: 12px; padding: 0 20px; }
-    .btn-auth { flex: 1; padding: 16px; border-radius: 50px; font-family: var(--font-base); font-weight: 700; font-size: 1rem; cursor: pointer; border: none; text-transform: uppercase; }
-    .btn-login { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(204,255,0,0.4); }
-    .btn-signup { background: rgba(255,255,255,0.15); color: #fff; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
-
-    /* 모달 공통 */
-    .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000; background: rgba(0,0,0,0.9); padding: 20px; flex-direction: column; justify-content: center; }
-    .auth-modal.active { display: flex; }
-    .modal-title { text-align: center; font-family: var(--font-sport); color: var(--accent); font-size: 2rem; margin-bottom: 20px; }
-    .input-field { background: #222; border: 1px solid #444; color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; width: 100%; }
-    .btn-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; }
-    .btn-full { width: 100%; margin-top: 10px; background: var(--accent); border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-
-    /* 메인 화면 */
-    #main-screen { display: none; position: relative; width: 100%; height: 100%; }
-    #map-bg { width: 100%; height: 100%; filter: saturate(1.2); }
-    #control-overlay { position: absolute; bottom: 40px; left: 0; right: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-    .triangle-cluster { position: relative; width: 280px; height: 220px; margin-bottom: 20px; pointer-events: auto; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>POKE RUN: HOME</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     
-    /* 흰색 버튼 스타일 */
-    .circle-btn { position: absolute; width: 80px; height: 80px; border-radius: 50%; background: #ffffff; color: #000000; border: 1px solid #e5e5e5; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.8rem; font-weight: 800; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); cursor: pointer; transition: all 0.2s; }
-    .circle-btn:active { transform: scale(0.95); background: #f3f4f6; }
-    .circle-btn span { margin-bottom: 2px; font-size: 1.4rem; }
-    
-    .btn-home { top: 0; left: 50%; transform: translateX(-50%); width: 95px; height: 95px; z-index: 10; border: 3px solid #000; }
-    .btn-diet { bottom: 10px; left: 0; }
-    .btn-weight { bottom: 10px; right: 0; }
-    
-    .connector { position: absolute; background: rgba(0,0,0,0.2); z-index: 0; }
-    .line-left { width: 2px; height: 120px; top: 50px; left: 85px; transform: rotate(35deg); }
-    .line-right { width: 2px; height: 120px; top: 50px; right: 85px; transform: rotate(-35deg); }
+    <style>
+        /* --- 공통 테마 설정 --- */
+        :root {
+            --volt: #ccff00;
+            --bg-main: #000000;
+            --bg-card: #111111;
+            --bg-sub: #262626;
+            --text-main: #ffffff;
+            --text-sub: #9ca3af;
+            --border-color: #262626;
+        }
 
-    .pokeball-container { pointer-events: auto; margin-top: 10px; cursor: pointer; transition: transform 0.3s; }
-    .pokeball-container:hover { transform: rotate(10deg) scale(1.1); }
-    .pokeball { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #000; background: linear-gradient(to bottom, #ff0000 48%, #000 48%, #000 52%, #fff 52%); position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
-    .pokeball::after { content: ''; width: 24px; height: 24px; background: #fff; border: 3px solid #000; border-radius: 50%; z-index: 2; }
-    .pokeball-label { text-align: center; margin-top: 8px; font-size: 0.8rem; color: #000; font-weight: 900; font-family: var(--font-sport); text-shadow: 0 0 2px #fff; }
+        /* [핵심 수정] 화면 축소 강제 방지 및 PC/모바일 레이아웃 고정 */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 스크롤바 생성 원천 차단 */
+            position: fixed; /* 화면이 덜컹거리지 않게 못 박기 */
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            touch-action: pan-y; /* 손가락 확대 제스처 차단 */
+            -webkit-text-size-adjust: 100%;
+        }
 
-    /* 웨이트 메뉴 선택 모달 */
-    .menu-btn { width: 100%; padding: 20px; margin-bottom: 10px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s; }
-    .menu-btn:active { transform: scale(0.98); }
-    .btn-record { background: #3b82f6; color: white; }
-    .btn-share { background: #8b5cf6; color: white; }
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  </style>
+        /* 하트 애니메이션 */
+        @keyframes heart-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        .animate-heart { animation: heart-pop 0.3s ease-in-out; }
+
+        /* 댓글/알림 시트 (Bottom Sheet) 스타일 */
+        .bottom-sheet-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 50;
+            visibility: hidden; opacity: 0; transition: all 0.3s ease;
+            display: flex; align-items: flex-end; justify-content: center;
+        }
+        .bottom-sheet-overlay.open { visibility: visible; opacity: 1; }
+        
+        .bottom-sheet {
+            background: var(--bg-card); width: 100%; max-width: 450px; height: 70vh;
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; flex-direction: column;
+        }
+        .bottom-sheet-overlay.open .bottom-sheet { transform: translateY(0); }
+        
+        .sheet-handle {
+            width: 40px; height: 4px; background: var(--bg-sub);
+            border-radius: 2px; margin: 12px auto;
+            cursor: grab;
+        }
+
+        .input-dark {
+            width: 100%; background: var(--bg-sub); border: none;
+            color: var(--text-main); padding: 12px 16px; border-radius: 20px;
+            outline: none; font-size: 14px;
+        }
+    </style>
 </head>
-<body>
-  <!-- 인트로 -->
-  <div id="landing-screen">
-    <div id="bg-slider" class="zooming"></div>
-    <div class="slogan-container">
-      <div class="slogan-sub">PROJECT: DIET MONSTER</div>
-      <div class="slogan-main">뛰어 넘어봐<br>너의 한계 !!</div>
-    </div>
-    <div class="auth-buttons">
-      <button class="btn-auth btn-signup" onclick="showModal('signup')">회원가입</button>
-      <button class="btn-auth btn-login" onclick="showModal('login')">로그인</button>
-    </div>
-  </div>
+<body class="flex justify-center h-screen w-full bg-[var(--bg-main)]">
 
-  <!-- 모달들 -->
-  <div id="modal-login" class="auth-modal">
-    <button class="btn-close" onclick="closeModals()">✕</button>
-    <div class="modal-title">LOGIN</div>
-    <input type="text" class="input-field" placeholder="ID / Email">
-    <input type="password" class="input-field" placeholder="Password">
-    <button class="btn-full" onclick="handleLoginSuccess()">로그인</button>
-  </div>
-  <div id="modal-signup" class="auth-modal">
-    <button class="btn-close" onclick="closeModals()">✕</button>
-    <div class="modal-title">SIGN UP</div>
-    <input type="text" class="input-field" placeholder="이메일">
-    <input type="password" class="input-field" placeholder="비밀번호">
-    <button class="btn-full" onclick="alert('가입 완료!'); showModal('login');">가입하기</button>
-  </div>
+    <div class="w-full max-w-md h-full relative flex flex-col bg-[var(--bg-main)] shadow-2xl overflow-hidden border-x border-[var(--border-color)] sm:border-x-0">
+        
+        <header class="px-5 py-4 flex justify-between items-center bg-[var(--bg-main)]/90 backdrop-blur-sm z-20 border-b border-[var(--border-color)]">
+            <h1 class="text-2xl font-black italic tracking-tighter text-[var(--text-main)] font-sport">
+                POKE<span class="text-[var(--volt)]">RUN</span>
+            </h1>
+            <div class="flex gap-4 items-center"> 
+                <button onclick="openActivitySheet()">
+                    <i data-lucide="heart" class="w-6 h-6 text-[var(--text-main)]"></i>
+                </button>
+                <button onclick="location.href='message.html'">
+                    <i data-lucide="send" class="w-6 h-6 text-[var(--text-main)] transform -rotate-45 mt-[9px]"></i>
+                </button>
+            </div>
+        </header>
 
-  <!-- 웨이트 선택 모달 (기록 vs 공유) -->
-  <div id="modal-weight-select" class="auth-modal">
-    <button class="btn-close" onclick="closeModals()">✕</button>
-    <div class="modal-title" style="font-size:1.5rem;">WEIGHT MENU</div>
-    <button class="menu-btn btn-record" onclick="location.href='record.html'">
-      📝 운동 기록 (Record)
-    </button>
-    <button class="menu-btn btn-share" onclick="location.href='share.html'">
-      📢 운동 공유 (Share)
-    </button>
-  </div>
+        <main id="feed-container" class="flex-1 overflow-y-auto scrollbar-hide pb-20 pt-2">
+            <div class="text-center text-[var(--text-sub)] py-20 flex flex-col items-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--volt)] mb-4"></div>
+                <p>피드를 불러오는 중...</p>
+            </div>
+        </main>
 
-  <!-- 메인 화면 -->
-  <div id="main-screen">
-    <div id="map-bg"></div>
-    <div id="control-overlay">
-      <div class="triangle-cluster">
-        <div class="connector line-left"></div>
-        <div class="connector line-right"></div>
+        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30">
+            <button onclick="location.reload()" class="flex-1 flex flex-col items-center gap-1 text-[var(--volt)] pb-1">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">피드</span>
+            </button>
+            
+            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] hover:text-white transition pb-1">
+                <i data-lucide="clapperboard" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">릴스</span>
+            </button>
+            
+            <div class="relative w-16 flex justify-center z-10">
+                <button onclick="location.href='upload.html'" class="absolute bottom-2 bg-[var(--volt)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)] shadow-lg active:scale-95 transition-transform">
+                    <i data-lucide="plus" class="w-7 h-7"></i>
+                </button>
+            </div>
 
-        <!-- HOME: 새로고침 -->
-        <div class="circle-btn btn-home" onclick="location.reload()">
-          <span>🏠</span>
-          <div>HOME</div>
+            <button onclick="location.href='profile.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] hover:text-white transition pb-1">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">프로필</span>
+            </button>
+            
+            <button onclick="location.href='settings.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] hover:text-white transition pb-1">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">설정</span>
+            </button>
+        </nav>
+
+        <div id="sheet-reply" class="bottom-sheet-overlay" onclick="closeReplySheet(event)">
+            <div id="sheet-modal" class="bottom-sheet shadow-2xl">
+                <div class="sheet-handle"></div>
+                <div class="px-5 pb-3 border-b border-[var(--border-color)] text-center font-bold text-sm">
+                    댓글 <span id="reply-count-header" class="text-[var(--volt)]">0</span>
+                </div>
+                
+                <div id="reply-list" class="flex-1 overflow-y-auto p-4"> </div>
+
+                <div class="p-4 border-t border-[var(--border-color)] bg-[var(--bg-card)] pb-8">
+                    <div class="flex items-center gap-3">
+                        <img id="my-avatar-input" class="w-8 h-8 rounded-full bg-gray-700 object-cover">
+                        <div class="flex-1 relative">
+                            <input type="text" id="reply-input" class="input-dark pr-12" placeholder="댓글 달기...">
+                            <button onclick="addReply()" class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--volt)] font-bold text-sm px-2 py-1">게시</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- RUNNING: diet1-4ts.html 이동 -->
-        <div class="circle-btn btn-diet" onclick="location.href='diet1-4ts.html'">
-          <span>🏃</span>
-          <div>RUNNING</div>
+        <div id="sheet-activity" class="bottom-sheet-overlay" onclick="closeActivitySheet(event)">
+            <div id="sheet-activity-modal" class="bottom-sheet shadow-2xl">
+                <div class="sheet-handle"></div>
+                <div class="px-5 pb-3 border-b border-[var(--border-color)] text-center font-bold text-sm">
+                    활동
+                </div>
+                <div id="activity-list" class="flex-1 overflow-y-auto p-4">
+                    <div class="text-center text-gray-500 py-10 text-sm">로딩 중...</div>
+                </div>
+            </div>
         </div>
 
-        <!-- WEIGHT: 메뉴 모달 열기 -->
-        <div class="circle-btn btn-weight" onclick="showModal('weight-select')">
-          <span>🏋️</span>
-          <div>WEIGHT</div>
-        </div>
-      </div>
-
-      <!-- POKEMON: pok.html 이동 -->
-      <div class="pokeball-container" onclick="location.href='pok.html'">
-        <div class="pokeball"></div>
-        <div class="pokeball-label">CATCH</div>
-      </div>
     </div>
-  </div>
 
-  <script>
-    // 인트로
-    const introImages = [
-      "https://images.unsplash.com/photo-1552674605-4694c49e8570?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1486218119243-13883505764c?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=800&q=80"
-    ];
-    const slider = document.getElementById('bg-slider');
-    let imgIndex = 0;
-    function startSlider() {
-      slider.style.backgroundImage = `url('${introImages[0]}')`;
-      setInterval(() => {
-        slider.classList.remove('zooming');
-        void slider.offsetWidth; 
-        imgIndex = (imgIndex + 1) % introImages.length;
-        slider.style.backgroundImage = `url('${introImages[imgIndex]}')`;
-        slider.classList.add('zooming');
-      }, 3000);
-    }
-    startSlider();
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, onValue, push, update, remove, get, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // 화면 전환
-    function showModal(type) {
-      document.querySelectorAll('.auth-modal').forEach(e => e.classList.remove('active'));
-      document.getElementById(`modal-${type}`).classList.add('active');
-    }
-    function closeModals() {
-      document.querySelectorAll('.auth-modal').forEach(e => e.classList.remove('active'));
-    }
-    function handleLoginSuccess() {
-      closeModals();
-      document.getElementById('landing-screen').style.display = 'none';
-      document.getElementById('main-screen').style.display = 'block';
-      initMap();
-    }
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
+            authDomain: "pokbattle.firebaseapp.com", 
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
+            projectId: "pokbattle", 
+            storageBucket: "pokbattle.firebasestorage.app", 
+            messagingSenderId: "445300582484", 
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
+        };
 
-    // 지도
-    function initMap() {
-      const container = document.getElementById('map-bg');
-      const options = { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 4 };
-      new kakao.maps.Map(container, options);
-    }
-  </script>
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let currentUser = null;
+        let currentPostId = null;
+
+        // 1. 인증 상태 확인
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('my-avatar-input').src = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
+                loadFeed();
+            } else {
+                alert("로그인이 필요합니다.");
+                location.href = 'home.html';
+            }
+        });
+
+        // 2. 피드 불러오기
+        function loadFeed() {
+            const feedContainer = document.getElementById('feed-container');
+            const postsQuery = query(ref(db, 'posts'), limitToLast(20));
+
+            onValue(postsQuery, (snapshot) => {
+                const data = snapshot.val();
+                
+                if (!data) {
+                    feedContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-[var(--text-sub)]">
+                            <i data-lucide="camera-off" class="w-12 h-12 mb-3 opacity-50"></i>
+                            <p>아직 게시물이 없습니다.</p>
+                            <button onclick="location.href='upload.html'" class="mt-4 text-[var(--volt)] font-bold text-sm">첫 게시물 올리기</button>
+                        </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+
+                const posts = Object.entries(data).reverse();
+                let allPostsHtml = "";
+
+                posts.forEach(([key, post]) => {
+                    const likeCount = post.likes ? Object.keys(post.likes).length : 0;
+                    const commentCount = post.comments ? Object.keys(post.comments).length : 0;
+                    const isLiked = post.likes && currentUser && post.likes[currentUser.uid];
+                    const heartClass = isLiked ? "fill-[var(--volt)] text-[var(--volt)]" : "text-white";
+                    
+                    allPostsHtml += `
+                        <article class="border-b border-[var(--border-color)] pb-4 mb-4">
+                            <div class="px-4 py-3 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-gray-800 overflow-hidden border border-[var(--border-color)]">
+                                        <img src="${post.authorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + post.author}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-sm text-white leading-none mb-1">${post.authorName}</p>
+                                        <p class="text-xs text-gray-500">${new Date(post.timestamp).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <button class="text-gray-500"><i data-lucide="more-horizontal" class="w-5 h-5"></i></button>
+                            </div>
+
+                            <div class="w-full bg-[#050505] h-auto flex items-center justify-center overflow-hidden relative" ondblclick="toggleLike('${key}')">
+                                <img src="${post.image}" class="w-full h-auto object-contain" loading="lazy" decoding="async">
+                                <i id="heart-anim-${key}" data-lucide="heart" class="w-24 h-24 text-[var(--volt)] fill-[var(--volt)] absolute opacity-0 transition-opacity duration-300 transform scale-0"></i>
+                            </div>
+
+                            <div class="px-4 pt-3 flex justify-between items-center">
+                                <div class="flex gap-5 items-center"> 
+                                    <button onclick="toggleLike('${key}')" class="transition-transform active:scale-90">
+                                        <i id="like-icon-${key}" data-lucide="heart" class="w-7 h-7 ${heartClass} transition-colors duration-200"></i>
+                                    </button>
+                                    <button onclick="openReplySheet('${key}')">
+                                        <i data-lucide="message-circle" class="w-7 h-7 text-white hover:text-gray-300"></i>
+                                    </button>
+                                    </div>
+                                </div>
+
+                            <div class="px-4 py-2">
+                                <p class="font-bold text-sm mb-1">좋아요 ${likeCount}개</p>
+                                <div class="text-sm">
+                                    <span class="font-bold mr-1">${post.authorName}</span>
+                                    <span class="text-gray-200">${post.content}</span>
+                                </div>
+                                ${commentCount > 0 ? `<button onclick="openReplySheet('${key}')" class="text-gray-500 text-sm mt-1">댓글 ${commentCount}개 모두 보기</button>` : ''}
+                            </div>
+                        </article>
+                    `;
+                });
+
+                feedContainer.innerHTML = allPostsHtml;
+                lucide.createIcons();
+            });
+        }
+
+        // 3. 좋아요 & 알림 전송 기능
+        window.toggleLike = (postId) => {
+            if(!currentUser) return alert("로그인이 필요합니다.");
+
+            const icon = document.getElementById(`like-icon-${postId}`);
+            if (icon) {
+                if (icon.classList.contains('text-[var(--volt)]')) {
+                    // 좋아요 취소 UI
+                    icon.classList.remove('fill-[var(--volt)]', 'text-[var(--volt)]');
+                    icon.classList.add('text-white');
+                } else {
+                    // 좋아요 UI
+                    icon.classList.add('fill-[var(--volt)]', 'text-[var(--volt)]');
+                    icon.classList.remove('text-white');
+                    const heartAnim = document.getElementById(`heart-anim-${postId}`);
+                    if(heartAnim) {
+                        heartAnim.style.opacity = '1';
+                        heartAnim.style.transform = 'scale(1.2)';
+                        setTimeout(() => { heartAnim.style.opacity = '0'; heartAnim.style.transform = 'scale(0)'; }, 800);
+                    }
+                }
+            }
+
+            const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
+            get(likeRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    remove(likeRef);
+                } else {
+                    // 좋아요 저장
+                    update(ref(db, `posts/${postId}/likes`), { [currentUser.uid]: true });
+
+                    // 알림 보내기 (작성자에게)
+                    get(ref(db, `posts/${postId}`)).then(postSnap => {
+                        if(postSnap.exists()){
+                            const postData = postSnap.val();
+                            // 본인 게시물이 아닐 때만 알림 전송
+                            if(postData.author !== currentUser.uid){ 
+                                push(ref(db, `notifications/${postData.author}`), {
+                                    type: 'like',
+                                    fromUid: currentUser.uid,
+                                    fromName: currentUser.displayName || "익명",
+                                    fromAvatar: currentUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.uid}`,
+                                    postId: postId,
+                                    postImage: postData.image,
+                                    timestamp: Date.now()
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        };
+
+        // 4. 댓글 시트 열기
+        window.openReplySheet = (postId) => {
+            currentPostId = postId;
+            document.getElementById('sheet-reply').classList.add('open');
+            loadReplies(postId);
+        };
+
+        window.closeReplySheet = (e) => {
+            if (e.target.classList.contains('bottom-sheet-overlay')) {
+                document.getElementById('sheet-reply').classList.remove('open');
+                currentPostId = null;
+            }
+        };
+
+        // 알림 시트 열기
+        window.openActivitySheet = () => {
+            if(!currentUser) return;
+            document.getElementById('sheet-activity').classList.add('open');
+            loadNotifications();
+        };
+
+        // 알림 시트 닫기
+        window.closeActivitySheet = (e) => {
+            if (e.target.classList.contains('bottom-sheet-overlay')) {
+                document.getElementById('sheet-activity').classList.remove('open');
+            }
+        };
+
+        // 알림 데이터 불러오기
+        function loadNotifications() {
+            const list = document.getElementById('activity-list');
+            const notiRef = query(ref(db, `notifications/${currentUser.uid}`), limitToLast(30));
+            
+            onValue(notiRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    list.innerHTML = `<div class="text-center text-gray-500 py-10 text-sm">
+                        <i data-lucide="bell-off" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+                        새로운 활동이 없습니다.
+                    </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+
+                const notis = Object.values(data).reverse(); // 최신순 정렬
+                let html = "";
+                
+                notis.forEach(noti => {
+                    if(noti.type === 'like') {
+                        html += `
+                        <div class="flex items-center gap-3 py-3 border-b border-[var(--border-color)]">
+                            <img src="${noti.fromAvatar}" class="w-10 h-10 rounded-full bg-gray-800 object-cover">
+                            <div class="flex-1 text-sm">
+                                <span class="font-bold text-white">${noti.fromName}</span>님이 회원님의 게시물을 좋아합니다.
+                                <div class="text-xs text-gray-500 mt-1">${new Date(noti.timestamp).toLocaleDateString()}</div>
+                            </div>
+                            <img src="${noti.postImage}" class="w-10 h-10 rounded object-cover border border-[var(--border-color)]">
+                        </div>
+                        `;
+                    }
+                });
+                
+                list.innerHTML = html;
+                lucide.createIcons();
+            });
+        }
+
+        // 5. 댓글 로드
+        function loadReplies(postId) {
+            const replyList = document.getElementById('reply-list');
+            const countHeader = document.getElementById('reply-count-header');
+            
+            onValue(ref(db, `posts/${postId}/comments`), (snap) => {
+                replyList.innerHTML = "";
+                const data = snap.val();
+                
+                if (!data) {
+                    countHeader.innerText = "0";
+                    replyList.innerHTML = "<div class='text-center text-gray-500 py-10 text-sm'>첫 댓글을 남겨보세요!</div>";
+                    return;
+                }
+
+                const comments = Object.values(data);
+                countHeader.innerText = comments.length;
+
+                let allCommentsHtml = "";
+                comments.forEach((c, index) => {
+                    const borderClass = index < comments.length - 1 
+                        ? "border-b border-[var(--border-color)] pb-3 mb-3" 
+                        : "pb-1 mb-1";
+
+                    allCommentsHtml += `
+                        <div class="flex gap-3 ${borderClass} animate-fade-in">
+                            <img src="${c.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + c.author}" class="w-8 h-8 rounded-full bg-gray-700 mt-1">
+                            <div class="flex-1">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="font-bold text-xs text-white">${c.author}</span>
+                                    <span class="text-[10px] text-gray-500">${new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <p class="text-sm text-gray-200 mt-0.5">${c.text}</p>
+                            </div>
+                        </div>`;
+                });
+                replyList.innerHTML = allCommentsHtml;
+                replyList.scrollTop = replyList.scrollHeight;
+            });
+        }
+
+        // 6. 댓글 작성
+        window.addReply = () => {
+            const input = document.getElementById('reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!currentUser) return alert("로그인이 필요합니다.");
+
+            const newCommentRef = push(ref(db, `posts/${currentPostId}/comments`));
+            update(newCommentRef, {
+                text: text,
+                author: currentUser.displayName || "익명",
+                avatar: currentUser.photoURL || "",
+                timestamp: Date.now()
+            });
+            input.value = "";
+        };
+
+        lucide.createIcons();
+
+        /* --- [모바일 & PC 통합] 드래그 닫기 로직 --- */
+        // 댓글 시트용
+        setupDragToClose('sheet-modal', 'reply-list', 'sheet-reply');
+        // 알림 시트용
+        setupDragToClose('sheet-activity-modal', 'activity-list', 'sheet-activity');
+
+        function setupDragToClose(sheetId, listId, overlayId) {
+            const sheet = document.getElementById(sheetId);
+            const list = document.getElementById(listId);
+            const overlay = document.getElementById(overlayId);
+            let touchStart = 0;
+            let touchCurrent = 0;
+            let isDragging = false;
+
+            // Touch
+            sheet.addEventListener('touchstart', (e) => {
+                if (list.contains(e.target) && list.scrollTop > 0) return;
+                touchStart = e.touches[0].clientY;
+                isDragging = true;
+                sheet.style.transition = 'none';
+            });
+            sheet.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                touchCurrent = e.touches[0].clientY;
+                const delta = touchCurrent - touchStart;
+                if (delta > 0) {
+                    if(e.cancelable) e.preventDefault();
+                    sheet.style.transform = `translateY(${delta}px)`;
+                }
+            });
+            sheet.addEventListener('touchend', () => handleDragEnd());
+
+            // Mouse
+            sheet.addEventListener('mousedown', (e) => {
+                if (list.contains(e.target) && list.scrollTop > 0) return;
+                touchStart = e.clientY;
+                isDragging = true;
+                sheet.style.transition = 'none';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                touchCurrent = e.clientY;
+                const delta = touchCurrent - touchStart;
+                if (delta > 0) sheet.style.transform = `translateY(${delta}px)`;
+            });
+            window.addEventListener('mouseup', () => {
+                if(isDragging) handleDragEnd();
+            });
+
+            function handleDragEnd() {
+                isDragging = false;
+                sheet.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'; 
+                const delta = touchCurrent - touchStart;
+                if (delta > 120) {
+                    overlay.classList.remove('open');
+                    setTimeout(() => { 
+                        sheet.style.transform = ''; 
+                        if(overlayId === 'sheet-reply') currentPostId = null;
+                    }, 300);
+                } else {
+                    sheet.style.transform = ''; 
+                }
+                touchStart = 0; touchCurrent = 0;
+            }
+        }
+    </script>
 </body>
 </html>
