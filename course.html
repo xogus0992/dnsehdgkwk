@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POKERUN</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c96c999113980d67c697b2f5a3d385f1&libraries=services"></script>
+
+    <link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>코스 찾는 중...</p>
+    </div>
+
+    <div class="scaffold">
+        <div class="safe-area">
+            
+            <div class="header-section">
+                <div class="distance-display">
+                    <input type="number" id="goalDistInput" value="3">
+                </div>
+                <div class="unit-label">
+                    <span>목표거리</span>
+                    <span>km</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="options-row">
+                <div class="radio-group">
+                    <label class="radio-item"><input type="radio" name="tripType" value="편도" checked> 편도</label>
+                    <label class="radio-item"><input type="radio" name="tripType" value="왕복"> 왕복</label>
+                    <label class="radio-item"><input type="radio" name="tripType" value="추천"> 추천</label>
+                </div>
+                <div class="btn-group">
+                    <button class="icon-btn gps-btn" id="resetBtn" style="margin-right: 5px;">
+                        <span class="material-icons">refresh</span>
+                    </button>
+                    <button class="icon-btn gps-btn" id="myLocationBtn">
+                        <span class="material-icons">my_location</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <div class="input-wrapper">
+                    <input type="text" id="startInput" placeholder="출발지를 입력하세요.">
+                    <span id="startDistBadge" class="dist-badge" style="display:none;">0km</span>
+                    <ul id="startSuggestions" class="suggestions-list"></ul>
+                </div>
+                
+                <div class="input-wrapper">
+                    <input type="text" id="endInput" placeholder="도착지를 입력하세요. (선택사항)">
+                    <span id="endDistBadge" class="dist-badge" style="display:none;">0km</span>
+                    <ul id="endSuggestions" class="suggestions-list"></ul>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <div class="info-col">
+                    <span class="info-label">검색 거리</span>
+                    <span id="searchDistDisplay" class="info-val">0.00 km</span>
+                </div>
+                
+                <button id="createCourseBtn" class="create-btn">
+                    코스 생성하기
+                </button>
+
+                <div class="info-col">
+                    <span class="info-label">실제 거리</span>
+                    <span id="actualDistDisplay" class="info-val">0.00 km</span>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+
+        </div> 
+
+        <div class="bottom-bar">
+            <button id="loadBtn" class="icon-action">
+                <span class="material-icons">download</span>
+            </button>
+            <button id="startRunningBtn" class="start-btn">
+                S T A R T
+            </button>
+            <button id="saveBtn" class="icon-action">
+                <span class="material-icons">upload</span>
+            </button>
+        </div>
+
+        <div id="loadModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span>저장된 코스 목록</span>
+                    <button id="closeLoadBtn" class="close-icon"><span class="material-icons">close</span></button>
+                </div>
+                <ul id="savedList" class="saved-list"></ul>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="stations.js"></script>
+    <script src="campus.js"></script>
+    <script src="course.js"></script>
+</body>
+</html>

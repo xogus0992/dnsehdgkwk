@@ -1,4 +1,4 @@
-export const STATIONS = [
+const STATIONS_DATA = [
   {
     "id": "stn_1",
     "name": "연천역",

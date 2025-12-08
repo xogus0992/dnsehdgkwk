@@ -1,4 +1,4 @@
-export const CAMPUSES = [
+const CAMPUS_DATA = [
   {
     "id": "uni_1",
     "name": "국립강릉원주대학교",
