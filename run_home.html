@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POKERUN - Home</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <link rel="stylesheet" href="run_home.css">
+</head>
+<body>
+
+    <div class="scaffold">
+        <div class="safe-area">
+            
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button id="prevMonthBtn" class="nav-btn"><span class="material-icons">chevron_left</span></button>
+                    <span id="currentMonthLabel">2023. 10</span>
+                    <button id="nextMonthBtn" class="nav-btn"><span class="material-icons">chevron_right</span></button>
+                </div>
+                
+                <div class="weekdays-grid">
+                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                
+                <div id="calendarGrid" class="days-grid">
+                    </div>
+            </div>
+
+            <div id="dailyRecordSection" class="daily-record-container hidden">
+                <div class="section-header">
+                    <span id="selectedDateLabel">10월 25일</span>
+                    <button id="closeDailyBtn" class="icon-btn-small"><span class="material-icons">close</span></button>
+                </div>
+                <ul id="dailyRecordList" class="daily-list">
+                    </ul>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="feed-container">
+                <div class="feed-title">친구들의 활동</div>
+                <ul id="friendList" class="feed-list">
+                    </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="run_home.js"></script>
+</body>
+</html>
