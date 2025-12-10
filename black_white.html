@@ -30,13 +30,17 @@
             --rank-c: #6b7280; 
         }
 
-        /* --- 2. 기본 스타일 재정의 --- */
+        /* --- 2. 모바일 화면 맞춤 수정 (핵심) --- */
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-main);
-            overflow: hidden; /* 게임 화면 전체 스크롤 제어 */
-            padding-bottom: 0 !important; /* layout.css 패딩 제거 */
+            
+            /* [수정] 100vh -> 100dvh (모바일 브라우저 바 대응) */
+            height: 100dvh; 
+            width: 100vw;
+            overflow: hidden; /* 스크롤 방지 */
+            padding-bottom: 0 !important; 
         }
 
         /* 공통 하단바 숨김 */
@@ -54,7 +58,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        /* 애니메이션 */
         .anim-pop { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
@@ -62,7 +65,6 @@
         .sprite-enemy { filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); transition: transform 0.2s; }
         .sprite-dead { filter: grayscale(1) opacity(0.5); transform: scale(0.8) !important; transition: all 1s; }
 
-        /* 배틀 이펙트 */
         @keyframes smash-dash {
             0% { transform: translate(0,0) scale(1); }
             40% { transform: translate(var(--tx), var(--ty)) scale(1.3) skewX(-20deg); }
@@ -105,16 +107,16 @@
         .nav-btn { transition: all 0.2s; }
     </style>
 </head>
-<body class="flex justify-center h-screen w-full bg-gray-100">
+<body class="flex justify-center bg-gray-100">
 
-    <div id="app" class="relative w-full max-w-md h-full bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
+    <div id="app" class="relative w-full max-w-md h-[100dvh] bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
         
-        <div style="height: 64px;"></div>
+        <div style="height: 64px; flex-shrink: 0;"></div>
 
-        <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)]">
+        <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)] w-full">
             </main>
 
-        <nav id="main-nav" class="absolute bottom-0 w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 pb-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+        <nav id="main-nav" class="absolute bottom-0 w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));">
             <button onclick="app.nav('lobby')" id="nav-lobby" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
                 <i data-lucide="home" class="w-6 h-6"></i>
                 <span class="text-[10px] font-black italic font-sport">HOME</span>
@@ -123,11 +125,13 @@
                 <i data-lucide="users" class="w-6 h-6"></i>
                 <span class="text-[10px] font-black italic font-sport">TEAM</span>
             </button>
-            <button onclick="app.nav('battle')" class="mb-6 transform transition-transform active:scale-95 group">
+            
+            <button onclick="app.nav('battle')" class="mb-2 transform transition-transform active:scale-95 group">
                 <div class="w-16 h-16 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
                     <i data-lucide="swords" class="w-8 h-8 text-white fill-current"></i>
                 </div>
             </button>
+            
             <button onclick="app.nav('shop')" id="nav-shop" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
                 <i data-lucide="shopping-bag" class="w-6 h-6"></i>
                 <span class="text-[10px] font-black italic font-sport">SHOP</span>
@@ -276,44 +280,50 @@
                 const typeInfo = TYPE_FX[partner.type] || TYPE_FX.normal;
                 const typeColor = typeInfo.particleColor;
 
-                // [수정] 화면 잘림 방지: h-full 제거, pb-32 추가, 스크롤 가능하게 변경
+                // [수정] 스크롤 없이 한 화면에 들어오도록 Flexbox로 간격 자동 조절
+                // h-full로 높이를 채우고, justify-between으로 요소들을 위아래로 분산시킵니다.
+                // pb-24: 하단바가 가리지 않도록 공간 확보
                 c.innerHTML = `
-                    <div class="flex flex-col items-center pt-8 px-6 pb-32 anim-pop w-full min-h-full">
-                        <div class="relative w-full aspect-square flex items-center justify-center mb-6">
+                    <div class="flex flex-col items-center justify-between h-full w-full p-4 pb-28 anim-pop">
+                        
+                        <div class="relative w-full flex-1 flex items-center justify-center max-h-[40vh]">
                             <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent blur-[60px] rounded-full"></div>
-                            <img src="${partner.sprite}" class="w-64 h-64 object-contain relative z-10 sprite-player drop-shadow-2xl">
+                            <img src="${partner.sprite}" class="h-full object-contain relative z-10 sprite-player drop-shadow-2xl max-h-64">
                             <div class="absolute bottom-0 right-4 glass px-3 py-1 rounded-full flex items-center gap-1 border-blue-500/30">
                                 <i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current"></i>
                                 <span class="text-[10px] font-black italic text-[var(--text-main)]">MAIN</span>
                             </div>
                         </div>
-                        <h2 class="font-sport font-black italic text-5xl uppercase mb-2 text-[var(--text-main)] drop-shadow-sm tracking-tighter">${partner.name}</h2>
-                        
-                        <div class="glass px-6 py-2 rounded-full flex items-center gap-3 mb-8 border border-gray-200">
-                            <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
-                            <div class="h-4 w-[1px] bg-gray-300"></div>
-                            <div class="flex items-center gap-1" style="color:${typeColor}">
-                                <i data-lucide="${typeInfo.icon}" class="w-4 h-4"></i>
-                                <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
+
+                        <div class="flex flex-col items-center w-full">
+                            <h2 class="font-sport font-black italic text-4xl uppercase mb-1 text-[var(--text-main)] drop-shadow-sm tracking-tighter text-center line-clamp-1">${partner.name}</h2>
+                            
+                            <div class="glass px-6 py-2 rounded-full flex items-center gap-3 mb-4 border border-gray-200">
+                                <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
+                                <div class="h-4 w-[1px] bg-gray-300"></div>
+                                <div class="flex items-center gap-1" style="color:${typeColor}">
+                                    <i data-lucide="${typeInfo.icon}" class="w-4 h-4"></i>
+                                    <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="w-full glass p-4 rounded-xl mb-4 border-l-4" style="border-color: ${typeColor}">
+                        <div class="w-full glass p-3 rounded-xl mb-3 border-l-4" style="border-color: ${typeColor}">
                             <div class="flex justify-between items-center">
                                 <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
                                 <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
                             </div>
-                            <div class="text-2xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
+                            <div class="text-xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4 w-full">
-                             <div class="glass p-4 rounded-xl flex flex-col items-center justify-center">
+                        <div class="grid grid-cols-2 gap-3 w-full">
+                             <div class="glass p-3 rounded-xl flex flex-col items-center justify-center">
                                  <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
-                                 <p class="text-xl font-sport font-black italic text-[var(--text-main)]">Bronze</p>
+                                 <p class="text-lg font-sport font-black italic text-[var(--text-main)]">Bronze</p>
                              </div>
-                             <div class="glass p-4 rounded-xl flex flex-col items-center justify-center">
+                             <div class="glass p-3 rounded-xl flex flex-col items-center justify-center">
                                  <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
-                                 <p class="text-xl font-sport font-black italic text-[var(--text-main)]">0%</p>
+                                 <p class="text-lg font-sport font-black italic text-[var(--text-main)]">0%</p>
                              </div>
                         </div>
                     </div>
