@@ -7,243 +7,264 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="layout.css">
+
     <style>
-        /* --- 1. 기본 테마 (다크 모드) 변수 --- */
+        /* --- 테마 설정 (White Mode Fixed) --- */
         :root { 
-            --volt:#ccff00; 
-            --bg-main: #000000; 
-            --bg-card: #111111; 
-            --text-main: #ffffff; 
-            --text-sub: #9ca3af; 
-            --border-color: #262626; 
-            --bg-sub: #262626; /* 출석 버튼 배경색 대체용으로 추가 */
+            --volt: #2563eb;         /* 파랑 */
+            --bg-main: #f0f4f8;      /* 밝은 배경 */
+            --bg-card: #ffffff;      /* 흰색 카드 */
+            --bg-sub: #e5e7eb;       /* 서브 배경 */
+            --text-main: #1a1a1a;    /* 검정 텍스트 */
+            --text-sub: #4b5563;     /* 회색 텍스트 */
+            --border-color: #cccccc; /* 경계선 */
+            --danger: #ef4444;       /* 빨강 (위험/삭제) */
         }
-        
-        /* ⚪ 2. 화이트 모드 디자인 변수 추가 */
-        [data-theme="light"] {
-            --volt:#2563eb; 
-            --bg-main: #f0f4f8;        /* 밝은 배경 */
-            --bg-card: #ffffff;        /* 밝은 카드 배경 */
-            --text-main: #000000;      /* 어두운 메인 텍스트 */
-            --text-sub: #000000;       /* 중간 서브 텍스트 */
-            --border-color: #000000;   /* 밝은 테두리 */
-            --bg-sub: #e5e7eb;         /* 출석 버튼 배경색 대체용으로 추가 */
-        }
-        
-        /* [수정] body에 transition 추가 */
+
         body { 
             font-family: 'Inter', 'Noto Sans KR', sans-serif; 
             background: var(--bg-main); 
             color: var(--text-main); 
-            -webkit-font-smoothing: antialiased;
-            transition: background-color 0.3s, color 0.3s; /* 전환 효과 추가 */
         }
         
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
-        
-        .toggle-checkbox:checked { right: 0; border-color: var(--volt); }
-        .toggle-checkbox:checked + .toggle-label { background-color: var(--volt); }
-        
-        /* [수정] input-mini 배경 및 색상 변수 사용 */
-        .input-mini { 
-            background: var(--bg-main); 
-            border: 1px solid var(--border-color); 
-            color: var(--text-main); 
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            width: 60px; 
-            text-align: center; 
-            font-size: 14px; 
+
+        /* 토글 스위치 스타일 */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--volt);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--volt);
+        }
+        .toggle-checkbox {
+            right: 0;
+            z-index: 1;
+            border-color: #e5e7eb;
+            transition: all 0.3s;
+        }
+        .toggle-label {
+            width: 44px;
+            height: 24px;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            transition: all 0.3s;
+        }
+        .toggle-checkbox:checked {
+            right: -20px; /* 위치 조정 */
+            transform: translateX(100%);
         }
         
-        /* 페이지 전환용 클래스 (전체화면 오버레이) */
-        .full-page-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-main); z-index: 100; /* 네비게이션바(z-30)보다 높게 설정 */
-            display: none; flex-direction: column;
-            overflow: hidden; /* 내부 스크롤 별도 지정 */
+        /* 스위치 커스텀 (Tailwind와 결합) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
         }
-        .full-page-overlay.active { display: flex; }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--volt);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* 섹션 스타일 */
+        .settings-section {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 0 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: 1px solid var(--border-color);
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--bg-main);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        
+        .row-title { font-size: 14px; font-weight: 600; color: var(--text-main); }
+        .row-desc { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+        
+        .select-box {
+            background: var(--bg-sub);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-main);
+            outline: none;
+            font-weight: bold;
+        }
     </style>
 </head>
-<body class="flex justify-center h-screen bg-[var(--bg-main)]">
-    <div class="w-full max-w-md h-full bg-[var(--bg-main)] flex flex-col relative border-x border-[var(--border-color)] sm:border-x-0 overflow-hidden">
-        
-        <main class="flex-1 overflow-y-auto pb-24 scrollbar-hide relative w-full p-5">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-black italic font-sport tracking-tighter">SETTINGS</h2>
-                <button onclick="toggleTheme()" class="text-[var(--text-main)] hover:text-[var(--volt)] transition-colors p-1 rounded-full active:bg-[var(--bg-card)]">
-                    <i id="theme-icon" data-lucide="sun-moon" class="w-6 h-6"></i>
-                </button>
-            </div>
-            
-            <div class="flex flex-col items-center pt-2 pb-6 border-b border-[var(--border-color)] mb-6">
-                <div class="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500 mb-3 relative group">
-                    <img id="setting-img" class="w-full h-full rounded-full bg-[var(--bg-card)] object-cover">
-                </div>
-                <h2 id="setting-name" class="text-xl font-bold mb-1">-</h2>
-                <p id="setting-email" class="text-xs text-[var(--text-sub)]">-</p> 
-                <p id="setting-phone" class="text-xs text-[var(--text-sub)] mb-4">-</p>
-                <button onclick="location.href='profile.html'" class="bg-[var(--bg-card)] px-5 py-2 rounded-full text-xs font-bold border border-[var(--border-color)] hover:border-gray-500 transition">프로필 편집</button>
-            </div>
+<body class="bg-[var(--bg-main)]">
 
-            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">HEALTH GOALS</div>
-            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs text-[var(--text-sub)] mb-1">현재 체중</span>
-                        <div class="flex items-center gap-1">
-                            <input type="number" id="input-weight" class="input-mini" placeholder="0">
-                            <span class="text-xs">kg</span>
-                        </div>
-                    </div>
-                    <i data-lucide="arrow-right" class="text-gray-600"></i>
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs text-[var(--text-sub)] mb-1">목표 체중</span>
-                        <div class="flex items-center gap-1">
-                            <input type="number" id="input-goal" class="input-mini" placeholder="0">
-                            <span class="text-xs">kg</span>
-                        </div>
-                    </div>
-                    <button onclick="saveWeight()" class="bg-[var(--volt)] text-black text-xs font-bold px-3 py-2 rounded-lg ml-2">저장</button>
-                </div>
-                <div class="bg-[var(--bg-main)]/50 rounded-lg p-3 text-center border border-[var(--border-color)]">
-                    <span class="text-xs text-[var(--text-sub)]">목표까지</span>
-                    <span id="weight-diff" class="text-[var(--volt)] font-bold ml-1 text-sm">- kg</span>
-                    <span class="text-xs text-[var(--text-sub)] ml-1">남았습니다! 🔥</span>
+    <div class="w-full max-w-md mx-auto p-5 pb-32">
+        <h1 class="text-2xl font-black italic font-sport tracking-tighter mb-6">SETTINGS</h1>
+
+        <div class="bg-[var(--bg-card)] rounded-2xl p-5 mb-6 flex items-center gap-4 border border-[var(--border-color)] shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-[var(--volt)] opacity-10 blur-2xl rounded-full pointer-events-none"></div>
+
+            <div class="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-cyan-400">
+                <img id="user-avatar" class="w-full h-full rounded-full bg-[var(--bg-sub)] object-cover">
+            </div>
+            <div class="flex-1">
+                <h2 id="user-name" class="text-lg font-bold text-[var(--text-main)]">-</h2>
+                <p id="user-email" class="text-xs text-[var(--text-sub)] mb-2">-</p>
+                <div class="inline-flex items-center gap-1 bg-[var(--bg-sub)] px-2 py-1 rounded-lg">
+                    <span class="text-yellow-500 font-bold">●</span>
+                    <span class="text-xs font-bold text-[var(--text-main)]">보유 코인:</span>
+                    <span id="my-coin" class="text-sm font-black text-[var(--volt)] font-sport italic">0</span>
                 </div>
             </div>
-
-            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">EVENT</div>
-            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 mb-6 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-20 h-20 bg-[var(--volt)] opacity-5 blur-2xl rounded-full"></div>
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                            <i data-lucide="calendar-check" class="text-[var(--volt)] w-4 h-4"></i>
-                            매일매일 출석체크
-                        </h3>
-                        <p id="attendance-msg" class="text-xs text-[var(--text-sub)] mt-1">오늘도 러닝하러 오셨군요!</p>
-                    </div>
-                    <button id="btn-attendance" onclick="checkAttendance()" class="bg-[var(--bg-sub)] hover:bg-[var(--volt)] hover:text-black transition text-[var(--text-main)] text-xs font-bold px-4 py-2 rounded-lg border border-[var(--border-color)]">
-                        출석하기
-                    </button>
-                </div>
-                <div class="mt-3 text-xs text-[var(--text-sub)]">
-                    누적 출석일: <span id="attendance-count" class="text-white font-bold">0</span>일
-                </div>
-            </div>
-
-            <div class="mb-2 text-xs font-bold text-[var(--text-sub)] ml-1">GENERAL</div>
-            <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] overflow-hidden mb-8">
-                <div class="w-full flex items-center justify-between p-4 border-b border-[var(--border-color)]">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="bell" class="w-5 h-5 text-[var(--text-sub)]"></i>
-                        <span class="text-sm">알림 설정</span>
-                    </div>
-                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="toggle" id="toggle-noti" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300"/>
-                        <label for="toggle-noti" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-800 cursor-pointer border border-gray-700"></label>
-                    </div>
-                </div>
-
-                <button onclick="openPage('privacy')" class="w-full flex items-center justify-between p-4 border-b border-[var(--border-color)] hover:bg-white/5 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="shield" class="w-5 h-5 text-[var(--text-sub)]"></i>
-                        <span class="text-sm">개인정보 처리방침</span>
-                    </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
-                </button>
-
-                <button onclick="openPage('terms')" class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="file-text" class="w-5 h-5 text-[var(--text-sub)]"></i>
-                        <span class="text-sm">이용약관</span>
-                    </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
-                </button>
-            </div>
-            
-            <button onclick="handleLogout()" class="w-full text-red-500/80 hover:text-red-500 text-sm py-4 font-bold transition">로그아웃</button>
-            <div class="text-center text-[10px] text-[var(--text-sub)]/50 mt-2">v1.0.3</div>
-        </main>
-
-        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30 relative">
-            <button onclick="location.href='log.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="home" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">피드</span>
+            <button onclick="location.href='profile.html'" class="text-[var(--text-sub)] hover:text-[var(--volt)]">
+                <i data-lucide="chevron-right"></i>
             </button>
-            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="clapperboard" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">릴스</span>
-            </button>
-            <div class="relative w-16 flex justify-center z-10">
-                <button onclick="location.href='upload.html'" class="absolute bottom-2 bg-[var(--volt)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)] shadow-lg active:scale-95 transition-transform">
-                    <i data-lucide="plus" class="w-7 h-7"></i>
-                </button>
-            </div>
-            <button onclick="location.href='profile.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="user" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">프로필</span>
-            </button>
-            <button onclick="location.reload()" class="flex-1 flex flex-col items-center gap-1 text-[var(--volt)] pb-1">
-                <i data-lucide="settings" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">설정</span>
-            </button>
-        </nav>
+        </div>
 
-        <div id="page-privacy" class="full-page-overlay">
-            <div class="sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md border-b border-[var(--border-color)] p-4 flex items-center gap-4 z-50">
-                <button onclick="closePage('privacy')"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
-                <h2 class="font-bold text-lg">개인정보 처리방침</h2>
+        <div class="text-xs font-bold text-[var(--text-sub)] mb-2 ml-1">WORKOUT</div>
+        <div class="settings-section">
+            <div class="settings-row">
+                <div>
+                    <div class="row-title">러닝 음성 안내 (TTS)</div>
+                    <div class="row-desc">1km마다 페이스와 시간을 알려줍니다.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="set-voice" onchange="updateSetting('voiceGuide', this.checked)">
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-1 overflow-y-auto p-5 text-sm text-gray-300 leading-relaxed space-y-4 pb-10">
-                <p class="font-bold text-white">제1조 (목적)</p>
-                <p>POKE RUN(이하 '회사')은 회원의 개인정보를 중요시하며, "정보통신망 이용촉진 및 정보보호"에 관한 법률을 준수하고 있습니다.</p>
-                
-                <p class="font-bold text-white">제2조 (수집하는 개인정보 항목)</p>
-                <p>회사는 서비스 제공을 위해 아래와 같은 개인정보를 수집하고 있습니다.<br>
-                - 필수항목: 이메일, 닉네임, 비밀번호, 프로필 사진<br>
-                - 선택항목: 신체정보(체중), 운동 기록</p>
-                
-                <p class="font-bold text-white">제3조 (개인정보의 보유 및 이용기간)</p>
-                <p>회사는 원칙적으로 개인정보 수집 및 이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 관계법령의 규정에 의하여 보존할 필요가 있는 경우 회사는 아래와 같이 관계법령에서 정한 일정한 기간 동안 회원정보를 보관합니다.<br>
-                - 접속 로그 등 서비스 이용 기록: 3개월</p>
-
-                <p class="font-bold text-white">제4조 (이용자의 권리)</p>
-                <p>이용자는 언제든지 등록되어 있는 자신의 개인정보를 조회하거나 수정할 수 있으며 가입해지를 요청할 수 있습니다.</p>
+            <div class="settings-row">
+                <div>
+                    <div class="row-title">화면 켜짐 유지</div>
+                    <div class="row-desc">운동 중 화면이 꺼지지 않습니다.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="set-screen" onchange="updateSetting('screenAlwaysOn', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div class="row-title">시작 전 카운트다운</div>
+                <select id="set-countdown" class="select-box" onchange="updateSetting('countdown', this.value)">
+                    <option value="0">없음</option>
+                    <option value="3">3초</option>
+                    <option value="5">5초</option>
+                    <option value="10">10초</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="row-title">웨이트 기본 휴식시간</div>
+                    <div class="row-desc">세트 간 휴식 타이머 기본값</div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <input type="number" id="set-rest" class="select-box w-14 text-center" value="60" onchange="updateSetting('restTime', this.value)">
+                    <span class="text-xs font-bold">초</span>
+                </div>
             </div>
         </div>
 
-        <div id="page-terms" class="full-page-overlay">
-            <div class="sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md border-b border-[var(--border-color)] p-4 flex items-center gap-4 z-50">
-                <button onclick="closePage('terms')"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
-                <h2 class="font-bold text-lg">이용약관</h2>
+        <div class="text-xs font-bold text-[var(--text-sub)] mb-2 ml-1">SOCIAL & FEED</div>
+        <div class="settings-section">
+            <div class="settings-row">
+                <div>
+                    <div class="row-title">계정 비공개</div>
+                    <div class="row-desc">팔로워에게만 피드를 공개합니다.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="set-private" onchange="updateSetting('privateAccount', this.checked)">
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-1 overflow-y-auto p-5 text-sm text-gray-300 leading-relaxed space-y-4 pb-10">
-                <p class="font-bold text-white">제1조 (목적)</p>
-                <p>이 약관은 POKE RUN이 제공하는 운동 기록 및 소셜 네트워크 서비스(이하 '서비스')의 이용조건 및 절차, 이용자와 회사의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
-                
-                <p class="font-bold text-white">제2조 (계정 관리의 의무)</p>
-                <p>회원의 ID와 비밀번호에 관한 관리책임은 회원에게 있으며, 이를 제3자가 이용하도록 하여서는 안 됩니다. 회사는 회원의 귀책사유로 인한 서비스 이용의 장애에 대하여 책임을 지지 않습니다.</p>
-                
-                <p class="font-bold text-white">제3조 (서비스 이용 제한)</p>
-                <p>회사는 회원이 다음 각 호에 해당하는 행위를 하였을 경우 사전 통지 없이 이용 계약을 해지하거나 또는 기간을 정하여 서비스 이용을 중지할 수 있습니다.<br>
-                1. 타인의 명의를 도용한 경우<br>
-                2. 공공질서 및 미풍양속에 저해되는 내용을 고의로 유포시킨 경우<br>
-                3. 타인의 명예를 손상시키거나 불이익을 주는 행위를 한 경우</p>
-
-                <p class="font-bold text-white">제4조 (책임의 한계)</p>
-                <p>회사는 무료로 제공되는 서비스 이용과 관련하여 관련법에 특별한 규정이 없는 한 책임을 지지 않습니다.</p>
+            <div class="settings-row">
+                <div>
+                    <div class="row-title">릴스 자동 재생</div>
+                    <div class="row-desc">데이터 사용량이 증가할 수 있습니다.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="set-autoplay" onchange="updateSetting('autoPlay', this.checked)">
+                    <span class="slider"></span>
+                </label>
             </div>
         </div>
 
+        <div class="text-xs font-bold text-[var(--text-sub)] mb-2 ml-1">NOTIFICATION</div>
+        <div class="settings-section">
+            <div class="settings-row">
+                <div class="row-title">활동 알림 (좋아요, 팔로우)</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-push-act" onchange="updateSetting('pushActivity', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div class="row-title">마케팅 정보 수신</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-push-mkt" onchange="updateSetting('pushMarketing', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="text-xs font-bold text-[var(--text-sub)] mb-2 ml-1">ACCOUNT</div>
+        <div class="settings-section">
+            <button onclick="clearAppCache()" class="w-full flex items-center justify-between py-4 text-left border-b border-[var(--bg-main)]">
+                <span class="row-title">캐시 데이터 삭제</span>
+                <i data-lucide="trash-2" class="w-4 h-4 text-[var(--text-sub)]"></i>
+            </button>
+            <button onclick="handleLogout()" class="w-full flex items-center justify-between py-4 text-left border-b border-[var(--bg-main)]">
+                <span class="row-title text-[var(--danger)]">로그아웃</span>
+                <i data-lucide="log-out" class="w-4 h-4 text-[var(--danger)]"></i>
+            </button>
+            <button onclick="handleDeleteAccount()" class="w-full flex items-center justify-between py-4 text-left">
+                <span class="row-title text-[var(--text-sub)] text-xs">회원 탈퇴</span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-[var(--text-sub)]"></i>
+            </button>
+        </div>
+
+        <div class="text-center text-[10px] text-[var(--text-sub)] mt-6 mb-10">
+            POKE RUN Version 1.2.0<br>
+            © 2025 POKE RUN Corp.
+        </div>
     </div>
 
+    <script src="layout.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getAuth, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
@@ -256,165 +277,100 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
         let currentUser = null;
-        
-        // --- ⚙️ 테마 전환 기능 (추가) ---
-        function updateThemeIcon(isLight) {
-            const icon = document.getElementById('theme-icon');
-            if (icon) {
-                 if(isLight) {
-                    icon.setAttribute('data-lucide', 'moon'); // 화이트 모드일 때 달 아이콘
-                 } else {
-                    icon.setAttribute('data-lucide', 'sun-moon'); // 다크 모드일 때 해/달 아이콘
-                 }
-                 lucide.createIcons(); 
-            }
-        }
 
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            const isLight = savedTheme === 'light';
-            if (isLight) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-            updateThemeIcon(isLight);
-        }
-
-        window.toggleTheme = () => {
-            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            if (isLight) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('theme', 'dark');
-                updateThemeIcon(false);
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                updateThemeIcon(true);
-            }
-        };
-        // ----------------------------------------------------
-
-
-        onAuthStateChanged(auth, async (user) => {
-            if(user) {
+        // 1. 초기화 및 데이터 로드
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
                 currentUser = user;
-                document.getElementById('setting-name').innerText = user.displayName || "러너";
-                document.getElementById('setting-email').innerText = user.email;
-                
-                const userRef = ref(db, `users/${user.uid}`);
-                onValue(userRef, (snap) => {
-                    const data = snap.val();
-                    if(data) {
-                        const avatar = data.avatar || user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
-                        document.getElementById('setting-img').src = avatar;
-                        document.getElementById('setting-phone').innerText = data.phone || "전화번호 없음";
-
-                        if(data.weight) document.getElementById('input-weight').value = data.weight;
-                        if(data.goalWeight) document.getElementById('input-goal').value = data.goalWeight;
-                        updateWeightDiff();
-
-                        const today = new Date().toDateString();
-                        const attendanceCount = data.attendanceCount || 0;
-                        document.getElementById('attendance-count').innerText = attendanceCount;
-                        
-                        const btn = document.getElementById('btn-attendance');
-                        const msg = document.getElementById('attendance-msg');
-                        
-                        if(data.lastAttendanceDate === today) {
-                            btn.innerText = "완료";
-                            btn.disabled = true;
-                            // [수정] hardcoded classes to use variables for theme consistency
-                            btn.classList.add('bg-[var(--bg-sub)]', 'text-[var(--text-sub)]'); 
-                            btn.classList.remove('bg-[#222]', 'text-white', 'hover:bg-[var(--volt)]');
-                            msg.innerText = "오늘 출석을 완료했습니다! 🎉";
-                            msg.style.color = "var(--volt)";
-                        } else {
-                            btn.innerText = "출석하기";
-                            btn.disabled = false;
-                            // [수정] hardcoded classes to use variables for theme consistency
-                            btn.classList.remove('bg-gray-700', 'text-gray-400');
-                            btn.classList.add('bg-[var(--bg-sub)]', 'text-[var(--text-main)]', 'hover:bg-[var(--volt)]', 'hover:text-black');
-                            msg.innerText = "오늘도 힘차게 달려볼까요?";
-                            // [수정] hardcoded color to use variable for theme consistency
-                            msg.style.color = "var(--text-sub)"; 
-                        }
-                    }
-                });
-            } else { 
-                location.href = 'home.html'; 
+                loadUserData(user.uid);
+            } else {
+                location.href = 'log.html';
             }
         });
 
-        window.saveWeight = async () => {
-            if(!currentUser) return;
-            const weight = document.getElementById('input-weight').value;
-            const goalWeight = document.getElementById('input-goal').value;
+        function loadUserData(uid) {
+            const userRef = ref(db, `users/${uid}`);
             
-            try {
-                await update(ref(db, `users/${currentUser.uid}`), {
-                    weight: weight,
-                    goalWeight: goalWeight
-                });
-                alert("건강 목표가 저장되었습니다.");
-                updateWeightDiff();
-            } catch(e) {
-                alert("저장 실패: " + e.message);
-            }
-        };
+            onValue(userRef, (snap) => {
+                const data = snap.val();
+                if (!data) return;
 
-        function updateWeightDiff() {
-            const w = parseFloat(document.getElementById('input-weight').value) || 0;
-            const g = parseFloat(document.getElementById('input-goal').value) || 0;
-            const diffSpan = document.getElementById('weight-diff');
-            
-            if(w > 0 && g > 0) {
-                const diff = (w - g).toFixed(1);
-                if(diff > 0) diffSpan.innerText = `${diff}kg 감량`;
-                else if(diff < 0) diffSpan.innerText = `${Math.abs(diff)}kg 증량`;
-                else diffSpan.innerText = "목표 달성!";
-            } else {
-                diffSpan.innerText = "- kg";
-            }
+                // 프로필 정보
+                document.getElementById('user-name').innerText = data.nickname || "러너";
+                document.getElementById('user-email').innerText = data.email || "";
+                document.getElementById('user-avatar').src = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
+                
+                // 코인 정보 (없으면 0)
+                const coins = data.coins || 0;
+                document.getElementById('my-coin').innerText = coins.toLocaleString();
+
+                // 설정값 반영 (없으면 기본값)
+                const s = data.settings || {};
+                
+                // 체크박스 (true/false)
+                document.getElementById('set-voice').checked = s.voiceGuide !== false; // 기본 true
+                document.getElementById('set-screen').checked = s.screenAlwaysOn === true; // 기본 false
+                document.getElementById('set-private').checked = s.privateAccount === true; 
+                document.getElementById('set-autoplay').checked = s.autoPlay !== false; 
+                document.getElementById('set-push-act').checked = s.pushActivity !== false;
+                document.getElementById('set-push-mkt').checked = s.pushMarketing === true;
+
+                // 선택값
+                document.getElementById('set-countdown').value = s.countdown || "3";
+                document.getElementById('set-rest').value = s.restTime || "60";
+            });
         }
 
-        window.checkAttendance = async () => {
-            if(!currentUser) return;
-            const today = new Date().toDateString();
-            const btn = document.getElementById('btn-attendance');
-            btn.innerText = "처리 중...";
+        // 2. 설정 업데이트 (전역 함수)
+        window.updateSetting = (key, value) => {
+            if (!currentUser) return;
             
-            try {
-                const snap = await get(ref(db, `users/${currentUser.uid}`));
-                let currentCount = 0;
-                if(snap.exists() && snap.val().attendanceCount) {
-                    currentCount = snap.val().attendanceCount;
-                }
-                await update(ref(db, `users/${currentUser.uid}`), {
-                    lastAttendanceDate: today,
-                    attendanceCount: currentCount + 1
-                });
-                alert("출석체크 완료! 🎁");
-            } catch(e) {
-                console.error(e);
-                alert("출석체크 오류 발생");
-                btn.innerText = "출석하기";
+            // 숫자형 변환 (restTime 등)
+            if (key === 'restTime') value = parseInt(value) || 60;
+            
+            update(ref(db, `users/${currentUser.uid}/settings`), {
+                [key]: value
+            }).then(() => {
+                // 로컬 스토리지에도 백업 (오프라인/빠른 로딩용)
+                const currentSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+                currentSettings[key] = value;
+                localStorage.setItem('userSettings', JSON.stringify(currentSettings));
+            }).catch(err => console.error("설정 저장 실패:", err));
+        };
+
+        // 3. 계정 관리 기능
+        window.clearAppCache = () => {
+            if(confirm("앱의 임시 데이터를 정리하시겠습니까?\n로그인 정보는 유지됩니다.")) {
+                // settings, records 등 핵심 키 제외하고 삭제하거나,
+                // 간단하게 관련 없는 키만 지우는 로직. 여기선 단순 알림.
+                localStorage.removeItem('myWorkoutRecords'); // 로컬 운동기록 초기화 예시
+                alert("캐시 데이터가 삭제되었습니다.");
+                location.reload();
             }
         };
 
-        // [수정] 오버레이 페이지 제어 함수
-        window.openPage = (pageName) => {
-            const page = document.getElementById(`page-${pageName}`);
-            page.classList.add('active'); // active 클래스로 제어
+        window.handleLogout = () => {
+            if(confirm("로그아웃 하시겠습니까?")) {
+                signOut(auth).then(() => location.href='log.html');
+            }
         };
 
-        window.closePage = (pageName) => {
-            const page = document.getElementById(`page-${pageName}`);
-            page.classList.remove('active');
+        window.handleDeleteAccount = async () => {
+            const msg = "정말로 탈퇴하시겠습니까?\n모든 데이터(코인, 기록, 친구)가 즉시 삭제되며 복구할 수 없습니다.";
+            if(confirm(msg)) {
+                const uid = currentUser.uid;
+                try {
+                    // DB 데이터 삭제
+                    await remove(ref(db, `users/${uid}`));
+                    // 인증 계정 삭제
+                    await deleteUser(currentUser);
+                    alert("탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
+                    location.href = 'log.html';
+                } catch (e) {
+                    alert("탈퇴 실패: " + e.message + "\n(재로그인 후 다시 시도해주세요)");
+                }
+            }
         };
-
-        window.handleLogout = () => signOut(auth).then(() => location.href='home.html');
-
-        // ⭐️ 페이지 로드 시 테마 적용 (추가)
-        document.addEventListener('DOMContentLoaded', loadTheme);
 
         lucide.createIcons();
     </script>

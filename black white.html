@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>RUN: POKEMON CLUB ULTIMATE</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="layout.css">
+
+    <style>
+        /* --- 1. 테마 설정 (White Mode Fixed) --- */
+        :root {
+            --volt: #2563eb;         /* 파랑 */
+            --bg-main: #f0f4f8;      /* 밝은 배경 */
+            --bg-card: #ffffff;      /* 흰색 카드 */
+            --text-main: #1a1a1a;    /* 검정 텍스트 */
+            --text-sub: #4b5563;     /* 회색 텍스트 */
+            --border-color: #cccccc; /* 경계선 */
+            
+            /* 등급별 컬러 */
+            --rank-s: #9333ea; 
+            --rank-a: #d97706;
+            --rank-b: #2563eb; 
+            --rank-c: #6b7280; 
+        }
+
+        /* --- 2. 기본 스타일 재정의 --- */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden; /* 게임 화면 전체 스크롤 제어 */
+            padding-bottom: 0 !important; /* layout.css 패딩 제거 */
+        }
+
+        /* 공통 하단바 숨김 */
+        .app-bottom-nav, .center-menu-container { display: none !important; }
+
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+        /* 유리 질감 */
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 애니메이션 */
+        .anim-pop { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .sprite-player { transform: scaleX(-1); filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); transition: transform 0.2s; }
+        .sprite-enemy { filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); transition: transform 0.2s; }
+        .sprite-dead { filter: grayscale(1) opacity(0.5); transform: scale(0.8) !important; transition: all 1s; }
+
+        /* 배틀 이펙트 */
+        @keyframes smash-dash {
+            0% { transform: translate(0,0) scale(1); }
+            40% { transform: translate(var(--tx), var(--ty)) scale(1.3) skewX(-20deg); }
+            100% { transform: translate(0,0) scale(1); }
+        }
+        .anim-dash { animation: smash-dash 0.5s cubic-bezier(0.1, 0.9, 0.2, 1); z-index: 100 !important; }
+
+        @keyframes heavy-shake { 
+            0%, 100% { transform: translate(0,0); } 
+            10%, 30%, 50% { transform: translate(-5px, 0); } 
+            20%, 40% { transform: translate(5px, 0); } 
+        }
+        .anim-hit { animation: heavy-shake 0.4s ease-out; filter: brightness(2) sepia(1) hue-rotate(-50deg); }
+
+        @keyframes cam-shake {
+            0%, 100% { transform: translate(0,0); }
+            25% { transform: translate(-3px, 3px); }
+            50% { transform: translate(3px, -3px); }
+        }
+        .anim-cam-shake { animation: cam-shake 0.3s ease-out; }
+
+        .fx-particle {
+            position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; z-index: 95;
+            animation: particle-out 0.6s ease-out forwards;
+        }
+        @keyframes particle-out {
+            0% { transform: translate(0,0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--vx), var(--vy)) scale(0); opacity: 0; }
+        }
+
+        .type-fire { color: #ef4444; } .type-water { color: #3b82f6; } .type-grass { color: #22c55e; }
+        .type-electric { color: #eab308; } .type-psychic { color: #a855f7; } .type-normal { color: #6b7280; }
+
+        .rank-S { color: var(--rank-s); font-weight: 900; }
+        .rank-A { color: var(--rank-a); font-weight: 800; }
+        .rank-B { color: var(--rank-b); font-weight: 700; }
+        .rank-C { color: var(--rank-c); font-weight: 600; }
+
+        .nav-active { color: var(--volt) !important; transform: translateY(-2px); }
+        .nav-btn { transition: all 0.2s; }
+    </style>
+</head>
+<body class="flex justify-center h-screen w-full bg-gray-100">
+
+    <div id="app" class="relative w-full max-w-md h-full bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
+        
+        <div style="height: 64px;"></div>
+
+        <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)]">
+            </main>
+
+        <nav id="main-nav" class="absolute bottom-0 w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 pb-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+            <button onclick="app.nav('lobby')" id="nav-lobby" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-black italic font-sport">HOME</span>
+            </button>
+            <button onclick="app.nav('team')" id="nav-team" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+                <i data-lucide="users" class="w-6 h-6"></i>
+                <span class="text-[10px] font-black italic font-sport">TEAM</span>
+            </button>
+            <button onclick="app.nav('battle')" class="mb-6 transform transition-transform active:scale-95 group">
+                <div class="w-16 h-16 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
+                    <i data-lucide="swords" class="w-8 h-8 text-white fill-current"></i>
+                </div>
+            </button>
+            <button onclick="app.nav('shop')" id="nav-shop" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+                <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+                <span class="text-[10px] font-black italic font-sport">SHOP</span>
+            </button>
+            <button onclick="app.nav('dex')" id="nav-dex" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+                <i data-lucide="book-open" class="w-6 h-6"></i>
+                <span class="text-[10px] font-black italic font-sport">DEX</span>
+            </button>
+        </nav>
+
+        <div id="toast" class="absolute top-24 left-1/2 -translate-x-1/2 bg-[var(--volt)] text-white px-6 py-3 rounded-full font-black italic shadow-2xl transform scale-0 transition-transform z-50 pointer-events-none text-sm whitespace-nowrap border-2 border-white flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span id="toast-msg">Notification</span>
+        </div>
+        
+        <div id="camera-shake-layer" class="pointer-events-none absolute inset-0 z-0"></div>
+    </div>
+
+    <script src="layout.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, update, onValue, push, get, child, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE2O8aibfFZO",
+            authDomain: "pokbattle.firebaseapp.com",
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
+            projectId: "pokbattle",
+            storageBucket: "pokbattle.firebasestorage.app",
+            messagingSenderId: "445300582484",
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1",
+            measurementId: "G-PNXLYD0D0X"
+        };
+
+        const appFB = initializeApp(firebaseConfig);
+        const db = getDatabase(appFB);
+        window.fb = { db, ref, set, update, onValue, push, get, child, remove, onDisconnect };
+
+        const $ = (id) => document.getElementById(id);
+        const wait = (ms) => new Promise(r => setTimeout(r, ms));
+        const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+        window.showToast = function(msg, type='success') {
+            const t = $('toast');
+            if(!t) return;
+            const msgEl = $('toast-msg');
+            msgEl.innerText = msg;
+            t.style.backgroundColor = type === 'error' ? '#ef4444' : 'var(--volt)'; 
+            requestAnimationFrame(() => t.style.transform = 'translate(-50%, 0) scale(1)');
+            setTimeout(() => t.style.transform = 'translate(-50%, 0) scale(0)', 2500);
+        };
+
+        const BALLS = [
+            { id: 'poke', name: 'Poké Ball', price: 200, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png', rates: {S: 0, A: 5, B: 20, C: 75}, color: 'border-red-500' },
+            { id: 'great', name: 'Great Ball', price: 500, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png', rates: {S: 5, A: 15, B: 40, C: 40}, color: 'border-blue-500' },
+            { id: 'ultra', name: 'Ultra Ball', price: 1500, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png', rates: {S: 15, A: 45, B: 30, C: 10}, color: 'border-yellow-500' },
+            { id: 'master', name: 'Master Ball', price: 5000, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png', rates: {S: 100, A: 0, B: 0, C: 0}, color: 'border-purple-500' }
+        ];
+
+        const state = {
+            coins: 5000,
+            inventory: [],
+            team: [null, null, null],
+            battle: { active: false, roomId: null, role: null, myTeam: [], enemyTeam: [], lastActionId: 0 },
+            selectedSlot: null,
+            profileImg: localStorage.getItem('pokerun_avatar') || null,
+            nickname: localStorage.getItem('pokerun_name') || "Trainer"
+        };
+
+        const TYPE_FX = {
+            fire: { style: 'type-fire', icon: 'flame', particleColor: '#ef4444' },
+            water: { style: 'type-water', icon: 'droplets', particleColor: '#3b82f6' },
+            electric: { style: 'type-electric', icon: 'zap', particleColor: '#eab308' },
+            grass: { style: 'type-grass', icon: 'leaf', particleColor: '#22c55e' },
+            psychic: { style: 'type-psychic', icon: 'eye', particleColor: '#a855f7' },
+            normal: { style: 'type-normal', icon: 'circle-dot', particleColor: '#9ca3af' }
+        };
+
+        const app = {
+            init: () => {
+                if(state.inventory.length === 0) {
+                    app.addPokemon({id: 25, name: 'Pikachu', type: 'electric', rank: 'A', hp: 100, atk: 55, move: 'Thunderbolt'}, true);
+                    app.addPokemon({id: 6, name: 'Charizard', type: 'fire', rank: 'S', hp: 160, atk: 90, move: 'Flamethrower'}, true);
+                    app.addPokemon({id: 9, name: 'Blastoise', type: 'water', rank: 'A', hp: 140, atk: 75, move: 'Hydro Pump'}, true);
+                    state.team = [state.inventory[1], state.inventory[0], state.inventory[2]];
+                }
+                app.updateCoins(0);
+                app.nav('lobby');
+            },
+
+            addPokemon: (pkm, silent=false) => {
+                pkm.uid = Date.now() + Math.random();
+                pkm.sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
+                pkm.static = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+                pkm.level = 1;
+                pkm.maxHp = pkm.hp;
+                pkm.currentHp = pkm.hp;
+                if(!pkm.move) pkm.move = 'Tackle';
+                state.inventory.push(pkm);
+                if(!silent) showToast(`Got ${pkm.name}!`);
+            },
+
+            updateCoins: (amt) => {
+                state.coins += amt;
+                const headerCoin = document.getElementById('userCoinDisplay');
+                if(headerCoin) headerCoin.innerText = state.coins.toLocaleString();
+            },
+
+            nav: (view) => {
+                const main = $('main-content');
+                main.innerHTML = '';
+                state.selectedSlot = null;
+
+                document.querySelectorAll('.nav-btn').forEach(b => {
+                    const isActive = b.id === `nav-${view}`;
+                    b.classList.remove('nav-active');
+                    if(isActive) b.classList.add('nav-active');
+                });
+
+                if(view === 'lobby') app.renderLobby(main);
+                if(view === 'shop') app.renderShop(main);
+                if(view === 'dex') app.renderDex(main);
+                if(view === 'team') app.renderTeam(main);
+                if(view === 'battle') app.renderBattleSetup(main);
+                lucide.createIcons();
+            },
+
+            selectSlot: (index) => {
+                state.selectedSlot = (state.selectedSlot === index) ? null : index;
+                app.renderTeam($('main-content'));
+            },
+
+            equip: (invIndex) => {
+                if (state.selectedSlot === null) return showToast("먼저 위쪽 슬롯을 선택하세요!", "error");
+                const pkm = state.inventory[invIndex];
+                if (state.team.some(p => p && p.uid === pkm.uid)) return showToast("이미 팀에 있습니다!", "error");
+                state.team[state.selectedSlot] = pkm;
+                state.selectedSlot = null;
+                showToast(`${pkm.name} 배치 완료!`);
+                app.renderTeam($('main-content'));
+            },
+
+            renderLobby: (c) => {
+                const partner = state.team[0] || state.inventory[0];
+                const typeInfo = TYPE_FX[partner.type] || TYPE_FX.normal;
+                const typeColor = typeInfo.particleColor;
+
+                // [수정] 화면 잘림 방지: h-full 제거, pb-32 추가, 스크롤 가능하게 변경
+                c.innerHTML = `
+                    <div class="flex flex-col items-center pt-8 px-6 pb-32 anim-pop w-full min-h-full">
+                        <div class="relative w-full aspect-square flex items-center justify-center mb-6">
+                            <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent blur-[60px] rounded-full"></div>
+                            <img src="${partner.sprite}" class="w-64 h-64 object-contain relative z-10 sprite-player drop-shadow-2xl">
+                            <div class="absolute bottom-0 right-4 glass px-3 py-1 rounded-full flex items-center gap-1 border-blue-500/30">
+                                <i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current"></i>
+                                <span class="text-[10px] font-black italic text-[var(--text-main)]">MAIN</span>
+                            </div>
+                        </div>
+                        <h2 class="font-sport font-black italic text-5xl uppercase mb-2 text-[var(--text-main)] drop-shadow-sm tracking-tighter">${partner.name}</h2>
+                        
+                        <div class="glass px-6 py-2 rounded-full flex items-center gap-3 mb-8 border border-gray-200">
+                            <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
+                            <div class="h-4 w-[1px] bg-gray-300"></div>
+                            <div class="flex items-center gap-1" style="color:${typeColor}">
+                                <i data-lucide="${typeInfo.icon}" class="w-4 h-4"></i>
+                                <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
+                            </div>
+                        </div>
+
+                        <div class="w-full glass p-4 rounded-xl mb-4 border-l-4" style="border-color: ${typeColor}">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
+                                <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
+                            </div>
+                            <div class="text-2xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 w-full">
+                             <div class="glass p-4 rounded-xl flex flex-col items-center justify-center">
+                                 <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
+                                 <p class="text-xl font-sport font-black italic text-[var(--text-main)]">Bronze</p>
+                             </div>
+                             <div class="glass p-4 rounded-xl flex flex-col items-center justify-center">
+                                 <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
+                                 <p class="text-xl font-sport font-black italic text-[var(--text-main)]">0%</p>
+                             </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderShop: (c) => {
+                const ballCards = BALLS.map(b => `
+                    <div onclick="app.confirmBuy('${b.id}')" class="bg-white rounded-2xl flex flex-col items-center relative overflow-hidden group active:scale-95 transition-all cursor-pointer border-t-4 p-4 shadow-lg ${b.color}">
+                        <div class="absolute top-2 right-2 text-[9px] font-black uppercase bg-black/80 px-2 py-0.5 rounded text-white border border-white/10 z-10 relative">
+                            ${b.id === 'master' ? '100% S-RANK' : `S: ${b.rates.S}%`}
+                        </div>
+                        <img src="${b.img}" class="w-20 h-20 object-contain mb-3 drop-shadow-lg group-hover:scale-110 transition-transform mt-2 relative z-10">
+                        <h3 class="font-black italic text-lg uppercase mb-0.5 relative z-10 text-[var(--text-main)]">${b.name}</h3>
+                        <p class="text-[var(--volt)] font-bold text-sm mb-3 relative z-10">${b.price.toLocaleString()} C</p>
+                    </div>
+                `).join('');
+
+                c.innerHTML = `
+                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
+                        <h2 class="text-4xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">ITEM SHOP</h2>
+                        <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4">${ballCards}</div>
+                    </div>
+                `;
+            },
+
+            confirmBuy: async (ballId) => {
+                const ball = BALLS.find(b => b.id === ballId);
+                if(state.coins < ball.price) return showToast("Not enough coins!", "error");
+                app.updateCoins(-ball.price);
+                
+                const overlay = document.createElement('div');
+                overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+                overlay.innerHTML = `<div class="relative mb-12"><img src="${ball.img}" class="w-48 h-48 object-contain relative z-10 anim-shake"></div>`;
+                $('app').appendChild(overlay);
+
+                await wait(1500);
+
+                const rand = Math.random() * 100;
+                let rank = 'C';
+                if (rand <= ball.rates.S) rank = 'S';
+                else if (rand <= ball.rates.S + ball.rates.A) rank = 'A';
+                else if (rand <= ball.rates.S + ball.rates.A + ball.rates.B) rank = 'B';
+
+                const id = rnd(1, 151);
+                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then(r=>r.json());
+                let moveName = 'Tackle';
+                if (res.moves && res.moves.length > 0) {
+                    moveName = res.moves[Math.floor(Math.random() * Math.min(res.moves.length, 15))].move.name;
+                }
+
+                const pkm = { 
+                    id: id, 
+                    name: res.name.charAt(0).toUpperCase() + res.name.slice(1), 
+                    type: res.types[0].type.name, 
+                    rank: rank, 
+                    hp: rnd(60, 100) + (rank==='S'?60:0), 
+                    atk: rnd(40, 80),
+                    move: moveName
+                };
+                app.addPokemon(pkm, true);
+
+                overlay.innerHTML = `
+                    <div class="text-[var(--volt)] font-sport text-6xl font-black italic mb-2 anim-pop">GOTCHA!</div>
+                    <img src="${pkm.sprite}" class="w-56 h-56 object-contain relative z-10 sprite-player mb-4">
+                    <h2 class="text-3xl font-black italic uppercase text-black mb-2">${pkm.name}</h2>
+                    <div class="glass px-4 py-1 rounded-full text-xs font-bold uppercase mb-8 border border-gray-300 text-gray-600">${pkm.type}</div>
+                    <button onclick="this.parentElement.remove()" class="bg-[var(--volt)] text-white px-12 py-4 rounded-full font-black italic shadow-lg">CLOSE</button>
+                `;
+            },
+
+            renderTeam: (c) => {
+                const slots = state.team.map((p, i) => {
+                    const isSelected = state.selectedSlot === i;
+                    const borderClass = isSelected ? 'border-[var(--volt)] bg-blue-50 ring-2 ring-[var(--volt)]' : 'border-dashed border-gray-300';
+                    const isLeader = i === 0;
+                    return `
+                    <div onclick="app.selectSlot(${i})" class="bg-white h-32 rounded-xl flex items-center justify-center relative cursor-pointer border-2 transition-all duration-200 ${borderClass}">
+                        ${isLeader ? `<div class="absolute top-2 left-2 z-20"><i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current drop-shadow-md"></i></div>` : ''}
+                        ${p ? `<div class="text-center relative z-10"><img src="${p.sprite}" class="w-20 h-20 object-contain sprite-player mx-auto"><div class="bg-gray-100 px-2 rounded text-[9px] text-gray-600 mt-1">${p.move}</div></div>` : `<i data-lucide="${isSelected ? 'check' : 'plus'}" class="w-6 h-6 text-gray-300"></i>`}
+                    </div>`;
+                }).join('');
+
+                const inv = state.inventory.map((p, i) => {
+                    const isInTeam = state.team.some(t => t && t.uid === p.uid);
+                    return `
+                    <div onclick="app.equip(${i})" class="bg-white p-2 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-gray-50 border border-gray-100 ${isInTeam ? 'opacity-50' : ''}">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"><img src="${p.static}" class="w-10 h-10 object-contain"></div>
+                        <div class="flex-1">
+                            <div class="flex justify-between"><p class="font-black text-xs uppercase text-[var(--text-main)]">${p.name}</p><span class="text-[9px] font-bold text-gray-400 uppercase border border-gray-200 px-1 rounded">${p.type}</span></div>
+                            <p class="text-[10px] text-gray-500 flex items-center gap-1"><i data-lucide="swords" class="w-3 h-3"></i> ${p.move}</p>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                c.innerHTML = `
+                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
+                        <h2 class="text-3xl font-sport font-black italic text-[var(--text-main)] mb-4">MY TEAM</h2>
+                        <div class="grid grid-cols-3 gap-2 mb-6">${slots}</div>
+                        <div class="flex-1 overflow-y-auto pt-4 grid grid-cols-1 gap-2">${inv}</div>
+                    </div>
+                `;
+                lucide.createIcons();
+            },
+
+            renderDex: (c) => {
+                const ownedIds = new Set(state.inventory.map(p => p.id));
+                const totalDexSize = 151; 
+                let dexHtml = '';
+                for (let id = 1; id <= totalDexSize; id++) {
+                    const isOwned = ownedIds.has(id);
+                    const pokemon = isOwned ? state.inventory.find(p => p.id === id) : null;
+                    const name = isOwned ? pokemon.name : '???';
+                    const iconOrImg = isOwned ? `<img src="${pokemon.static}" class="w-16 h-16 object-contain">` : `<i data-lucide="help-circle" class="w-10 h-10 text-gray-300"></i>`;
+                    dexHtml += `
+                        <div class="bg-white border border-gray-100 p-2 rounded-xl flex flex-col items-center justify-between min-h-[120px]">
+                            <span class="text-[9px] font-bold uppercase text-gray-400">${id.toString().padStart(3, '0')}</span>
+                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-1 overflow-hidden ${isOwned ? '' : 'opacity-30 grayscale'}">${iconOrImg}</div>
+                            <span class="font-black text-xs uppercase ${isOwned ? 'text-black' : 'text-gray-300'} text-center">${name}</span>
+                        </div>`;
+                }
+                c.innerHTML = `
+                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
+                        <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">POKEDEX</h2>
+                        <div class="bg-white p-4 rounded-xl mb-6 border-l-4 border-[var(--volt)] shadow-sm">
+                            <span class="text-xs text-gray-500 font-bold uppercase">Collected</span>
+                            <div class="text-2xl font-sport font-black italic text-black mt-1">${ownedIds.size} / ${totalDexSize}</div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2">${dexHtml}</div>
+                    </div>`;
+                lucide.createIcons();
+            },
+
+            renderBattleSetup: (c) => {
+                const ready = state.team.filter(p=>p).length === 3;
+                if (!ready) {
+                    c.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full p-6 text-center pb-32">
+                            <i data-lucide="alert-triangle" class="w-12 h-12 text-yellow-500 mb-4"></i>
+                            <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">Team Incomplete</h2>
+                            <button onclick="app.nav('team')" class="bg-[var(--volt)] text-white font-bold py-3 px-8 rounded-full shadow-lg">GO TO TEAM</button>
+                        </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+                c.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop text-center bg-gray-100 pb-32">
+                        <h2 class="text-4xl font-sport font-black italic text-[var(--text-main)] mb-8">BATTLE MODE</h2>
+                        <div class="w-full mb-8">
+                            <button onclick="app.startBattle()" class="w-full bg-[var(--volt)] text-white font-black italic text-xl py-4 rounded-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                <i data-lucide="swords" class="w-6 h-6"></i> QUICK MATCH
+                            </button>
+                        </div>
+                        <div class="w-full h-[1px] bg-gray-300 mb-8"></div>
+                        <div class="w-full">
+                            <h3 class="text-gray-500 font-bold mb-3 uppercase tracking-wider text-sm">Private Room</h3>
+                            <div class="flex gap-2 mb-3">
+                                <input id="room-code-input" type="number" placeholder="Enter Code" class="w-full bg-white text-black p-3 rounded-lg text-center font-sport font-bold border border-gray-300">
+                                <button onclick="app.joinPrivateRoom()" class="bg-gray-800 text-white font-bold px-6 rounded-lg">JOIN</button>
+                            </div>
+                            <button onclick="app.createPrivateRoom()" class="w-full bg-white py-3 rounded-lg text-gray-500 border border-gray-300 text-sm font-bold">+ CREATE NEW ROOM</button>
+                        </div>
+                    </div>`;
+                lucide.createIcons();
+            },
+
+            createPrivateRoom: async () => {
+                const myTeamData = state.team.map((p, i) => ({
+                    uid: p.uid, name: p.name, sprite: p.sprite,
+                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
+                    move: p.move, type: p.type
+                }));
+                const code = Math.floor(10000 + Math.random() * 90000).toString(); 
+                state.battle.roomId = code; state.battle.role = 'host';
+                
+                $('main-content').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop bg-white pb-32">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--volt)] mb-6"></div>
+                        <p class="text-gray-500 font-bold mb-2">WAITING FOR PLAYER...</p>
+                        <h1 class="text-6xl font-sport font-black text-[var(--volt)] tracking-widest mb-8">${code}</h1>
+                        <button onclick="app.nav('battle')" class="mt-12 text-gray-400 underline">Cancel</button>
+                    </div>`;
+                
+                const roomRef = window.fb.ref(window.fb.db, `battles/${code}`);
+                await window.fb.set(roomRef, { host: myTeamData, status: 'waiting', private: true, createdAt: Date.now() });
+                window.fb.onDisconnect(roomRef).remove();
+                app.listenToBattle();
+            },
+
+            joinPrivateRoom: async () => {
+                const code = $('room-code-input').value;
+                if (!code || code.length < 5) return showToast("Invalid code", "error");
+                const myTeamData = state.team.map((p, i) => ({
+                    uid: p.uid, name: p.name, sprite: p.sprite,
+                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
+                    move: p.move, type: p.type
+                }));
+                const roomRef = window.fb.ref(window.fb.db, `battles/${code}`);
+                const snapshot = await window.fb.get(roomRef);
+                if (!snapshot.exists()) return showToast("Room not found!", "error");
+                const data = snapshot.val();
+                if (data.status !== 'waiting') return showToast("Room full!", "error");
+
+                state.battle.roomId = code; state.battle.role = 'guest';
+                await window.fb.update(roomRef, { guest: myTeamData, status: 'ready' });
+                showToast("Joining room...");
+                app.listenToBattle();
+            },
+
+            startBattle: async () => {
+                const myTeamData = state.team.map((p, i) => ({
+                    uid: p.uid, name: p.name, sprite: p.sprite,
+                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
+                    move: p.move, type: p.type
+                }));
+                showToast("Searching opponent...", "info");
+                const roomsRef = window.fb.ref(window.fb.db, 'battles');
+                let snapshot;
+                try { snapshot = await window.fb.get(roomsRef); } catch(e) { return showToast("Connection failed!", "error"); }
+                
+                let joinedRoomId = null;
+                const now = Date.now();
+                if (snapshot.exists()) {
+                    const rooms = snapshot.val();
+                    for (const [id, room] of Object.entries(rooms)) {
+                        if (room.status === 'waiting' && !room.private && (now - room.createdAt < 300000)) {
+                            joinedRoomId = id; break;
+                        }
+                    }
+                }
+
+                if (joinedRoomId) {
+                    state.battle.roomId = joinedRoomId; state.battle.role = 'guest';
+                    await window.fb.update(window.fb.ref(window.fb.db, `battles/${joinedRoomId}`), { guest: myTeamData, status: 'ready' });
+                    showToast("Opponent found!");
+                } else {
+                    const newRoomRef = window.fb.push(roomsRef);
+                    state.battle.roomId = newRoomRef.key; state.battle.role = 'host';
+                    await window.fb.set(newRoomRef, { host: myTeamData, status: 'waiting', private: false, createdAt: Date.now() });
+                    window.fb.onDisconnect(newRoomRef).remove();
+                    showToast("Waiting for opponent...");
+                }
+                app.listenToBattle();
+            },
+
+            listenToBattle: () => {
+                const roomRef = window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`);
+                window.fb.onValue(roomRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) return;
+                    if (data.status === 'ready' && !state.battle.active) {
+                        state.battle.active = true;
+                        const enemyData = state.battle.role === 'host' ? data.guest : data.host;
+                        state.battle.enemyTeam = enemyData;
+                        state.battle.myTeam = state.team.map(p => ({...p, currentHp: p.hp}));
+                        app.renderBattleArena($('main-content'));
+                        if (state.battle.role === 'host') app.hostBattleLoop();
+                    }
+                    if (data.lastAction && data.lastAction.id !== state.battle.lastActionId) {
+                        state.battle.lastActionId = data.lastAction.id;
+                        app.playAction(data.lastAction);
+                    }
+                });
+            },
+
+            renderBattleArena: (c) => {
+                const myLeader = state.battle.myTeam[0];
+                const enLeader = state.battle.enemyTeam[0];
+                const renderUnit = (p, i, isP) => `
+                    <div id="unit-${isP?'p':'e'}-${i}" class="relative w-32 h-32 flex items-end justify-center transition-transform duration-100">
+                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 w-20 flex flex-col items-center z-50 pointer-events-none">
+                            <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden border border-white/50 shadow-md">
+                                <div id="hp-${isP?'p':'e'}-${i}" class="h-full bg-[var(--volt)] transition-all duration-300" style="width:${(p.currentHp/p.maxHp)*100}%"></div>
+                            </div>
+                        </div>
+                        <img src="${p.sprite}" class="w-28 h-28 object-contain ${isP?'sprite-player':'sprite-enemy'} z-10 filter drop-shadow-xl">
+                        <div class="absolute bottom-2 w-16 h-4 bg-black/20 rounded-[100%] blur-sm z-0"></div>
+                    </div>`;
+
+                c.innerHTML = `
+                    <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none pb-32">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000')] bg-cover bg-center opacity-20"></div>
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 font-sport font-black text-9xl text-black/5 italic select-none">VS</div>
+                        <div class="relative z-10 flex justify-end gap-1 p-6 pt-32 pr-4 perspective-[1000px]">${state.battle.enemyTeam.map((p,i)=>renderUnit(p,i,false)).join('')}</div>
+                        <div class="flex-1 flex items-center justify-center z-20 pointer-events-none">
+                            <div id="battle-log" class="bg-white/90 px-8 py-2 rounded-full text-black font-black italic text-xs tracking-widest border border-gray-200 shadow-lg text-center transform scale-0 transition-transform">BATTLE START!</div>
+                        </div>
+                        <div class="relative z-10 flex justify-start gap-1 p-6 pb-40 pl-4 perspective-[1000px]">${state.battle.myTeam.map((p,i)=>renderUnit(p,i,true)).join('')}</div>
+                    </div>`;
+            },
+
+            updateTotalHp: () => {
+                const calcPct = (team) => {
+                    const totalMax = team.reduce((sum, p) => sum + p.maxHp, 0);
+                    const totalCur = team.reduce((sum, p) => sum + Math.max(0, p.currentHp), 0);
+                    return (totalCur / totalMax) * 100;
+                };
+                $('hp-p-0').style.width = `${calcPct(state.battle.myTeam)}%`;
+            },
+
+            hostBattleLoop: async () => {
+                while(state.battle.active) {
+                    await wait(2200); 
+                    const hostUnits = state.battle.myTeam.map((p, i) => ({...p, idx: i, side: 'host'})).filter(p => p.currentHp > 0);
+                    const guestUnits = state.battle.enemyTeam.map((p, i) => ({...p, idx: i, side: 'guest'})).filter(p => p.currentHp > 0);
+
+                    if (hostUnits.length === 0 || guestUnits.length === 0) {
+                        const winner = hostUnits.length > 0 ? 'host' : 'guest';
+                        window.fb.update(window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`), { lastAction: { type: 'end', winner: winner, id: Date.now() } });
+                        return;
+                    }
+
+                    const isHostTurn = Math.random() > 0.5;
+                    const attacker = isHostTurn ? hostUnits[rnd(0, hostUnits.length-1)] : guestUnits[rnd(0, guestUnits.length-1)];
+                    const target = isHostTurn ? guestUnits[rnd(0, guestUnits.length-1)] : hostUnits[rnd(0, hostUnits.length-1)];
+                    let damage = rnd(25, 40); if (attacker.rank === 'S') damage += 20;
+
+                    window.fb.update(window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`), {
+                        lastAction: { type: 'attack', attackerSide: attacker.side, attackerIdx: attacker.idx, targetSide: target.side, targetIdx: target.idx, damage: damage, move: attacker.move, id: Date.now() }
+                    });
+                }
+            },
+
+            createParticles: (x, y, color) => {
+                for(let i=0; i<8; i++) {
+                    const p = document.createElement('div');
+                    p.classList.add('fx-particle');
+                    p.style.backgroundColor = color;
+                    p.style.left = x + 'px'; p.style.top = y + 'px';
+                    const angle = Math.random() * 360;
+                    const velocity = Math.random() * 80 + 20;
+                    const vx = Math.cos(angle * Math.PI / 180) * velocity + 'px';
+                    const vy = Math.sin(angle * Math.PI / 180) * velocity + 'px';
+                    p.style.setProperty('--vx', vx); p.style.setProperty('--vy', vy);
+                    document.body.appendChild(p);
+                    setTimeout(() => p.remove(), 600);
+                }
+            },
+
+            playAction: async (action) => {
+                if (action.type === 'end') {
+                    const isWin = action.winner === state.battle.role;
+                    app.endBattle(isWin); return;
+                }
+                if (action.type === 'attack') {
+                    const isMyAttack = action.attackerSide === state.battle.role;
+                    const atkIdx = action.attackerIdx; const defIdx = action.targetIdx;
+                    const atkEl = $(`unit-${isMyAttack ? 'p' : 'e'}-${atkIdx}`);
+                    const defEl = $(`unit-${!isMyAttack ? 'p' : 'e'}-${defIdx}`);
+                    if(!atkEl || !defEl) return;
+
+                    const atkName = isMyAttack ? state.battle.myTeam[atkIdx].name : state.battle.enemyTeam[atkIdx].name;
+                    const log = $('battle-log');
+                    log.innerHTML = `<span class="${isMyAttack ? 'text-[var(--volt)]' : 'text-red-500'}">${atkName}</span> used ${action.move}!`;
+                    log.style.transform = 'scale(1)';
+
+                    atkEl.style.zIndex = 100;
+                    const rectAtk = atkEl.getBoundingClientRect();
+                    const rectDef = defEl.getBoundingClientRect();
+                    atkEl.style.setProperty('--tx', `${(rectDef.left + rectDef.width/2) - (rectAtk.left + rectAtk.width/2) * 0.8}px`);
+                    atkEl.style.setProperty('--ty', `${(rectDef.top + rectDef.height/2) - (rectAtk.top + rectAtk.height/2) * 0.8}px`);
+                    atkEl.classList.add('anim-dash');
+                    
+                    await wait(250);
+                    app.createParticles(rectDef.left + rectDef.width/2, rectDef.top + rectDef.height/2, '#ef4444');
+                    defEl.classList.add('anim-hit');
+                    $('camera-shake-layer').classList.add('anim-cam-shake');
+                    
+                    let targetUnit = !isMyAttack ? state.battle.myTeam[defIdx] : state.battle.enemyTeam[defIdx];
+                    targetUnit.currentHp = Math.max(0, targetUnit.currentHp - action.damage);
+                    const hpBar = $(`hp-${!isMyAttack ? 'p' : 'e'}-${defIdx}`);
+                    hpBar.style.width = `${(targetUnit.currentHp / targetUnit.maxHp) * 100}%`;
+                    if((targetUnit.currentHp / targetUnit.maxHp) < 0.3) hpBar.style.backgroundColor = '#ef4444';
+
+                    await wait(300);
+                    atkEl.classList.remove('anim-dash'); defEl.classList.remove('anim-hit');
+                    $('camera-shake-layer').classList.remove('anim-cam-shake');
+                    log.style.transform = 'scale(0)';
+                    atkEl.style.zIndex = '';
+
+                    if(targetUnit.currentHp <= 0) {
+                        defEl.querySelector('img').classList.add('sprite-dead');
+                        hpBar.parentElement.style.opacity = 0;
+                    }
+                }
+            },
+
+            endBattle: (win) => {
+                state.battle.active = false;
+                app.updateCoins(win ? 500 : 50);
+                const overlay = document.createElement('div');
+                overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+                overlay.innerHTML = `
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 ${win ? 'bg-[var(--volt)]' : 'bg-red-500'} blur-[80px] opacity-30 rounded-full animate-pulse"></div>
+                        <h1 class="text-7xl font-sport font-black italic relative z-10 ${win?'text-[var(--volt)]':'text-gray-500'} tracking-tighter">${win?'VICTORY':'DEFEAT'}</h1>
+                    </div>
+                    <div class="bg-white px-8 py-3 rounded-full mb-8 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg"><span class="text-black font-bold text-xl">+${win?500:50} Coins</span></div>
+                    <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl">RETURN HOME</button>
+                `;
+                $('app').appendChild(overlay);
+            }
+        };
+
+        window.app = app;
+        app.init();
+    </script>
+</body>
+</html>

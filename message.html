@@ -7,27 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* ------------------ 테마 설정 ------------------ */
-        /* 기본 다크 모드 설정 (Base Theme) */
+        /* ------------------ 테마 설정 (White Mode Fixed) ------------------ */
         :root { 
-            --volt: #ccff00;  /* 액센트 색상은 유지 */
-            --bg-main: #000000; /* 배경 */
-            --text-main: #ffffff; /* 기본 텍스트 */
-            --border-color: #262626; /* 보더/구분선 */
-            --bg-card: #111111; /* 카드/모달 배경 (다크) */
-            --bg-sub: #1f2937; /* 입력창/호버 배경 (다크) */
-            --text-sub: #9ca3af; /* 서브 텍스트 */
-        }
-
-        /* 화이트 모드 오버라이드 (White Mode Theme) */
-        .white-mode {
-            --volt:#2563eb;
-            --bg-main: #f8f8f8;
-            --text-main: #1f2937;
-            --border-color: #e5e7eb;
-            --bg-card: #ffffff;
-            --bg-sub: #f3f4f6; /* 입력창/호버 배경 (화이트) */
-            --text-sub: #6b7280;
+            --volt: #2563eb;         /* 선명한 파랑 (강조색) */
+            --bg-main: #f8f8f8;      /* 전체 배경 (밝은 회색) */
+            --text-main: #1f2937;    /* 기본 텍스트 (진한 회색) */
+            --border-color: #e5e7eb; /* 경계선 */
+            --bg-card: #ffffff;      /* 카드/헤더 배경 (흰색) */
+            --bg-sub: #f3f4f6;       /* 입력창/상대방 말풍선 배경 */
+            --text-sub: #6b7280;     /* 서브 텍스트 (회색) */
         }
         
         /* ------------------ 기본 스타일 ------------------ */
@@ -35,18 +23,42 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-main); 
             color: var(--text-main); 
+            margin: 0; padding: 0;
         }
         
-        .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; word-wrap: break-word; line-height: 1.4; }
-        .msg-me { background: var(--volt); color: black; border-bottom-right-radius: 4px; align-self: flex-end; font-weight: 500; }
+        /* [수정] 말풍선 스타일: 텍스트에 딱 맞게 */
+        .msg-bubble { 
+            width: fit-content;      /* 텍스트 내용만큼만 너비 차지 */
+            max-width: 100%;         /* 부모 너비 넘지 않음 */
+            padding: 10px 14px; 
+            border-radius: 18px; 
+            font-size: 14px; 
+            line-height: 1.4;
+            
+            /* 텍스트 줄바꿈 규칙 */
+            word-break: break-word;  /* 단어가 길면 줄바꿈 */
+            overflow-wrap: break-word;
+            white-space: pre-wrap;   /* 사용자가 입력한 줄바꿈만 허용 */
+        }
+        
+        /* 내 메시지 */
+        .msg-me { 
+            background: var(--volt); 
+            color: white; 
+            border-bottom-right-radius: 4px; 
+            align-self: flex-end; /* 오른쪽 정렬 */
+            font-weight: 500; 
+        }
+        
+        /* 상대방 메시지 */
         .msg-other { 
-            background: var(--bg-sub); /* 다크/화이트 모드에 맞춰 배경색 변경 */
+            background: var(--bg-sub); 
             color: var(--text-main); 
             border-bottom-left-radius: 4px; 
-            align-self: flex-start; 
+            align-self: flex-start; /* 왼쪽 정렬 */
         }
         
-        /* 모달 스타일 - 오버레이는 유지 */
+        /* 모달 스타일 */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
         
@@ -59,11 +71,9 @@
         
         <header class="px-5 py-4 border-b border-[var(--border-color)] bg-[var(--bg-card)] z-10 shrink-0">
             <div class="flex items-center justify-between mb-4">
-                <button onclick="location.href='log.html'" class="active:scale-95 transition"><i data-lucide="arrow-left" class="w-6 h-6 text-[var(--text-sub)]"></i></button>
+                <button onclick="location.href='index.html'" class="active:scale-95 transition"><i data-lucide="arrow-left" class="w-6 h-6 text-[var(--text-sub)]"></i></button>
                 <span class="font-bold text-lg tracking-tight text-[var(--text-main)]">MESSAGES</span>
                 <div class="flex gap-4">
-                    <button id="theme-toggle-btn" onclick="toggleTheme()" class="active:scale-95 transition">
-                        </button>
                     <button onclick="openFriendModal()" class="relative active:scale-95 transition">
                         <i data-lucide="contact" class="w-6 h-6 text-[var(--volt)]"></i>
                     </button>
@@ -86,7 +96,7 @@
             </div>
         </header>
 
-        <div id="chat-list" class="flex-1 overflow-y-auto">
+        <div id="chat-list" class="flex-1 overflow-y-auto bg-[var(--bg-main)]">
             <div class="text-center text-[var(--text-sub)] py-20 text-sm">불러오는 중...</div>
         </div>
 
@@ -101,11 +111,11 @@
                 </div>
             </div>
             
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth"></div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth bg-[var(--bg-main)]"></div>
             
             <div class="p-3 border-t border-[var(--border-color)] flex gap-2 bg-[var(--bg-card)] safe-area-bottom">
                 <input type="text" id="msg-input" onkeypress="if(event.key==='Enter') sendMessage()" class="flex-1 bg-[var(--bg-sub)] border border-[var(--border-color)] rounded-full px-5 py-3 outline-none text-sm text-[var(--text-main)] focus:border-[var(--volt)]" placeholder="메시지를 입력하세요">
-                <button onclick="sendMessage()" class="bg-[var(--volt)] text-black rounded-full p-3 hover:opacity-80 transition"><i data-lucide="send" class="w-5 h-5"></i></button>
+                <button onclick="sendMessage()" class="bg-[var(--volt)] text-white rounded-full p-3 hover:opacity-80 transition"><i data-lucide="send" class="w-5 h-5"></i></button>
             </div>
         </div>
 
@@ -118,7 +128,7 @@
                 
                 <div class="flex gap-2 mb-2">
                     <input type="text" id="friend-search-input" placeholder="친구 닉네임 검색" class="flex-1 bg-[var(--bg-sub)] px-4 py-3 rounded-lg text-sm outline-none border border-[var(--border-color)] focus:border-[var(--volt)] text-[var(--text-main)]">
-                    <button onclick="searchFriend()" class="bg-[var(--volt)] text-black font-bold px-4 rounded-lg text-sm whitespace-nowrap">검색</button>
+                    <button onclick="searchFriend()" class="bg-[var(--volt)] text-white font-bold px-4 rounded-lg text-sm whitespace-nowrap">검색</button>
                 </div>
                 <div id="friend-search-result" class="text-xs text-[var(--text-sub)] mb-6 min-h-[24px] flex items-center ml-1"></div>
 
@@ -151,7 +161,7 @@
 
                 <div class="flex gap-3">
                     <button onclick="closeModal('modal-group')" class="flex-1 py-3 bg-[var(--border-color)] rounded-lg text-sm text-[var(--text-main)] font-medium">취소</button>
-                    <button onclick="createGroupChat()" class="flex-1 py-3 bg-[var(--volt)] text-black font-bold rounded-lg text-sm shadow-[0_0_10px_rgba(204,255,0,0.3)]">방 만들기</button>
+                    <button onclick="createGroupChat()" class="flex-1 py-3 bg-[var(--volt)] text-white font-bold rounded-lg text-sm shadow-sm">방 만들기</button>
                 </div>
             </div>
         </div>
@@ -161,58 +171,34 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, update, get, set, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-        
-        const app = initializeApp({ apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle" });
+        import { getDatabase, ref, onValue, push, update, remove, get, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
+            authDomain: "pokbattle.firebaseapp.com", 
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
+            projectId: "pokbattle", 
+            storageBucket: "pokbattle.firebasestorage.app", 
+            messagingSenderId: "445300582484", 
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
+        };
+
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
-        
+
+        let currentUser = null;
         let currentChatId = null;
         let myUid = null;
         let myNickname = "Unknown";
 
         lucide.createIcons();
         
-        // 0. [추가] 테마 관리 기능
-        window.currentTheme = localStorage.getItem('theme') || 'white-mode'; // 화이트 모드를 기본값으로 설정
-        const body = document.body;
-        const themeButton = document.getElementById('theme-toggle-btn');
-
-        function updateThemeIcon() {
-            if (!themeButton) return;
-            // 현재 테마에 따라 아이콘 변경 (white-mode -> dark-mode 전환 시 'moon' 표시)
-            const icon = currentTheme === 'white-mode' ? 'moon' : 'sun';
-            themeButton.innerHTML = `<i data-lucide="${icon}" class="w-6 h-6 text-[var(--text-main)]"></i>`;
-            lucide.createIcons();
-        }
-
-        function applyTheme(theme) {
-            // 기존 테마 클래스 제거
-            body.className = body.className.split(' ').filter(c => c !== 'white-mode').join(' ');
-            
-            if (theme === 'white-mode') {
-                body.classList.add('white-mode');
-            }
-            currentTheme = theme;
-            localStorage.setItem('theme', theme);
-            updateThemeIcon();
-        }
-
-        window.toggleTheme = () => {
-            const newTheme = currentTheme === 'white-mode' ? 'dark-mode' : 'white-mode';
-            applyTheme(newTheme);
-        };
-        
-        // 페이지 로드 시 테마 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            applyTheme(currentTheme);
-        });
-
-        // 1. 로그인 상태 확인 및 초기화
+        // 1. 로그인 상태 확인
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                currentUser = user;
                 myUid = user.uid;
-                // 사용자 정보 확인 및 자동 등록 (DB)
                 const userRef = ref(db, `users/${myUid}`);
                 get(userRef).then(snap => {
                     if(!snap.exists()) {
@@ -222,14 +208,14 @@
                         myNickname = snap.val().nickname;
                     }
                 });
-                loadChatList(); // 채팅 목록 불러오기
+                loadChatList(); 
             } else {
                 document.getElementById('chat-list').innerHTML = "<div class='flex flex-col items-center justify-center h-full text-gray-500 gap-2'><i data-lucide='lock' class='w-6 h-6'></i><span>로그인이 필요합니다.</span></div>";
                 lucide.createIcons();
             }
         });
 
-        // 2. 채팅 목록 불러오기 (비공개 필터링 포함)
+        // 2. 채팅 목록 불러오기
         function loadChatList() {
             onValue(ref(db, 'groups'), (snap) => {
                 const list = document.getElementById('chat-list');
@@ -241,11 +227,9 @@
                     return;
                 }
 
-                // 정렬: 최신 메시지 시간 순 (내림차순)
                 const sortedChats = Object.entries(data).sort((a, b) => (b[1].lastTime || 0) - (a[1].lastTime || 0));
 
                 sortedChats.forEach(([key, g]) => {
-                    // [중요] 개인정보 보호: 멤버에 내가 포함되어 있거나, 오픈채팅('open_')인 경우만 표시
                     if ((g.members && g.members[myUid]) || key.startsWith('open_')) {
                         renderChatItem(list, key, g);
                     }
@@ -256,29 +240,25 @@
 
         function renderChatItem(container, key, g) {
             const div = document.createElement('div');
-            // 호버 색상, 보더 색상에 변수 적용
-            div.className = "chat-item w-full flex items-center gap-4 p-4 hover:bg-[var(--bg-sub)] active:opacity-90 cursor-pointer border-b border-[var(--border-color)] group transition-colors";
+            div.className = "chat-item w-full flex items-center gap-4 p-4 hover:bg-[var(--bg-sub)] active:opacity-90 cursor-pointer border-b border-[var(--border-color)] group transition-colors bg-[var(--bg-card)]";
             div.dataset.name = g.name; 
             
-            // 아이콘 배경 및 텍스트 색상 변경
             let iconBgColor = "bg-[var(--bg-sub)] text-[var(--text-sub)]";
             let typeTag = "GROUP";
-            // 타입 태그 보더 및 텍스트 색상 변경
             let typeColor = "text-[var(--text-sub)] border-[var(--text-sub)]";
             
             if(key.startsWith('open_')) { 
-                iconBgColor = "bg-[var(--volt)] text-black"; 
+                iconBgColor = "bg-[var(--volt)] text-white"; 
                 typeTag = "OPEN"; 
                 typeColor = "text-[var(--volt)] border-[var(--volt)]";
             } else if (g.type === 'private') {
                 typeTag = "1:1";
             }
 
-            // 시간 포맷팅
             const timeStr = g.lastTime ? new Date(g.lastTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
 
             div.innerHTML = `
-                <div class="w-12 h-12 rounded-full ${iconBgColor} flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                <div class="w-12 h-12 rounded-full ${iconBgColor} flex items-center justify-center font-bold text-sm shrink-0 shadow-sm border border-[var(--border-color)]">
                     ${g.name.slice(0,2)}
                 </div>
                 <div class="flex-1 min-w-0" onclick="openChatRoom('${key}', '${g.name}', '${typeTag}')">
@@ -295,14 +275,13 @@
             container.appendChild(div);
         }
 
-        // 3. 채팅방 진입 & 메시지 전송
+        // 3. 채팅방 로직
         window.openChatRoom = (id, title, typeLabel) => {
             currentChatId = id;
             document.getElementById('chat-room-title').innerText = title;
             document.getElementById('chat-room-type').innerText = typeLabel === 'OPEN' ? '오픈 채팅방' : '비공개 채팅방';
             document.getElementById('chat-room').style.transform = "translateX(0)";
             
-            // 메시지 실시간 로드
             onValue(ref(db, `messages/${id}`), (snap) => {
                 const container = document.getElementById('chat-messages');
                 container.innerHTML = "";
@@ -310,15 +289,8 @@
                 if(data) {
                     Object.values(data).forEach(m => {
                         const isMe = m.uid === myUid;
-                        container.innerHTML += `
-                            <div class="w-full flex ${isMe ? 'justify-end' : 'justify-start'}">
-                                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
-                                    <span class="text-[10px] text-[var(--text-sub)] mb-1 px-1 ${isMe ? 'hidden' : 'block'}">${m.nickname}</span>
-                                    <div class="msg-bubble ${isMe ? 'msg-me' : 'msg-other'} shadow-sm">
-                                        ${m.text}
-                                    </div>
-                                </div>
-                            </div>`;
+                        // [수정] 말풍선 생성 시 HTML 공백 제거 (한줄로 연결)
+                        container.innerHTML += `<div class="w-full flex ${isMe ? 'justify-end' : 'justify-start'}"><div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]"><span class="text-[10px] text-[var(--text-sub)] mb-1 px-1 ${isMe ? 'hidden' : 'block'}">${m.nickname}</span><div class="msg-bubble ${isMe ? 'msg-me' : 'msg-other'} shadow-sm">${m.text}</div></div></div>`;
                     });
                 }
                 container.scrollTop = container.scrollHeight;
@@ -349,7 +321,7 @@
             input.focus();
         };
 
-        // 4. 오픈 채팅 입장 (자동 생성/입장)
+        // 4. 오픈 채팅 입장
         window.enterOpenChat = (type) => {
             const chatMap = {
                 'running': { id: 'open_running', name: '🏃 런닝 커뮤니티' },
@@ -371,7 +343,7 @@
             });
         };
 
-        // 5. 친구 관리 로직 (프로필, 1:1, 삭제)
+        // 5. 친구 관리
         window.openFriendModal = () => {
             document.getElementById('modal-friend').classList.add('active');
             loadMyFriendList();
@@ -395,14 +367,13 @@
                     if(foundUid === myUid) {
                         resDiv.innerHTML = "<span class='text-[var(--volt)]'>본인입니다.</span>";
                     } else {
-                        // 검색 결과 UI 배경색/보더색/아바타 배경색/텍스트색 변수 적용
                         resDiv.innerHTML = `
                             <div class="flex items-center justify-between w-full p-3 bg-[var(--bg-sub)] rounded-lg border border-[var(--border-color)]">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-[var(--border-color)] flex items-center justify-center text-[var(--text-main)] text-xs">${foundData.nickname[0]}</div>
                                     <span class="font-bold text-sm text-[var(--text-main)]">${foundData.nickname}</span>
                                 </div>
-                                <button onclick="addFriend('${foundUid}', '${foundData.nickname}')" class="bg-[var(--volt)] text-black text-xs px-3 py-1.5 rounded font-bold hover:brightness-110">친구 추가</button>
+                                <button onclick="addFriend('${foundUid}', '${foundData.nickname}')" class="bg-[var(--volt)] text-white text-xs px-3 py-1.5 rounded font-bold hover:brightness-110">친구 추가</button>
                             </div>`;
                     }
                 } else {
@@ -421,7 +392,6 @@
             });
         };
 
-        // 친구 목록 불러오기 (UI 개선: 프로필 + 1:1 버튼 + 삭제)
         window.loadMyFriendList = () => {
             const listDiv = document.getElementById('my-friend-list');
             const countSpan = document.getElementById('friend-count');
@@ -438,12 +408,10 @@
                 let validCount = 0;
 
                 Object.entries(friends).forEach(([uid, name]) => {
-                    // [버그 수정] 잘못된 데이터(boolean 등) 필터링
                     if (typeof name !== 'string' || !name) return;
 
                     validCount++;
                     const item = document.createElement('div');
-                    // 친구 목록 아이템 배경색/보더색에 변수 적용
                     item.className = "flex items-center justify-between p-3 bg-[var(--bg-sub)] rounded-xl border border-[var(--border-color)] hover:border-[var(--text-sub)] transition";
                     item.innerHTML = `
                         <div class="flex items-center gap-3 flex-1">
@@ -456,7 +424,7 @@
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="startPrivateChat('${uid}', '${name}')" class="bg-[var(--border-color)] hover:bg-[var(--volt)] hover:text-black text-[var(--text-main)] p-2 rounded-lg transition" title="1:1 대화">
+                            <button onclick="startPrivateChat('${uid}', '${name}')" class="bg-[var(--border-color)] hover:bg-[var(--volt)] hover:text-white text-[var(--text-main)] p-2 rounded-lg transition" title="1:1 대화">
                                 <i data-lucide="message-circle" class="w-4 h-4"></i>
                             </button>
                             <button onclick="deleteFriend('${uid}')" class="bg-[var(--border-color)] hover:bg-red-500/20 hover:text-red-500 text-[var(--text-sub)] p-2 rounded-lg transition" title="친구 삭제">
@@ -471,38 +439,28 @@
             });
         };
 
-        // 친구 삭제 로직 (확실하게 처리)
         window.deleteFriend = (fUid) => {
             if(!confirm("정말 이 친구를 삭제하시겠습니까?\n더 이상 그룹에 초대할 수 없습니다.")) return;
-            
-            remove(ref(db, `users/${myUid}/friends/${fUid}`))
-            .then(() => {
-                // UI는 onValue 리스너에 의해 자동 갱신됨
-            })
-            .catch(err => alert("삭제 중 오류가 발생했습니다: " + err.message));
+            remove(ref(db, `users/${myUid}/friends/${fUid}`));
         };
 
-        // 1:1 비공개 채팅 시작
         window.startPrivateChat = (fUid, fName) => {
-            // 나와 친구만 있는 방 생성
             const roomName = `${myNickname}, ${fName}`;
             const members = { [myUid]: true, [fUid]: true };
-            
             const newGroupRef = push(ref(db, 'groups'));
             update(newGroupRef, {
                 name: roomName,
-                type: 'private', // 프라이빗 태그
+                type: 'private',
                 members: members,
                 lastMsg: '1:1 대화가 시작되었습니다.',
                 lastTime: Date.now()
             }).then(() => {
-                closeModal('modal-friend'); // 친구창 닫고
-                openChatRoom(newGroupRef.key, roomName, '1:1'); // 바로 입장
+                closeModal('modal-friend');
+                openChatRoom(newGroupRef.key, roomName, '1:1');
             });
         };
 
-
-        // 6. 그룹 채팅 생성 (친구 초대 목록: 잘못된 데이터 제거)
+        // 6. 그룹 채팅
         window.openGroupCreateModal = () => {
             document.getElementById('modal-group').classList.add('active');
             loadFriendListForGroup();
@@ -523,7 +481,6 @@
                 let hasValidFriends = false;
 
                 Object.entries(friends).forEach(([uid, name]) => {
-                    // [중요] 'undefinedtrue' 방지: 이름이 정상적인 문자열이 아니거나 true/false 값이면 건너뜀
                     if (typeof name !== 'string' || name === 'true' || !name) return;
 
                     hasValidFriends = true;
@@ -560,7 +517,7 @@
             const newGroupRef = push(ref(db, 'groups'));
             update(newGroupRef, {
                 name: name,
-                type: 'private', // 기본적으로 비공개
+                type: 'private',
                 members: members,
                 lastMsg: '그룹 채팅방 생성됨',
                 lastTime: Date.now()
@@ -571,7 +528,6 @@
             });
         };
 
-        // 기타 기능
         window.leaveChat = (chatId) => {
             if(!confirm("대화방을 나가시겠습니까?\n목록에서 사라집니다.")) return;
             remove(ref(db, `groups/${chatId}/members/${myUid}`));
@@ -586,6 +542,9 @@
         };
 
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        
+        // window 객체에 할당 (HTML onclick에서 사용하기 위함)
+        window.enterOpenChat = enterOpenChat;
     </script>
 </body>
 </html>
