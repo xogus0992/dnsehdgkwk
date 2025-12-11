@@ -1,7 +1,5 @@
 /* ============================================================
-   POKERUN LAYOUT INJECTOR (FINAL v4)
-   - 3 Layout Modes: Run / Weight / Main(Index)
-   - Center Button Logic: Expand -> Navigate to Index
+   POKERUN LAYOUT INJECTOR (Fixed Navigation Logic)
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,16 +8,14 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchUserCoin(); 
 });
 
-// 센터 메뉴 상태 (펼쳐졌는지 여부)
 let isMenuExpanded = false;
 
 function injectLayout() {
     const body = document.body;
     const path = window.location.pathname;
-    const page = path.split("/").pop(); // 현재 파일명
+    const page = path.split("/").pop(); // 현재 파일명 (예: index.html)
 
-    // --- 1. 상단바 (공통) ---
-    // 우측 아이콘 순서: 설정 -> 다크모드 -> 코인
+    // 1. 상단바 (공통)
     const headerHTML = `
         <header class="app-header">
             <div class="header-left" onclick="location.href='index.html'">
@@ -30,7 +26,6 @@ function injectLayout() {
             </div>
             <div class="header-right">
                 <button class="icon-btn" onclick="location.href='settings.html'"><span class="material-icons">settings</span></button>
-                <button class="icon-btn" onclick="toggleDarkMode()"><span class="material-icons">dark_mode</span></button>
                 <div class="coin-capsule">
                     <span class="material-icons coin-icon">monetization_on</span>
                     <span id="userCoinDisplay">0</span>
@@ -39,44 +34,46 @@ function injectLayout() {
         </header>
     `;
 
-    // --- 2. 하단바 (모드별 분기) ---
+    // 2. 하단바 아이템 결정 로직 (여기가 중요!)
     let navItemsHTML = "";
 
-    // [Mode 1] 러닝 모드 (run_ 접두사)
-    if (page.includes('run_')) {
+    // [A] 러닝 모드 (run_ 으로 시작)
+    if (page.startsWith('run_')) {
         navItemsHTML = `
-            <a href="run_running.html" class="nav-item" id="nav-run">
-                <span class="material-icons">directions_run</span><div>러닝</div>
+            <a href="run_home.html" class="nav-item" id="nav-home">
+                <span class="material-icons">home</span><div>홈</div>
             </a>
             <a href="run_course.html" class="nav-item" id="nav-course">
                 <span class="material-icons">map</span><div>코스</div>
             </a>
-            <div class="nav-space"></div> <a href="run_record.html" class="nav-item" id="nav-record">
-                <span class="material-icons">format_list_bulleted</span><div>기록</div>
+            <div class="nav-space"></div>
+            <a href="run_record.html" class="nav-item" id="nav-record">
+                <span class="material-icons">list_alt</span><div>기록</div>
             </a>
             <a href="profile.html" class="nav-item" id="nav-profile">
-                <span class="material-icons">person_outline</span><div>프로필</div>
+                <span class="material-icons">person</span><div>프로필</div>
             </a>
         `;
     } 
-    // [Mode 2] 웨이트 모드 (wei_ 또는 weight_ 접두사)
-    else if (page.includes('wei_') || page.includes('weight_')) {
+    // [B] 웨이트 모드 (wei_ 로 시작)
+    else if (page.startsWith('wei_') || page.startsWith('weight_')) {
         navItemsHTML = `
-            <a href="wei_calendar.html" class="nav-item" id="nav-calendar">
-                <span class="material-icons">calendar_today</span><div>캘린더</div>
+            <a href="wei_home.html" class="nav-item" id="nav-home">
+                <span class="material-icons">home</span><div>홈</div>
             </a>
             <a href="wei_routine.html" class="nav-item" id="nav-routine">
                 <span class="material-icons">fitness_center</span><div>루틴</div>
             </a>
-            <div class="nav-space"></div> <a href="wei_stats.html" class="nav-item" id="nav-stats">
+            <div class="nav-space"></div>
+            <a href="wei_stats.html" class="nav-item" id="nav-stats">
                 <span class="material-icons">bar_chart</span><div>통계</div>
             </a>
             <a href="profile.html" class="nav-item" id="nav-profile">
-                <span class="material-icons">person_outline</span><div>프로필</div>
+                <span class="material-icons">person</span><div>프로필</div>
             </a>
         `;
     } 
-    // [Mode 3] 메인/기본 모드 (index, reels, profile 등)
+    // [C] 소셜/메인 모드 (index.html, reels.html, settings.html 등 나머지 전부)
     else {
         navItemsHTML = `
             <a href="index.html" class="nav-item" id="nav-feed">
@@ -85,8 +82,9 @@ function injectLayout() {
             <a href="reels.html" class="nav-item" id="nav-reels">
                 <span class="material-icons">movie</span><div>릴스</div>
             </a>
-            <div class="nav-space"></div> <a href="profile.html" class="nav-item" id="nav-profile">
-                <span class="material-icons">person_outline</span><div>프로필</div>
+            <div class="nav-space"></div>
+            <a href="profile.html" class="nav-item" id="nav-profile">
+                <span class="material-icons">person</span><div>프로필</div>
             </a>
             <a href="settings.html" class="nav-item" id="nav-settings">
                 <span class="material-icons">settings</span><div>설정</div>
@@ -94,7 +92,7 @@ function injectLayout() {
         `;
     }
 
-    // 하단바 조립
+    // 3. 하단바 조립 (게임 페이지 black_white.html은 CSS로 하단바 숨김)
     const footerHTML = `
         <div id="menuOverlay" class="menu-overlay" onclick="closeCenterMenu()"></div>
 
@@ -115,55 +113,46 @@ function injectLayout() {
     body.insertAdjacentHTML('beforeend', footerHTML);
 }
 
-// --- 센터 버튼 핵심 로직 ---
 function handleCenterClick() {
     const menu = document.getElementById('centerMenu');
-    
     if (!isMenuExpanded) {
-        // 1. 닫힌 상태 -> 펼치기
         menu.classList.add('expanded');
         isMenuExpanded = true;
     } else {
-        // 2. 펼쳐진 상태 -> index.html로 이동
+        // 이미 열려있으면 메인(index)으로 이동
         window.location.href = 'index.html';
     }
 }
 
-// 메뉴 닫기 (오버레이 클릭 시)
 function closeCenterMenu() {
     const menu = document.getElementById('centerMenu');
-    menu.classList.remove('expanded');
+    if(menu) menu.classList.remove('expanded');
     isMenuExpanded = false;
 }
 
-// --- 유틸리티 ---
 function highlightCurrentNav() {
     const path = window.location.pathname;
     const page = path.split("/").pop(); 
 
-    // 현재 페이지 아이콘 활성화 로직
+    // 현재 페이지 활성화 (파란색 불 들어오게)
     if (page === 'index.html') document.getElementById('nav-feed')?.classList.add('active');
     else if (page === 'reels.html') document.getElementById('nav-reels')?.classList.add('active');
     else if (page === 'settings.html') document.getElementById('nav-settings')?.classList.add('active');
-    else if (page.includes('profile')) document.getElementById('nav-profile')?.classList.add('active');
+    else if (page === 'profile.html') document.getElementById('nav-profile')?.classList.add('active');
     
-    // Run
-    else if (page.includes('run_running')) document.getElementById('nav-run')?.classList.add('active');
-    else if (page.includes('run_course')) document.getElementById('nav-course')?.classList.add('active');
-    else if (page.includes('run_record')) document.getElementById('nav-record')?.classList.add('active');
-    
-    // Weight
-    else if (page.includes('calendar')) document.getElementById('nav-calendar')?.classList.add('active');
-    else if (page.includes('routine')) document.getElementById('nav-routine')?.classList.add('active');
-    else if (page.includes('stats')) document.getElementById('nav-stats')?.classList.add('active');
-}
+    // 러닝
+    else if (page === 'run_home.html') document.getElementById('nav-home')?.classList.add('active');
+    else if (page === 'run_course.html') document.getElementById('nav-course')?.classList.add('active');
+    else if (page === 'run_record.html') document.getElementById('nav-record')?.classList.add('active');
 
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
+    // 웨이트
+    else if (page === 'wei_home.html') document.getElementById('nav-home')?.classList.add('active');
+    else if (page === 'wei_routine.html') document.getElementById('nav-routine')?.classList.add('active');
+    else if (page === 'wei_stats.html') document.getElementById('nav-stats')?.classList.add('active');
 }
 
 function fetchUserCoin() {
-    // 서버 통신 대용 (3000 코인)
+    // 실제 파이어베이스 연동 시 수정
     const el = document.getElementById('userCoinDisplay');
-    if(el) el.innerText = "3,000"; 
+    if(el) el.innerText = "3,500"; 
 }

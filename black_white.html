@@ -14,57 +14,59 @@
     <link rel="stylesheet" href="layout.css">
 
     <style>
-        /* --- 1. 테마 설정 (White Mode Fixed) --- */
+        /* --- 1. 테마 설정 (White Mode Only) --- */
         :root {
             --volt: #2563eb;         /* 파랑 */
-            --bg-main: #f0f4f8;      /* 밝은 배경 */
+            --bg-main: #f3f4f6;      /* 연한 회색 배경 */
             --bg-card: #ffffff;      /* 흰색 카드 */
-            --text-main: #1a1a1a;    /* 검정 텍스트 */
-            --text-sub: #4b5563;     /* 회색 텍스트 */
-            --border-color: #cccccc; /* 경계선 */
+            --text-main: #111827;    /* 검정 텍스트 */
+            --text-sub: #6b7280;     /* 회색 텍스트 */
+            --border-color: #e5e7eb; /* 연한 테두리 */
             
-            /* 등급별 컬러 */
             --rank-s: #9333ea; 
             --rank-a: #d97706;
             --rank-b: #2563eb; 
             --rank-c: #6b7280; 
         }
 
-        /* --- 2. 모바일 화면 맞춤 수정 (핵심) --- */
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
+        /* --- 2. 모바일 전체 화면 고정 (잘림 방지) --- */
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100dvh; /* Dynamic Viewport Height */
+            overflow: hidden; /* 스크롤 방지 */
             background-color: var(--bg-main);
             color: var(--text-main);
-            
-            /* [수정] 100vh -> 100dvh (모바일 브라우저 바 대응) */
-            height: 100dvh; 
-            width: 100vw;
-            overflow: hidden; /* 스크롤 방지 */
-            padding-bottom: 0 !important; 
+            font-family: 'Noto Sans KR', sans-serif;
         }
 
-        /* 공통 하단바 숨김 */
-        .app-bottom-nav, .center-menu-container { display: none !important; }
+        /* layout.js가 불러오는 공통 하단바 숨기기 (게임 전용바 사용) */
+        .app-bottom-nav, .center-menu-container, #menuOverlay { 
+            display: none !important; 
+        }
+        
+        /* 상단바 높이만큼 패딩 (layout.css 헤더 높이 60px) */
+        body { padding-top: 60px; }
 
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-        /* 유리 질감 */
+        /* 유리 질감 (화이트) */
         .glass {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .anim-pop { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pop-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        .sprite-player { transform: scaleX(-1); filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); transition: transform 0.2s; }
-        .sprite-enemy { filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); transition: transform 0.2s; }
+        .sprite-player { transform: scaleX(-1); filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
+        .sprite-enemy { filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
         .sprite-dead { filter: grayscale(1) opacity(0.5); transform: scale(0.8) !important; transition: all 1s; }
 
+        /* 배틀 이펙트 */
         @keyframes smash-dash {
             0% { transform: translate(0,0) scale(1); }
             40% { transform: translate(var(--tx), var(--ty)) scale(1.3) skewX(-20deg); }
@@ -77,7 +79,7 @@
             10%, 30%, 50% { transform: translate(-5px, 0); } 
             20%, 40% { transform: translate(5px, 0); } 
         }
-        .anim-hit { animation: heavy-shake 0.4s ease-out; filter: brightness(2) sepia(1) hue-rotate(-50deg); }
+        .anim-hit { animation: heavy-shake 0.4s ease-out; filter: brightness(1.2) sepia(0.3) hue-rotate(-20deg); }
 
         @keyframes cam-shake {
             0%, 100% { transform: translate(0,0); }
@@ -109,14 +111,12 @@
 </head>
 <body class="flex justify-center bg-gray-100">
 
-    <div id="app" class="relative w-full max-w-md h-[100dvh] bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
+    <div id="app" class="relative w-full max-w-md h-full bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
         
-        <div style="height: 64px; flex-shrink: 0;"></div>
-
         <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)] w-full">
             </main>
 
-        <nav id="main-nav" class="absolute bottom-0 w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));">
+        <nav id="main-nav" class="w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0" style="padding-bottom: calc(10px + env(safe-area-inset-bottom));">
             <button onclick="app.nav('lobby')" id="nav-lobby" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
                 <i data-lucide="home" class="w-6 h-6"></i>
                 <span class="text-[10px] font-black italic font-sport">HOME</span>
@@ -126,9 +126,9 @@
                 <span class="text-[10px] font-black italic font-sport">TEAM</span>
             </button>
             
-            <button onclick="app.nav('battle')" class="mb-2 transform transition-transform active:scale-95 group">
-                <div class="w-16 h-16 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
-                    <i data-lucide="swords" class="w-8 h-8 text-white fill-current"></i>
+            <button onclick="app.nav('battle')" class="mb-1 transform transition-transform active:scale-95 group">
+                <div class="w-14 h-14 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
+                    <i data-lucide="swords" class="w-7 h-7 text-white fill-current"></i>
                 </div>
             </button>
             
@@ -156,8 +156,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, update, onValue, push, get, child, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // [주의] 실제 키 사용 필요
         const firebaseConfig = {
-            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE2O8aibfFZO",
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE2O8aibfFZO", 
             authDomain: "pokbattle.firebaseapp.com",
             databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
             projectId: "pokbattle",
@@ -185,6 +186,7 @@
             setTimeout(() => t.style.transform = 'translate(-50%, 0) scale(0)', 2500);
         };
 
+        // 볼 데이터 (화이트 테마용 보더 색상 조정)
         const BALLS = [
             { id: 'poke', name: 'Poké Ball', price: 200, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png', rates: {S: 0, A: 5, B: 20, C: 75}, color: 'border-red-500' },
             { id: 'great', name: 'Great Ball', price: 500, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png', rates: {S: 5, A: 15, B: 40, C: 40}, color: 'border-blue-500' },
@@ -237,6 +239,7 @@
 
             updateCoins: (amt) => {
                 state.coins += amt;
+                // layout.js의 헤더 코인 업데이트
                 const headerCoin = document.getElementById('userCoinDisplay');
                 if(headerCoin) headerCoin.innerText = state.coins.toLocaleString();
             },
@@ -257,6 +260,8 @@
                 if(view === 'dex') app.renderDex(main);
                 if(view === 'team') app.renderTeam(main);
                 if(view === 'battle') app.renderBattleSetup(main);
+                
+                // [중요] 아이콘 렌더링
                 lucide.createIcons();
             },
 
@@ -280,11 +285,9 @@
                 const typeInfo = TYPE_FX[partner.type] || TYPE_FX.normal;
                 const typeColor = typeInfo.particleColor;
 
-                // [수정] 스크롤 없이 한 화면에 들어오도록 Flexbox로 간격 자동 조절
-                // h-full로 높이를 채우고, justify-between으로 요소들을 위아래로 분산시킵니다.
-                // pb-24: 하단바가 가리지 않도록 공간 확보
+                // [수정] 모바일 화면 비율에 맞춰 flex로 꽉 채움 (스크롤 방지)
                 c.innerHTML = `
-                    <div class="flex flex-col items-center justify-between h-full w-full p-4 pb-28 anim-pop">
+                    <div class="flex flex-col items-center justify-between h-full w-full p-4 pb-8 anim-pop">
                         
                         <div class="relative w-full flex-1 flex items-center justify-center max-h-[40vh]">
                             <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent blur-[60px] rounded-full"></div>
@@ -295,10 +298,10 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col items-center w-full">
-                            <h2 class="font-sport font-black italic text-4xl uppercase mb-1 text-[var(--text-main)] drop-shadow-sm tracking-tighter text-center line-clamp-1">${partner.name}</h2>
+                        <div class="flex flex-col items-center w-full gap-3">
+                            <h2 class="font-sport font-black italic text-4xl uppercase text-[var(--text-main)] drop-shadow-sm tracking-tighter text-center line-clamp-1">${partner.name}</h2>
                             
-                            <div class="glass px-6 py-2 rounded-full flex items-center gap-3 mb-4 border border-gray-200">
+                            <div class="glass px-6 py-2 rounded-full flex items-center gap-3 border border-gray-200 shadow-sm">
                                 <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
                                 <div class="h-4 w-[1px] bg-gray-300"></div>
                                 <div class="flex items-center gap-1" style="color:${typeColor}">
@@ -306,25 +309,25 @@
                                     <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="w-full glass p-3 rounded-xl mb-3 border-l-4" style="border-color: ${typeColor}">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
-                                <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
+                            <div class="w-full glass p-3 rounded-xl border-l-4 shadow-sm" style="border-color: ${typeColor}">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
+                                    <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
+                                </div>
+                                <div class="text-xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
                             </div>
-                            <div class="text-xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
-                        </div>
 
-                        <div class="grid grid-cols-2 gap-3 w-full">
-                             <div class="glass p-3 rounded-xl flex flex-col items-center justify-center">
-                                 <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
-                                 <p class="text-lg font-sport font-black italic text-[var(--text-main)]">Bronze</p>
-                             </div>
-                             <div class="glass p-3 rounded-xl flex flex-col items-center justify-center">
-                                 <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
-                                 <p class="text-lg font-sport font-black italic text-[var(--text-main)]">0%</p>
-                             </div>
+                            <div class="grid grid-cols-2 gap-3 w-full">
+                                 <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                                     <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
+                                     <p class="text-lg font-sport font-black italic text-[var(--text-main)]">Bronze</p>
+                                 </div>
+                                 <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                                     <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
+                                     <p class="text-lg font-sport font-black italic text-[var(--text-main)]">0%</p>
+                                 </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -332,25 +335,28 @@
 
             renderShop: (c) => {
                 const ballCards = BALLS.map(b => `
-                    <div onclick="app.confirmBuy('${b.id}')" class="bg-white rounded-2xl flex flex-col items-center relative overflow-hidden group active:scale-95 transition-all cursor-pointer border-t-4 p-4 shadow-lg ${b.color}">
+                    <div onclick="app.confirmBuy('${b.id}')" class="bg-white rounded-2xl flex flex-col items-center relative overflow-hidden group active:scale-95 transition-all cursor-pointer border-t-4 p-4 shadow-md hover:shadow-lg ${b.color}">
                         <div class="absolute top-2 right-2 text-[9px] font-black uppercase bg-black/80 px-2 py-0.5 rounded text-white border border-white/10 z-10 relative">
-                            ${b.id === 'master' ? '100% S-RANK' : `S: ${b.rates.S}%`}
+                            ${b.id === 'master' ? '100% S' : `S: ${b.rates.S}%`}
                         </div>
-                        <img src="${b.img}" class="w-20 h-20 object-contain mb-3 drop-shadow-lg group-hover:scale-110 transition-transform mt-2 relative z-10">
+                        <img src="${b.img}" class="w-20 h-20 object-contain mb-3 drop-shadow-md group-hover:scale-110 transition-transform mt-2 relative z-10">
                         <h3 class="font-black italic text-lg uppercase mb-0.5 relative z-10 text-[var(--text-main)]">${b.name}</h3>
                         <p class="text-[var(--volt)] font-bold text-sm mb-3 relative z-10">${b.price.toLocaleString()} C</p>
                     </div>
                 `).join('');
 
                 c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
-                        <h2 class="text-4xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">ITEM SHOP</h2>
-                        <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4">${ballCards}</div>
+                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
+                        <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">ITEM SHOP</h2>
+                        <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4 custom-scroll">${ballCards}</div>
                     </div>
                 `;
             },
 
+            // (confirmBuy, renderTeam, renderDex, renderBattleSetup, createPrivateRoom, joinPrivateRoom, startBattle, listenToBattle, renderBattleArena, updateTotalHp, hostBattleLoop, createParticles, playAction, endBattle 함수는 기존과 동일하게 유지 - 테마 색상만 CSS 변수로 자동 적용됨)
+            
             confirmBuy: async (ballId) => {
+                // (기존 코드 유지)
                 const ball = BALLS.find(b => b.id === ballId);
                 if(state.coins < ball.price) return showToast("Not enough coins!", "error");
                 app.updateCoins(-ball.price);
@@ -420,10 +426,10 @@
                 }).join('');
 
                 c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
+                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
                         <h2 class="text-3xl font-sport font-black italic text-[var(--text-main)] mb-4">MY TEAM</h2>
                         <div class="grid grid-cols-3 gap-2 mb-6">${slots}</div>
-                        <div class="flex-1 overflow-y-auto pt-4 grid grid-cols-1 gap-2">${inv}</div>
+                        <div class="flex-1 overflow-y-auto pt-4 grid grid-cols-1 gap-2 custom-scroll">${inv}</div>
                     </div>
                 `;
                 lucide.createIcons();
@@ -446,13 +452,13 @@
                         </div>`;
                 }
                 c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-32">
+                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
                         <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">POKEDEX</h2>
                         <div class="bg-white p-4 rounded-xl mb-6 border-l-4 border-[var(--volt)] shadow-sm">
                             <span class="text-xs text-gray-500 font-bold uppercase">Collected</span>
                             <div class="text-2xl font-sport font-black italic text-black mt-1">${ownedIds.size} / ${totalDexSize}</div>
                         </div>
-                        <div class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2">${dexHtml}</div>
+                        <div class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2 custom-scroll">${dexHtml}</div>
                     </div>`;
                 lucide.createIcons();
             },
@@ -461,7 +467,7 @@
                 const ready = state.team.filter(p=>p).length === 3;
                 if (!ready) {
                     c.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full p-6 text-center pb-32">
+                        <div class="flex flex-col items-center justify-center h-full p-6 text-center pb-20">
                             <i data-lucide="alert-triangle" class="w-12 h-12 text-yellow-500 mb-4"></i>
                             <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">Team Incomplete</h2>
                             <button onclick="app.nav('team')" class="bg-[var(--volt)] text-white font-bold py-3 px-8 rounded-full shadow-lg">GO TO TEAM</button>
@@ -470,7 +476,7 @@
                     return;
                 }
                 c.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop text-center bg-gray-100 pb-32">
+                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop text-center bg-gray-100 pb-20">
                         <h2 class="text-4xl font-sport font-black italic text-[var(--text-main)] mb-8">BATTLE MODE</h2>
                         <div class="w-full mb-8">
                             <button onclick="app.startBattle()" class="w-full bg-[var(--volt)] text-white font-black italic text-xl py-4 rounded-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2">
@@ -490,6 +496,10 @@
                 lucide.createIcons();
             },
 
+            // (createPrivateRoom, joinPrivateRoom, startBattle, listenToBattle, renderBattleArena, updateTotalHp, hostBattleLoop, createParticles, playAction, endBattle 함수는 위 코드와 동일하게 유지)
+            // 지면 관계상 생략된 부분은 기존 코드와 동일합니다. 
+            // 다만, renderBattleArena의 배경을 White Theme에 맞게 조정 (bg-white 등)
+            
             createPrivateRoom: async () => {
                 const myTeamData = state.team.map((p, i) => ({
                     uid: p.uid, name: p.name, sprite: p.sprite,
@@ -500,7 +510,7 @@
                 state.battle.roomId = code; state.battle.role = 'host';
                 
                 $('main-content').innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop bg-white pb-32">
+                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop bg-white pb-20">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--volt)] mb-6"></div>
                         <p class="text-gray-500 font-bold mb-2">WAITING FOR PLAYER...</p>
                         <h1 class="text-6xl font-sport font-black text-[var(--volt)] tracking-widest mb-8">${code}</h1>
@@ -604,7 +614,7 @@
                     </div>`;
 
                 c.innerHTML = `
-                    <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none pb-32">
+                    <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none pb-20">
                         <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000')] bg-cover bg-center opacity-20"></div>
                         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 font-sport font-black text-9xl text-black/5 italic select-none">VS</div>
                         <div class="relative z-10 flex justify-end gap-1 p-6 pt-32 pr-4 perspective-[1000px]">${state.battle.enemyTeam.map((p,i)=>renderUnit(p,i,false)).join('')}</div>
@@ -621,7 +631,7 @@
                     const totalCur = team.reduce((sum, p) => sum + Math.max(0, p.currentHp), 0);
                     return (totalCur / totalMax) * 100;
                 };
-                $('hp-p-0').style.width = `${calcPct(state.battle.myTeam)}%`;
+                // $('hp-p-0').style.width = `${calcPct(state.battle.myTeam)}%`; // 개별 유닛 HP바가 이미 있으므로 전체 바는 생략 또는 별도 구현
             },
 
             hostBattleLoop: async () => {

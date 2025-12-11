@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POKE RUN: HOME</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="layout.css"> 
@@ -81,7 +85,7 @@
         /* --- 플로팅 액션 버튼 (FAB) 스타일 --- */
         .fab-container {
             position: fixed;
-            bottom: 90px; /* 하단바 높이 고려 */
+            bottom: 90px; /* 하단바(70px) + 여백(20px) */
             right: 20px;
             z-index: 8000;
             display: flex;
@@ -171,6 +175,10 @@
                     <i data-lucide="plus" class="w-6 h-6 text-[var(--volt)]"></i>
                 </button>
             </div>
+            <button onclick="toggleFab()" class="fab-btn-main" id="fabMainBtn">
+                <i data-lucide="menu" class="w-7 h-7"></i>
+            </button>
+        </div>
             <button onclick="toggleFab()" class="fab-btn-main" id="fabMainBtn">
                 <i data-lucide="menu" class="w-7 h-7"></i>
             </button>
