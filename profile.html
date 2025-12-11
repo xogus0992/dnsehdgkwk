@@ -103,9 +103,11 @@
                 <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center text-[var(--text-main)]">
                     <i data-lucide="grid-3x3" class="w-5 h-5"></i>
                 </button>
+                
                 <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
                     <i data-lucide="clapperboard" class="w-5 h-5"></i>
                 </button>
+                
                 <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
                     <i data-lucide="user-check" class="w-5 h-5"></i>
                 </button>
@@ -122,13 +124,21 @@
                 </div>
             </div>
 
-            <div id="tab-content-reels" class="hidden py-20 text-center text-[var(--text-sub)]"> <div class="flex justify-center mb-2"><i data-lucide="clapperboard" class="w-10 h-10 opacity-50"></i></div>
-                <p class="text-sm">아직 릴스가 없습니다.</p>
+            <div id="tab-content-reels" class="hidden p-4">
+                <iframe id="reelsContentFrame" 
+                        src="h profile.html" 
+                        frameborder="0" 
+                        style="width: 100%; height: 80vh; border: none; overflow: auto; background-color: var(--bg-main);">
+                </iframe>
             </div>
 
-            <div id="tab-content-tags" class="hidden py-20 text-center text-[var(--text-sub)]"> <div class="flex justify-center mb-2"><i data-lucide="user-check" class="w-10 h-10 opacity-50"></i></div>
-                <p class="text-sm">태그된 게시물이 없습니다.</p>
-            </div>
+                <div id="tab-content-tags" class="hidden p-4"> 
+    <iframe id="pkProfileContentFrame" 
+            src="pk profile.html" 
+            frameborder="0" 
+            style="width: 100%; height: 80vh; border: none; overflow: auto; background-color: var(--bg-main);">
+    </iframe>
+</div>
         </main>
 
         <div id="modal-user-list" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm">
@@ -629,5 +639,52 @@
         // ⭐️ 페이지 로드 시 테마 적용 (추가)
         document.addEventListener('DOMContentLoaded', loadTheme);
     </script>
+    <iframe id="hProfileFrame" 
+        src="" 
+        frameborder="0" 
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9000; visibility: hidden;">
+</iframe>
+
+<script>
+    // ------------------------------------
+    // H Profile 로드/닫기 함수 추가
+    // ------------------------------------
+
+    /**
+     * H 프로필 파일을 <iframe>에 로드하고 보이도록 설정합니다.
+     * 이 함수는 중앙 릴스 버튼에서 호출됩니다.
+     */
+    window.loadHProfile = function() {
+        const iframe = document.getElementById('hProfileFrame');
+        
+        // 1. <iframe>의 src를 'h profile.html'로 설정하여 로드 시작
+        iframe.src = 'h profile.html'; 
+        
+        // 2. <iframe>을 화면 전체에 보이도록 설정
+        iframe.style.visibility = 'visible';
+        
+        // 3. 메인 프로필 페이지 스크롤 방지
+        document.body.style.overflow = 'hidden'; 
+    }
+
+    /**
+     * <iframe> 내의 H 프로필 페이지를 닫고 메인 프로필 페이지로 돌아옵니다.
+     * 이 함수는 h profile.html 내부의 '닫기' 버튼에서 호출됩니다.
+     */
+    window.closeHProfile = function() {
+        const iframe = document.getElementById('hProfileFrame');
+        
+        // 1. <iframe> 숨기기
+        iframe.style.visibility = 'hidden';
+        
+        // 2. 메모리 해제 및 재사용을 위해 src 비우기
+        iframe.src = '';
+        
+        // 3. 스크롤 복구
+        document.body.style.overflow = '';
+    }
+    
+    // 이외 기존 window.switchTab, window.saveProfile 등 다른 모든 코드는 그대로 유지합니다.
+</script>
 </body>
 </html>

@@ -1,0 +1,708 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WEIGHT RUN: PROFILE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900;1,900&family=Noto+Sans+KR:wght@400;0,700;0,900&display=swap" rel="stylesheet">
+    <style>
+        /* --- 1. 기본 테마 (다크 모드) 변수 --- */
+        :root { 
+            --volt: #2563eb;          
+            --bg-main: #f0f4f8;       
+            --bg-card: #ffffff;       
+            --bg-sub: #e5e7eb;        
+            --text-main: #1a1a1a;     
+            --text-sub: #4b5563;      
+            --border-color: #cccccc;  
+        }
+        
+        /* ⚪ 2. 화이트 모드 디자인 변수 적용 */
+        [data-theme="light"] {
+            --volt: #2563eb;          
+            --bg-main: #f0f4f8;       
+            --bg-card: #ffffff;       
+            --bg-sub: #e5e7eb;        
+            --text-main: #1a1a1a;     
+            --text-sub: #4b5563;      
+            --border-color: #cccccc;  
+        }
+
+        html, body { 
+            width: 100%; height: 100%; margin: 0; padding: 0; 
+            background: var(--bg-main); 
+            color: var(--text-main); 
+            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            transition: background-color 0.3s, color 0.3s; 
+            touch-action: pan-y; 
+        }
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* 가로 스크롤 컨테이너 설정 */
+        .horizontal-scroll-container {
+            display: flex;
+            overflow-x: scroll; 
+            gap: 1rem;
+            padding-bottom: 1rem; 
+            /* 마우스 드래그를 위해 커서를 잡기 형태로 변경 */
+            cursor: grab;
+            user-select: none; /* 드래그 시 텍스트 선택 방지 */
+        }
+        /* 드래그 중 커서 모양 */
+        .horizontal-scroll-container.active {
+            cursor: grabbing;
+        }
+
+        /* 타이머 진행바 (Tailwind CSS 커스텀) */
+        .progress-bar {
+            height: 8px;
+            background-color: var(--bg-sub);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--volt);
+            transition: width 0.9s linear; /* 1초마다 부드럽게 줄어들도록 설정 */
+        }
+
+        /* 시계 애니메이션 추가 */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-fast {
+            animation: spin 1s linear infinite; /* 1초에 한 바퀴 회전 */
+        }
+        
+    </style>
+</head>
+<body class="flex justify-center h-screen bg-[var(--bg-main)]">
+
+    
+
+    <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col shadow-2xl border-x border-[var(--border-color)] sm:border-x-0">
+        
+        
+        <main class="flex-1 overflow-y-auto pb-4 scrollbar-hide">
+            
+            <div class="p-4 space-y-8">
+                <h2 class="font-bold text-xl font-sport text-[var(--volt)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2">
+                    <i data-lucide="footprints" class="w-6 h-6"></i>
+                    <span>부위별 스트레칭 가이드</span>
+                </h2>
+
+                <div id="stretching-categories" class="space-y-6">
+                    
+                    <div>
+                        <h3 class="font-bold text-lg text-[var(--text-main)] mb-3 flex items-center gap-2">
+                            <i data-lucide="armchair" class="w-5 h-5 text-[var(--volt)]"></i> 상체 (어깨, 가슴, 등)
+                        </h3>
+                        <div class="horizontal-scroll-container scrollbar-hide -mx-4 px-4 flex-nowrap">
+                            
+                            <div id="card-shoulder_rotator" onclick="showDetails('shoulder_rotator')" 
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/1683ec8d-09c1-4de7-823c-349127d86c66" alt="어깨 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">어깨 회전근 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 한 팔을 앞으로 펴서 반대쪽 어깨 쪽으로 당깁니다. 반대쪽 팔로 당기는 팔의 팔꿈치를 받쳐 몸쪽으로 부드럽게 눌러줍니다. 어깨 근육이 늘어나는 것을 느끼며 15~20초 유지합니다.
+                                </p>
+                            </div>
+                            
+                            <div id="card-chest_pec_minor" onclick="showDetails('chest_pec_minor')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/2dbe5dcc-14a1-4bc5-a80b-50cf53856199" alt="가슴 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">펙 마이너(소흉근) 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 문틀에 팔꿈치를 90도로 굽혀 붙이고, 한 발을 앞으로 내딛으며 몸을 천천히 문틀 밖으로 밀어줍니다. 가슴 앞쪽이 늘어나는 것을 느끼며 15~20초 유지합니다.
+                                </p>
+                            </div>
+                            
+                            <div id="card-back_latissimus" onclick="showDetails('back_latissimus')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/c5a2d78a-d0e5-4a1d-accd-4a571b928ca9" alt="광배근 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">광배근 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 무릎을 꿇고 앉아 팔을 앞으로 쭉 뻗고 상체를 바닥 쪽으로 숙입니다. 등 전체가 늘어나는 것을 느끼며 15~20초 유지합니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg text-[var(--text-main)] mb-3 flex items-center gap-2">
+                            <i data-lucide="foot" class="w-5 h-5 text-[var(--volt)]"></i> 하체 (햄스트링, 종아리)
+                        </h3>
+                         <div class="horizontal-scroll-container scrollbar-hide -mx-4 px-4 flex-nowrap">
+                            
+                            <div id="card-hamstring" onclick="showDetails('hamstring')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/0717394e-824b-483e-b773-63a59976eb76" alt="햄스트링 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">앉아서 햄스트링 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 바닥에 앉아 한쪽 다리는 펴고, 다른 쪽 다리는 무릎을 굽혀 발바닥을 편 다리의 허벅지 안쪽에 붙입니다. 허리를 곧게 펴고 몸을 편 다리 쪽으로 숙여줍니다. 무리하지 않는 범위에서 15~20초 유지합니다.
+                                </p>
+                            </div>
+                            
+                            <div id="card-calf" onclick="showDetails('calf')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/6d008063-0dac-4bd1-bbd0-26676975bae9" alt="종아리 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">벽 밀기 종아리 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 벽을 짚고 서서 한쪽 다리를 뒤로 뻗습니다. 뒤로 뻗은 다리의 발뒤꿈치는 바닥에 붙이고 무릎은 쭉 폅니다. 앞쪽 무릎을 굽혀 벽 쪽으로 몸을 숙여 종아리가 늘어나는 것을 느낍니다. 15~20초 유지합니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg text-[var(--text-main)] mb-3 flex items-center gap-2">
+                            <i data-lucide="heart" class="w-5 h-5 text-[var(--volt)]"></i> 코어 (허리, 복부)
+                        </h3>
+                        <div class="horizontal-scroll-container scrollbar-hide -mx-4 px-4 flex-nowrap">
+                            
+                            <div id="card-core_knee_hug" onclick="showDetails('core_knee_hug')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/1ee90685-0877-4ecb-9e57-ed1509d2d02a" alt="허리 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">무릎 안기 허리 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 등을 대고 바닥에 눕습니다. 양쪽 무릎을 가슴 쪽으로 당겨 양팔로 안아줍니다. 허리 근육이 부드럽게 이완되는 것을 느끼며 20~30초 유지합니다.
+                                </p>
+                            </div>
+                            
+                            <div id="card-core_cobra" onclick="showDetails('core_cobra')"
+                                 class="scroll-item bg-[var(--bg-card)] rounded-xl p-4 shadow-lg border-2 border-[var(--border-color)] w-4/5 flex-shrink-0 cursor-pointer active:scale-[0.98] transition hover:border-[var(--volt)] hover:scale-[1.02]">
+                                <div class="w-full h-36 bg-[var(--bg-sub)] rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-[var(--border-color)]">
+                                    <img src="https://github.com/user-attachments/assets/c8cecb49-6578-428f-8ea7-fd44d442452c" alt="코브라 스트레칭 사진" class="object-cover w-full h-full">
+                                </div>
+                                <p class="text-sm font-bold text-[var(--volt)] mb-1">코브라 스트레칭</p>
+                                <p class="text-xs text-[var(--text-sub)]">
+                                    <span class="font-bold text-white">방법:</span> 배를 대고 바닥에 엎드린 후, 팔꿈치를 어깨 아래에 두고 상체를 세우거나(초보) 팔을 펴서 상체를 들어 올립니다. 골반은 바닥에 붙이고 허리가 늘어나는 것을 느낍니다. 15~20초 유지합니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            </main>
+        
+    </div>
+
+    <div id="detailModal" class="fixed inset-0 z-50 bg-black bg-opacity-80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[var(--bg-card)] w-full max-w-sm rounded-2xl shadow-2xl border border-[var(--border-color)] p-6 relative flex flex-col max-h-full overflow-hidden">
+            
+            <h3 id="modalName" class="font-bold text-2xl font-sport text-[var(--volt)] mb-4 border-b border-[var(--border-color)] pb-2">근육 이름</h3>
+
+            <div id="timerContainer" class="text-center mb-6 p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-sub)]">
+                
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center text-left">
+                        <span id="timerSide" class="text-sm font-mono text-[var(--volt)] mr-2 w-14"></span>
+                        <p id="timerMessage" class="text-lg font-bold text-[var(--text-main)]">스트레칭 타이머</p>
+                    </div>
+                    <div id="currentTimeDisplay" class="text-sm font-sport text-[var(--text-sub)] flex items-center gap-1">
+                        <i id="clockIcon" data-lucide="clock" class="w-4 h-4 text-[var(--text-sub)]"></i>
+                        <span id="currentClock">--:--</span> </div>
+                </div>
+
+                <div class="flex justify-center items-center mb-3">
+                    <span id="timerDisplay" class="text-5xl font-sport text-[var(--text-main)]">00:00</span>
+                </div>
+                
+                <div class="progress-bar mb-4">
+                    <div id="progressBar" class="progress-fill" style="width: 100%;"></div>
+                </div>
+                <button id="startTimerButton" onclick="startTimerLogic()" class="w-full bg-[var(--volt)] text-black font-bold py-2 rounded-lg active:scale-95 transition flex items-center justify-center gap-2">
+                    <i data-lucide="play" class="w-5 h-5"></i>
+                    <span id="startButtonText">타이머 시작 (30초)</span>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto space-y-4 text-sm scrollbar-hide">
+                <div class="p-3 bg-[var(--bg-sub)] rounded-lg">
+                    <p class="font-bold text-base text-[var(--text-main)] mb-1 flex items-center gap-1"><i data-lucide="info" class="w-4 h-4 text-[var(--volt)]"></i> 특징</p>
+                    <p id="modalFeature" class="text-[var(--text-sub)]"></p>
+                </div>
+                
+                <div class="p-3 bg-[var(--bg-sub)] rounded-lg">
+                    <p class="font-bold text-base text-[var(--text-main)] mb-1 flex items-center gap-1"><i data-lucide="activity" class="w-4 h-4 text-[var(--volt)]"></i> 기능</p>
+                    <p id="modalFunction" class="text-[var(--text-sub)]"></p>
+                </div>
+                
+                <div class="p-3 bg-[var(--bg-sub)] rounded-lg">
+                    <p class="font-bold text-base text-[var(--text-main)] mb-1 flex items-center gap-1"><i data-lucide="users" class="w-4 h-4 text-[var(--volt)]"></i> 활용 부위 (어디에 많이 쓰이나요?)</p>
+                    <p id="modalUsage" class="text-[var(--text-sub)]"></p>
+                </div>
+                
+                <div class="p-3 bg-red-900 bg-opacity-30 rounded-lg border border-red-700">
+                    <p class="font-bold text-base text-red-400 mb-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i> 건강/유의점</p>
+                    <p id="modalCaution" class="text-red-300"></p>
+                </div>
+            </div>
+
+            <button onclick="closeDetails()" class="mt-4 bg-[var(--volt)] text-black font-bold py-2 rounded-lg active:scale-95 transition">닫기</button>
+        </div>
+    </div>
+        <script>
+            
+            // ===============================================
+            // 1. 상세 데이터 정의
+            // ===============================================
+            const STRETCH_DURATION = 30; // 30초
+            const stretchData = {
+                'shoulder_rotator': {
+                    name: '어깨 회전근 (Rotator Cuff)',
+                    feature: '어깨 관절을 안정시키고 팔을 회전시키는 4개의 작은 근육(극상근, 극하근, 소원근, 견갑하근)으로 구성됩니다.',
+                    function: '어깨 관절의 안정화 및 회전 운동(외회전, 내회전)을 담당합니다. 팔을 들어 올릴 때 핵심적인 역할을 합니다.',
+                    usage: '웨이트 트레이닝 (벤치프레스, 오버헤드 프레스), 던지기 동작 (야구, 농구), 수영 등 팔을 많이 사용하는 운동 시 필수적입니다.',
+                    caution: '과도한 부하, 잘못된 자세는 회전근개 파열의 위험이 있습니다. 부상 예방을 위해 반드시 운동 전후 스트레칭 및 저강도 근력 운동이 필요합니다.',
+                    needsSide: true // 좌/우 구분이 필요한 스트레칭
+                },
+                'chest_pec_minor': {
+                    name: '소흉근 (Pectoralis Minor)',
+                    feature: '대흉근 아래에 위치한 작은 근육으로, 어깨를 앞으로 둥글게(라운드 숄더) 만드는 데 기여할 수 있습니다.',
+                    function: '어깨뼈(견갑골)를 아래로 당기고 안정시키는 역할. 호흡 시 보조 역할도 수행합니다.',
+                    usage: '책상에 앉아 일하거나 스마트폰을 보는 등 구부정한 자세를 오래 유지할 때 단축되기 쉽습니다.',
+                    caution: '단축될 경우 라운드 숄더를 유발하며, 이는 목 통증이나 팔 저림(흉곽 출구 증후군)으로 이어질 수 있습니다. 꾸준한 스트레칭으로 이완시켜야 합니다.',
+                    needsSide: true // 좌/우 구분이 필요한 스트레칭
+                },
+                'back_latissimus': {
+                    name: '광배근 (Latissimus Dorsi)',
+                    feature: '등 전체를 덮는 넓고 강력한 근육으로, 상체에서 가장 큰 근육 중 하나입니다.',
+                    function: '팔을 몸통 쪽으로 당기거나(풀다운, 턱걸이), 뒤로 젖히는(로우) 역할을 합니다. 상체의 강력한 힘을 담당합니다.',
+                    usage: '턱걸이(풀업), 로우(Row), 수영, 암벽 등반 등 당기는 힘을 쓰는 모든 활동에 사용됩니다.',
+                    caution: '근육통이 생기면 허리 통증으로 오인하기 쉽습니다. 충분한 스트레칭 없이는 허리 움직임에 제한을 주어 부상 위험을 높입니다.',
+                    needsSide: true // 좌/우 구분이 필요한 스트레칭 (예: 한쪽 측면 늘리기)
+                },
+                'hamstring': {
+                    name: '햄스트링 (Hamstrings)',
+                    feature: '허벅지 뒤쪽의 3가지 근육(대퇴이두근, 반건양근, 반막양근)으로 구성되며, 무릎 관절을 구부리고 엉덩이를 펴는 역할을 합니다.',
+                    function: '걷기, 달리기, 점프 등 하체 움직임의 핵심 동력원입니다. 골반의 후방 경사에도 영향을 줍니다.',
+                    usage: '달리기, 축구, 농구 등 폭발적인 하체 힘이 필요한 스포츠에 필수적입니다.',
+                    caution: '단축되면 허리 통증(골반 후방 경사 유발)의 주요 원인이 되며, 갑작스러운 수축은 파열(햄스트링 부상)로 이어지기 쉽습니다. 운동 전후 충분히 늘려줘야 합니다.',
+                    needsSide: true // 좌/우 구분이 필요한 스트레칭
+                },
+                'calf': {
+                    name: '종아리 (Calf Muscles: 비복근, 가자미근)',
+                    feature: '발목 관절을 움직여 발뒤꿈치를 들어 올리는(족저 굴곡) 근육으로, \'제2의 심장\'이라 불리기도 합니다.',
+                    function: '걷거나 달릴 때 추진력을 제공하고, 정맥혈을 심장으로 되돌리는 펌프 역할을 합니다.',
+                    usage: '장시간 서 있거나 걷는 활동, 달리기, 계단 오르내리기 등에 주로 사용됩니다.',
+                    caution: '지나치게 긴장하면 혈액 순환을 방해하고 족저근막염의 원인이 될 수 있습니다. 운동 후 냉찜질과 스트레칭으로 충분히 이완시켜야 합니다.',
+                    needsSide: true // 좌/우 구분이 필요한 스트레칭
+                },
+                'core_knee_hug': {
+                    name: '무릎 안기 허리 스트레칭',
+                    feature: '긴장된 허리 주변의 심부 근육과 엉덩이 근육을 이완시키는 동작입니다.',
+                    function: '긴장된 허리 주변 근육과 엉덩이 근육을 부드럽게 늘려주어 허리 통증 완화에 도움을 줍니다.',
+                    usage: '오래 앉아 있거나 허리를 많이 사용한 후, 또는 허리 통증이 있을 때(급성 통증 제외) 사용합니다.',
+                    caution: '허리디스크 환자는 전문가의 지도 하에 실시해야 하며, 통증이 느껴지면 즉시 중단해야 합니다. 무릎을 과도하게 누르지 않도록 주의해야 합니다.',
+                    needsSide: false // 단일 동작 스트레칭 (좌/우 구분 불필요)
+                },
+                'core_cobra': {
+                    name: '코브라 스트레칭',
+                    feature: '복부 근육을 늘리고 척추를 신전시키는 동작으로, 코어 근육 강화 및 유연성 향상에 도움을 줍니다.',
+                    function: '척추의 움직임(신전)을 개선하고 복근 및 장요근(고관절 굴곡근)을 스트레칭합니다.',
+                    usage: '오래 앉아 있어 구부러진 자세를 교정하고 싶을 때, 허리 앞쪽(복부)을 늘리고 싶을 때 효과적입니다.',
+                    caution: '허리가 과도하게 꺾이지 않도록 복부에 힘을 주고 실시하며, 허리 통증이 있다면 팔꿈치를 바닥에 댄 상태(스핑크스 자세)로 강도를 낮춰야 합니다.',
+                    needsSide: false // 단일 동작 스트레칭 (좌/우 구분 불필요)
+                }
+            };
+
+            // 전역 변수
+            let activeCardId = null; 
+            let currentStretchId = null; 
+            let currentTimer = null; // 스트레칭 타이머 ID
+            // let currentClockInterval = null; // 시계 기능 제거
+            let currentSide = 'LEFT'; // 현재 진행 중인 쪽 ('LEFT', 'RIGHT', 'NONE')
+            let timeRemainingOnPause = STRETCH_DURATION; // 정지 시 남은 시간 저장 변수
+            let timerIsRunning = false; // 타이머 실행 상태 플래그
+
+            // ===============================================
+            // 2. 모달 표시/숨기기 함수
+            // ===============================================
+
+            window.showDetails = (id) => {
+                const data = stretchData[id];
+                if (!data) return;
+
+                // 기존 타이머 정지 (혹시 모를 상황 대비)
+                stopTimer(false);
+
+                // 1. 하이라이트 적용 (클릭 시)
+                const cardId = `card-${id}`;
+                const cardElement = document.getElementById(cardId);
+                if (cardElement) {
+                    cardElement.classList.remove('border-[var(--border-color)]', 'border-2');
+                    cardElement.classList.remove('hover:border-[var(--volt)]', 'hover:scale-[1.02]');
+                    cardElement.classList.add('border-4', 'border-[var(--volt)]');
+                    activeCardId = cardId;
+                }
+                
+                // 2. 타이머 초기화 및 사이드 설정
+                currentStretchId = id;
+                currentSide = 'LEFT';
+                timeRemainingOnPause = STRETCH_DURATION; // 초기 시간 설정
+                timerIsRunning = false;
+                
+                // 타이머 UI 초기 상태 설정
+                document.getElementById('timerMessage').innerText = '스트레칭 타이머';
+                document.getElementById('timerDisplay').innerText = formatTime(STRETCH_DURATION);
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('startTimerButton').disabled = false;
+                
+                const needsSide = data.needsSide;
+                const sideText = needsSide ? '(좌측/첫번째)' : '';
+                document.getElementById('startButtonText').innerText = `타이머 시작 (${STRETCH_DURATION}초)${sideText}`;
+                document.getElementById('timerSide').innerText = needsSide ? 'LEFT' : '';
+                
+                // 버튼 클릭 이벤트는 항상 시작 로직을 호출하도록 초기화
+                document.getElementById('startTimerButton').setAttribute('onclick', 'startTimerLogic()');
+                document.getElementById('startTimerButton').classList.remove('bg-red-500', 'bg-blue-600'); // 청색/적색 제거
+                document.getElementById('startTimerButton').classList.add('bg-[var(--volt)]');
+                
+                // 3. 데이터 채우기
+                document.getElementById('modalName').innerText = data.name;
+                document.getElementById('modalFeature').innerText = data.feature;
+                document.getElementById('modalFunction').innerText = data.function;
+                document.getElementById('modalUsage').innerText = data.usage;
+                document.getElementById('modalCaution').innerText = data.caution;
+                
+                // 4. 모달 표시
+                const modal = document.getElementById('detailModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                
+                // 5. 스크롤 방지
+                document.body.style.overflow = 'hidden';
+                lucide.createIcons();
+                
+                // 시계 아이콘 애니메이션 제거
+                document.getElementById('clockIcon').classList.remove('animate-spin-fast');
+            };
+
+            window.closeDetails = () => {
+                stopTimer(false); // 모달 닫을 때 스트레칭 타이머 중지
+                // stopClock(); // 시계 기능 제거
+                
+                // 1. 하이라이트 제거
+                if (activeCardId) {
+                    const activeCardElement = document.getElementById(activeCardId);
+                    if (activeCardElement) {
+                        activeCardElement.classList.remove('border-4', 'border-[var(--volt)]');
+                        activeCardElement.classList.add('border-2', 'border-[var(--border-color)]');
+                        activeCardElement.classList.add('hover:border-[var(--volt)]', 'hover:scale-[1.02]');
+                    }
+                    activeCardId = null;
+                }
+                
+                // 2. 모달 숨기기
+                const modal = document.getElementById('detailModal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+
+                // 3. 스크롤 허용
+                document.body.style.overflow = '';
+            };
+
+            // ===============================================
+            // 3. 타이머 로직
+            // ===============================================
+
+            // 시간을 MM:SS 형식으로 포맷
+            function formatTime(totalSeconds) {
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            // 버튼 클릭 시 타이머 로직 시작 (LEFT 또는 NONE)
+            window.startTimerLogic = () => {
+                const data = stretchData[currentStretchId];
+                const needsSide = data ? data.needsSide : false;
+                
+                // timeRemainingOnPause가 STRETCH_DURATION과 같으면 (또는 단일 동작이면) 새로 시작
+                if (timeRemainingOnPause === STRETCH_DURATION || !needsSide) {
+                    // 단일 동작이거나, 처음 시작하는 경우
+                    startStretchTimer(needsSide ? 'LEFT' : 'NONE', STRETCH_DURATION);
+                } else {
+                    // 일시 정지 후 재개하는 경우
+                    // 현재 사이드와 저장된 남은 시간부터 시작
+                    startStretchTimer(currentSide, timeRemainingOnPause);
+                }
+            };
+
+            /**
+             * 스트레칭 타이머 중지 및 UI 리셋/일시정지
+             * @param {boolean} isPause - true: 일시정지, false: 완전 초기화 (모달 닫기/다음 단계)
+             */
+            window.stopTimer = (isPause = true) => {
+                if (currentTimer !== null) {
+                    clearInterval(currentTimer);
+                    currentTimer = null;
+                    timerIsRunning = false;
+                }
+
+                document.getElementById('clockIcon').classList.remove('animate-spin-fast');
+                
+                if (isPause) {
+                    // 일시 정지 시
+                    
+                    const data = stretchData[currentStretchId];
+                    const needsSide = data ? data.needsSide : false;
+                    
+                    document.getElementById('timerMessage').innerText = '⏸️ 일시 정지됨';
+                    
+                    // 버튼 클릭 이벤트를 'startTimerLogic' (재개)으로 변경
+                    document.getElementById('startTimerButton').setAttribute('onclick', 'startTimerLogic()');
+                    document.getElementById('startTimerButton').disabled = false; 
+                    
+                    // 버튼 텍스트 변경: '계속 (남은 시간)'
+                    document.getElementById('startButtonText').innerText = `계속 (${formatTime(timeRemainingOnPause)})`;
+                    
+                    // 버튼 색상 변경 (정지 상태: 재개 준비)
+                    document.getElementById('startTimerButton').classList.remove('bg-red-500');
+                    document.getElementById('startTimerButton').classList.add('bg-blue-600'); 
+                    
+                    document.getElementById('timerSide').innerText = needsSide ? currentSide : '';
+                    lucide.createIcons();
+                    
+                } else {
+                    // 완전 초기화 시 (모달 닫기, 완료 후 재시작 준비)
+
+                    const data = stretchData[currentStretchId];
+                    const needsSide = data ? data.needsSide : false;
+                    const sideText = needsSide ? '(좌측/첫번째)' : '';
+                    
+                    // 시간도 초기화
+                    timeRemainingOnPause = STRETCH_DURATION;
+                    currentSide = 'LEFT'; 
+                    
+                    document.getElementById('timerMessage').innerText = '스트레칭 타이머';
+                    document.getElementById('timerDisplay').innerText = formatTime(STRETCH_DURATION);
+                    document.getElementById('progressBar').style.width = '100%';
+                    document.getElementById('startTimerButton').disabled = false;
+                    document.getElementById('startButtonText').innerText = `타이머 시작 (${STRETCH_DURATION}초)${sideText}`;
+                    document.getElementById('timerSide').innerText = needsSide ? 'LEFT' : '';
+                    
+                    document.getElementById('startTimerButton').setAttribute('onclick', 'startTimerLogic()');
+                    document.getElementById('startTimerButton').classList.remove('bg-red-500', 'bg-blue-600');
+                    document.getElementById('startTimerButton').classList.add('bg-[var(--volt)]');
+                    lucide.createIcons();
+                }
+            };
+
+            /**
+             * 실제 스트레칭 타이머를 돌리는 함수
+             * @param {string} side - 현재 진행할 쪽 ('LEFT', 'RIGHT', 'NONE')
+             * @param {number} startTime - 시작할 남은 시간 (초)
+             */
+            function startStretchTimer(side, startTime) {
+                stopTimer(false); // 기존 타이머 정지 (완전 초기화 없이)
+                
+                const data = stretchData[currentStretchId];
+                const needsSide = data ? data.needsSide : false;
+                
+                let timeRemaining = startTime; // 전달받은 시간부터 시작!
+                const totalTime = STRETCH_DURATION;
+                timerIsRunning = true;
+
+                // UI 업데이트 (진행 중 상태)
+                currentSide = side;
+                document.getElementById('timerMessage').innerText = '스트레칭 중...';
+                document.getElementById('timerSide').innerText = side === 'NONE' ? '' : side;
+                document.getElementById('startButtonText').innerText = '진행 중! (눌러서 정지)';
+                document.getElementById('timerDisplay').innerText = formatTime(timeRemaining); // 현재 남은 시간으로 표시
+                const initialProgress = (timeRemaining / totalTime) * 100;
+                document.getElementById('progressBar').style.width = `${initialProgress}%`;
+
+                // 진행 중일 때는 버튼을 누르면 정지되도록 onclick 변경
+                document.getElementById('startTimerButton').setAttribute('onclick', 'stopTimer(true)');
+                document.getElementById('startTimerButton').disabled = false; // 정지 기능은 활성화
+                
+                document.getElementById('startTimerButton').classList.remove('bg-[var(--volt)]', 'bg-blue-600');
+                document.getElementById('startTimerButton').classList.add('bg-red-500');
+                
+                // 시계 아이콘에 애니메이션 적용
+                document.getElementById('clockIcon').classList.add('animate-spin-fast');
+                lucide.createIcons();
+                
+                // 초당 타이머 업데이트
+                currentTimer = setInterval(() => {
+                    timeRemaining--;
+                    timeRemainingOnPause = timeRemaining; // 일시 정지 대비 남은 시간 업데이트
+                    
+                    // 시간 표시 업데이트
+                    document.getElementById('timerDisplay').innerText = formatTime(timeRemaining);
+                    
+                    // 진행바 업데이트
+                    const progressPercent = (timeRemaining / totalTime) * 100;
+                    document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+                    if (timeRemaining <= 0) {
+                        clearInterval(currentTimer);
+                        currentTimer = null;
+                        timerIsRunning = false;
+                        document.getElementById('clockIcon').classList.remove('animate-spin-fast');
+                        
+                        // 완료 처리 및 다음 단계 이동
+                        
+                        if (needsSide && side === 'LEFT') {
+                            // 1. 왼쪽 완료 -> 오른쪽 준비 알림 (3초)
+                            document.getElementById('timerMessage').innerText = '✅ 좌측 완료! 잠시 후 반대쪽 시작';
+                            document.getElementById('timerDisplay').innerText = '3초 대기';
+                            document.getElementById('progressBar').style.width = '100%';
+                            document.getElementById('timerSide').innerText = 'NEXT: RIGHT';
+                            document.getElementById('startButtonText').innerText = '자동 전환 중...';
+                            document.getElementById('startTimerButton').disabled = true; 
+                            
+                            // 다음 스트레칭을 위해 남은 시간 초기화
+                            timeRemainingOnPause = STRETCH_DURATION; 
+
+                            setTimeout(() => {
+                                // 사용자가 3초 안에 멈추지 않았을 때만 진행 (currentTimer가 null이고 timerIsRunning이 false 일 때만)
+                                if (currentTimer === null && !timerIsRunning) { 
+                                    startStretchTimer('RIGHT', STRETCH_DURATION);
+                                }
+                            }, 3000); 
+                            
+                        } else {
+                            // 2. 오른쪽 완료 또는 단일 동작 완료 -> 전체 완료 알림
+                            
+                            const message = needsSide ? '🎉 스트레칭 완료! 양쪽 모두 끝났습니다.' : '🎉 스트레칭 완료!';
+
+                            document.getElementById('timerMessage').innerText = message;
+                            document.getElementById('timerDisplay').innerText = formatTime(STRETCH_DURATION);
+                            document.getElementById('progressBar').style.width = '100%';
+                            document.getElementById('timerSide').innerText = '';
+                            document.getElementById('startTimerButton').disabled = false;
+                            document.getElementById('startButtonText').innerText = `재시작 (${STRETCH_DURATION}초)`;
+                            
+                            document.getElementById('startTimerButton').classList.remove('bg-red-500', 'bg-blue-600');
+                            document.getElementById('startTimerButton').classList.add('bg-[var(--volt)]');
+                            document.getElementById('startTimerButton').setAttribute('onclick', 'startTimerLogic()');
+                            
+                            // 최종 완료 후 초기 상태로 리셋
+                            timeRemainingOnPause = STRETCH_DURATION;
+                            currentSide = 'LEFT'; 
+                            lucide.createIcons();
+                        }
+                    }
+                }, 1000); // 1초마다 실행
+            }
+
+            // ===============================================
+            // 4. 실시간 시계 로직 (기능 제거됨)
+            // ===============================================
+
+            // ------------------------
+            // --- ⚙️ 테마 전환 기능 및 초기화 로직 ---
+            function updateThemeIcon(isLight) {
+                const icon = document.getElementById('theme-icon');
+                if (icon) {
+                    if(isLight) {
+                        icon.setAttribute('data-lucide', 'moon'); 
+                    } else {
+                        icon.setAttribute('data-lucide', 'sun-moon'); 
+                    }
+                    lucide.createIcons(); 
+                }
+            }
+            
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                const isLight = savedTheme === 'light';
+                if (isLight) {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+                updateThemeIcon(isLight);
+            }
+
+            window.toggleTheme = () => {
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                if (isLight) {
+                    document.documentElement.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'dark');
+                    updateThemeIcon(false);
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    updateThemeIcon(true);
+                }
+            };
+            // ------------------------
+            function closeCurrentProfile() {
+    // 부모 창(profile.html)에 정의된 closeHProfile 함수를 호출합니다.
+    if (window.parent && window.parent.closeHProfile) {
+        window.parent.closeHProfile();
+    } else {
+        console.error("H Profile을 닫을 부모 창 함수를 찾을 수 없습니다.");
+    }
+}
+
+            // 🖱️ 마우스 드래그 스크롤 기능
+            document.addEventListener('DOMContentLoaded', () => {
+                loadTheme();
+                lucide.createIcons();
+                
+                const sliders = document.querySelectorAll('.horizontal-scroll-container');
+
+                sliders.forEach(slider => {
+                    let isDown = false;
+                    let startX;
+                    let scrollLeft;
+
+                    // 마우스 클릭 시작
+                    slider.addEventListener('mousedown', (e) => {
+                        isDown = true;
+                        slider.classList.add('active'); 
+                        startX = e.pageX - slider.offsetLeft;
+                        scrollLeft = slider.scrollLeft;
+                    });
+
+                    // 마우스가 컨테이너를 벗어날 때 (드래그 종료)
+                    slider.addEventListener('mouseleave', () => {
+                        isDown = false;
+                        slider.classList.remove('active');
+                    });
+
+                    // 마우스 클릭 해제
+                    slider.addEventListener('mouseup', () => {
+                        isDown = false;
+                        slider.classList.remove('active');
+                    });
+
+                    // 마우스 이동 중
+                    slider.addEventListener('mousemove', (e) => {
+                        if(!isDown) return; 
+                        e.preventDefault(); 
+                        
+                        const x = e.pageX - slider.offsetLeft;
+                        const walk = (x - startX) * 1.5; 
+                        slider.scrollLeft = scrollLeft - walk;
+                    });
+                });
+                
+                // 페이지 로드시 시계 업데이트 시작 (제거됨)
+                // startClock();
+            });
+            // ------------------------------------
+        </script>
+    </body>
+    </html>
