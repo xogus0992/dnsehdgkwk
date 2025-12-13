@@ -93,196 +93,230 @@
     </style>
 
     <script type="module">
-    // ----------------------------------------------------
-    // (1) 외부 모듈 import (새로 만든 파일에서 가져옴)
-    // ----------------------------------------------------
-    import { 
-        auth, 
-        isIdChecked, 
-        isNickChecked,
-        handleLoginLogic,
-        checkDuplicateIDLogic,
-        checkDuplicateNickLogic,
-        handleSignupLogic,
-        findIDLogic,
-        findPWLogic
-    } from "./firebase-service.js"; // 👈 경로 확인 필수! (같은 폴더에 있다면 ./firebase-service.js)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
+            authDomain: "pokbattle.firebaseapp.com",
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
+            projectId: "pokbattle",
+            storageBucket: "pokbattle.firebasestorage.app",
+            messagingSenderId: "445300582484",
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1",
+            measurementId: "G-PNXLYD0D0X"
+        };
 
-    // ----------------------------------------------------
-    // (2) window 함수 재정의 (DOM에서 데이터 가져와 모듈 함수 호출)
-    // ----------------------------------------------------
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
 
-    // --- 로그인 로직 ---
-    window.handleLogin = async () => {
-        const email = document.getElementById('login-email').value.trim();
-        const pw = document.getElementById('login-pw').value;
-        
-        try {
-            await handleLoginLogic(email, pw); // 👈 모듈 함수 호출
-        } catch(e) {
-            alert("로그인 실패!\n" + e.message);
-        }
-    };
+        let isIdChecked = false;
+        let isNickChecked = false;
 
-    // --- 상태 변화 감지 ---
-    // 이 부분은 auth 객체를 import 했으므로 그대로 유지 가능합니다.
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            window.location.href = "index.html";
-        } else {
-            document.getElementById('login-screen').style.display = 'flex';
-        }
-    });
-
-    // --- 회원가입 및 찾기 기능 ---
-    window.checkDuplicateID = async () => {
-        const idInput = document.getElementById('reg-custom-id');
-        const val = idInput.value.trim();
-        const msg = document.getElementById('msg-id');
-        
-        try {
-            const { isAvailable, message } = await checkDuplicateIDLogic(val); // 👈 모듈 함수 호출
-            msg.style.display = 'block';
-            msg.innerText = message;
-            msg.style.color = isAvailable ? "#22c55e" : "#ef4444";
-            // isIdChecked는 모듈 내부에서 업데이트되지만, 혹시 모를 상황에 대비하여 
-            // 모듈에서 반환된 값을 기반으로 로컬 변수 업데이트도 가능합니다. (현재 로직에서는 모듈 내부에서 처리)
-        } catch(e) {
-            alert(e.message);
-            idInput.focus();
-        }
-    };
-
-    window.checkDuplicateNick = async () => {
-        const val = document.getElementById('reg-nick').value.trim();
-        const msg = document.getElementById('msg-nick');
-        
-        try {
-            const { isAvailable, message } = await checkDuplicateNickLogic(val); // 👈 모듈 함수 호출
-            msg.style.display = 'block';
-            msg.innerText = message;
-            msg.style.color = isAvailable ? "#22c55e" : "#ef4444";
-        } catch(e) {
-            alert(e.message);
-        }
-    };
-
-    window.checkPwMatch = () => {
-        const pw = document.getElementById('reg-pw').value;
-        const pw2 = document.getElementById('reg-pw2').value;
-        const msg = document.getElementById('msg-pw');
-        if(pw2 === "") { msg.style.display = 'none'; return; }
-        msg.style.display = 'block';
-        if(pw === pw2) {
-            msg.innerText = "일치합니다."; msg.style.color = "#22c55e";
-        } else {
-            msg.innerText = "불일치합니다."; msg.style.color = "#ef4444";
-        }
-    };
-
-    window.handleSignup = async () => {
-        const email = document.getElementById('reg-email').value.trim();
-        const customId = document.getElementById('reg-custom-id').value.trim();
-        const nick = document.getElementById('reg-nick').value.trim();
-        const pw = document.getElementById('reg-pw').value;
-        const pw2 = document.getElementById('reg-pw2').value;
-        const name = document.getElementById('reg-name').value;
-        const phone = document.getElementById('reg-phone').value;
-        const y = document.getElementById('reg-year').value;
-        const m = document.getElementById('reg-month').value;
-        const d = document.getElementById('reg-day').value;
-        const dob = `${y}-${m}-${d}`;
-        
-        if(pw !== pw2) return alert("비밀번호 불일치."); // 로컬 유효성 검사
-
-        try {
-            await handleSignupLogic(email, customId, nick, pw, name, phone, dob); // 👈 모듈 함수 호출
-            alert("가입 완료! 자동 로그인됩니다.");
-            closeModal('modal-signup');
-        } catch(e) {
-            alert("가입 오류: " + e.message);
-        }
-    };
-
-    window.findID = async () => {
-        const email = document.getElementById('find-id-email').value.trim();
-        const resultBox = document.getElementById('find-result-text-id');
-        
-        resultBox.innerHTML = "확인 중...";
-
-        try {
-            const userId = await findIDLogic(email); // 👈 모듈 함수 호출
-            
-            if(userId) {
-                resultBox.innerHTML = `
-                    <div class="text-center">
-                        <p class="text-sm text-gray-500 mb-2">회원님의 아이디는</p>
-                        <b class="text-[var(--volt)] text-2xl block mb-6">${userId}</b>
-                        <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:opacity-80 transition-colors">
-                            로그인 하러 가기
-                        </button>
-                    </div>
-                `;
-            } else {
-                resultBox.innerHTML = `<span style="color:#ef4444">가입된 정보가 없습니다.</span>`;
+        // --- 로그인 로직 ---
+        window.handleLogin = async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const pw = document.getElementById('login-pw').value;
+            if(!email || !pw) return alert("이메일과 비밀번호를 입력해주세요.");
+            try {
+                await signInWithEmailAndPassword(auth, email, pw);
+            } catch(e) {
+                alert("로그인 실패!\n" + e.message);
             }
-        } catch(e) {
-            alert("오류: " + e.message);
-            resultBox.innerHTML = `<span style="color:#ef4444">${e.message}</span>`;
-        }
-    };
+        };
 
-    window.findPW = async () => {
-        const targetId = document.getElementById('find-pw-id').value.trim();
-        const targetEmail = document.getElementById('find-pw-email').value.trim();
-        const resultBox = document.getElementById('find-result-text-pw');
-
-        resultBox.innerHTML = "확인 중...";
-
-        try {
-            const password = await findPWLogic(targetId, targetEmail); // 👈 모듈 함수 호출
-            
-            if(password) {
-                 resultBox.innerHTML = `
-                    <div class="text-center">
-                        <p class="text-sm text-gray-500 mb-2">회원님의 비밀번호는</p>
-                        <b class="text-[var(--volt)] text-2xl block mb-6">${password}</b>
-                        <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:opacity-80 transition-colors">
-                            로그인 하러 가기
-                        </button>
-                    </div>
-                `;
+        // --- 상태 변화 감지 ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = "index.html";
             } else {
-                 resultBox.innerHTML = `<span style="color:#ef4444">비밀번호 정보 없음.</span>`;
+                document.getElementById('login-screen').style.display = 'flex';
             }
-        } catch(e) {
-            alert("오류: " + e.message);
-            resultBox.innerHTML = `<span style="color:#ef4444">${e.message}</span>`;
+        });
+
+        // --- 회원가입 및 찾기 기능 ---
+        window.checkDuplicateID = async () => {
+            const idInput = document.getElementById('reg-custom-id');
+            const val = idInput.value.trim();
+            const msg = document.getElementById('msg-id');
+            
+            if(val.length < 4) { alert("아이디는 4글자 이상이어야 합니다."); idInput.focus(); return; }
+            
+            try {
+                const q = query(ref(db, 'users'), orderByChild('userId'), equalTo(val));
+                const snap = await get(q);
+                msg.style.display = 'block';
+                if(snap.exists()) {
+                    msg.innerText = "이미 존재하는 아이디입니다."; msg.style.color = "#ef4444"; isIdChecked = false;
+                } else {
+                    msg.innerText = "사용 가능한 아이디입니다."; msg.style.color = "#22c55e"; isIdChecked = true;
+                }
+            } catch(e) {
+                alert("오류: " + e.message);
+            }
+        };
+
+        window.checkDuplicateNick = async () => {
+            const val = document.getElementById('reg-nick').value.trim();
+            const msg = document.getElementById('msg-nick');
+            if(val.length < 2) { alert("2글자 이상 입력하세요."); return; }
+
+            const q = query(ref(db, 'users'), orderByChild('nickname'), equalTo(val));
+            const snap = await get(q);
+            msg.style.display = 'block';
+            if(snap.exists()) {
+                msg.innerText = "이미 존재하는 닉네임입니다."; msg.style.color = "#ef4444"; isNickChecked = false;
+            } else {
+                msg.innerText = "사용 가능합니다."; msg.style.color = "#22c55e"; isNickChecked = true;
+            }
+        };
+
+        window.checkPwMatch = () => {
+            const pw = document.getElementById('reg-pw').value;
+            const pw2 = document.getElementById('reg-pw2').value;
+            const msg = document.getElementById('msg-pw');
+            if(pw2 === "") { msg.style.display = 'none'; return; }
+            msg.style.display = 'block';
+            if(pw === pw2) {
+                msg.innerText = "일치합니다."; msg.style.color = "#22c55e";
+            } else {
+                msg.innerText = "불일치합니다."; msg.style.color = "#ef4444";
+            }
+        };
+
+        window.handleSignup = async () => {
+            const email = document.getElementById('reg-email').value.trim();
+            const customId = document.getElementById('reg-custom-id').value.trim();
+            const nick = document.getElementById('reg-nick').value.trim();
+            const pw = document.getElementById('reg-pw').value;
+            const pw2 = document.getElementById('reg-pw2').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+            
+            const y = document.getElementById('reg-year').value;
+            const m = document.getElementById('reg-month').value;
+            const d = document.getElementById('reg-day').value;
+            const dob = `${y}-${m}-${d}`;
+
+            if(!email || !pw || !name || !phone) return alert("필수 정보를 입력하세요.");
+            if(!customId) return alert("아이디를 입력하세요.");
+            if(!isIdChecked) return alert("아이디 중복확인 필수.");
+            if(!isNickChecked) return alert("닉네임 중복확인 필수.");
+            if(pw !== pw2) return alert("비밀번호 불일치.");
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pw);
+                await set(ref(db, 'users/' + cred.user.uid), {
+                    userId: customId,
+                    nickname: nick,
+                    email: email,
+                    realName: name,
+                    phone: phone,
+                    dob: dob,
+                    password: pw, // 보안상 비권장하지만 요청대로 유지
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nick}`
+                });
+                alert("가입 완료! 자동 로그인됩니다.");
+                closeModal('modal-signup');
+            } catch(e) {
+                alert("가입 오류: " + e.message);
+            }
+        };
+
+        window.findID = async () => {
+            const email = document.getElementById('find-id-email').value.trim();
+            const resultBox = document.getElementById('find-result-text-id');
+            
+            if(!email) return alert("이메일을 입력하세요.");
+            resultBox.innerHTML = "확인 중...";
+
+            try {
+                const q = query(ref(db, 'users'), orderByChild('email'), equalTo(email));
+                const snap = await get(q);
+                
+                if(snap.exists()) {
+                    const data = Object.values(snap.val())[0];
+                    if (data.userId) {
+                        resultBox.innerHTML = `
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500 mb-2">회원님의 아이디는</p>
+                                <b class="text-[var(--volt)] text-2xl block mb-6">${data.userId}</b>
+                                <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:opacity-80 transition-colors">
+                                    로그인 하러 가기
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        resultBox.innerHTML = `<span style="color:#ef4444">아이디 정보가 없습니다.</span>`;
+                    }
+                } else {
+                    resultBox.innerHTML = `<span style="color:#ef4444">가입된 정보가 없습니다.</span>`;
+                }
+            } catch(e) {
+                alert("오류: " + e.message);
+            }
+        };
+
+        window.findPW = async () => {
+            const targetId = document.getElementById('find-pw-id').value.trim();
+            const targetEmail = document.getElementById('find-pw-email').value.trim();
+            const resultBox = document.getElementById('find-result-text-pw');
+
+            if(!targetId || !targetEmail) return alert("모두 입력하세요.");
+            resultBox.innerHTML = "확인 중...";
+
+            try {
+                const q = query(ref(db, 'users'), orderByChild('userId'), equalTo(targetId));
+                const snap = await get(q);
+
+                if(snap.exists()) {
+                    const data = Object.values(snap.val())[0];
+                    if(data.email === targetEmail) {
+                        if (data.password) {
+                             resultBox.innerHTML = `
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500 mb-2">회원님의 비밀번호는</p>
+                                    <b class="text-[var(--volt)] text-2xl block mb-6">${data.password}</b>
+                                    <button onclick="closeModal('modal-find')" class="w-full bg-[var(--volt)] text-white font-bold py-3 rounded-xl hover:opacity-80 transition-colors">
+                                        로그인 하러 가기
+                                    </button>
+                                </div>
+                             `;
+                        } else {
+                             resultBox.innerHTML = `<span style="color:#ef4444">비밀번호 정보 없음.</span>`;
+                        }
+                    } else {
+                        resultBox.innerHTML = `<span style="color:#ef4444">이메일 불일치.</span>`;
+                    }
+                } else {
+                    resultBox.innerHTML = `<span style="color:#ef4444">존재하지 않는 아이디.</span>`;
+                }
+            } catch(e) {
+                alert("오류: " + e.message);
+            }
+        };
+
+        window.openModal = (id) => document.getElementById(id).style.display = 'flex';
+        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+            document.getElementById(`btn-${tab}`).classList.add('active');
         }
-    };
 
-    // --- 기타 UI 함수 (그대로 유지) ---
-    window.openModal = (id) => document.getElementById(id).style.display = 'flex';
-    window.closeModal = (id) => document.getElementById(id).style.display = 'none';
-    window.switchTab = (tab) => {
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(`tab-${tab}`).style.display = 'block';
-        document.getElementById(`btn-${tab}`).classList.add('active');
-    }
-
-    window.onload = () => {
-        const y = document.getElementById('reg-year');
-        const m = document.getElementById('reg-month');
-        const d = document.getElementById('reg-day');
-        const curr = new Date().getFullYear();
-        for(let i=curr; i>=1950; i--) y.add(new Option(i+'년', i));
-        for(let i=1; i<=12; i++) m.add(new Option(i+'월', i));
-        for(let i=1; i<=31; i++) d.add(new Option(i+'일', i));
-    }
-</script>
+        window.onload = () => {
+            const y = document.getElementById('reg-year');
+            const m = document.getElementById('reg-month');
+            const d = document.getElementById('reg-day');
+            const curr = new Date().getFullYear();
+            for(let i=curr; i>=1950; i--) y.add(new Option(i+'년', i));
+            for(let i=1; i<=12; i++) m.add(new Option(i+'월', i));
+            for(let i=1; i<=31; i++) d.add(new Option(i+'일', i));
+        }
+    </script>
 </head>
 <body class="flex justify-center h-screen w-full bg-[var(--bg-main)] text-[var(--text-main)]">
 
