@@ -17,7 +17,7 @@
         /* --- 테마 설정 (White Mode Fixed) --- */
         :root { 
             --volt: #2563eb;         /* 파랑 */
-            --bg-main: #f0f4f8;      /* 밝은 배경 */
+            --bg-main: #ffffff;      /* 밝은 배경 */
             --bg-card: #ffffff;      /* 흰색 카드 */
             --bg-sub: #e5e7eb;       /* 서브 배경 */
             --text-main: #1a1a1a;    /* 검정 텍스트 */
@@ -129,12 +129,22 @@
             outline: none;
             font-weight: bold;
         }
+        html, body {
+            height: auto !important;
+            overflow-y: auto !important;
+            position: static !important;
+        }
+
+        .app-content {
+            min-height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 </head>
 <body class="bg-[var(--bg-main)]">
 
-    <div class="w-full max-w-md mx-auto p-5 pb-32">
-        <h1 class="text-2xl font-black italic font-sport tracking-tighter mb-6">SETTINGS</h1>
+    <div class="app-content w-full max-w-md mx-auto p-5 pb-32">
 
         <div class="bg-[var(--bg-card)] rounded-2xl p-5 mb-6 flex items-center gap-4 border border-[var(--border-color)] shadow-sm relative overflow-hidden">
             <div class="absolute top-0 right-0 w-24 h-24 bg-[var(--volt)] opacity-10 blur-2xl rounded-full pointer-events-none"></div>

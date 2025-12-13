@@ -14,101 +14,101 @@
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
+    <main class="app-content">
+        <div class="scaffold">
+            <div class="safe-area">
+                
+                <div class="header-section">
+                    <div class="distance-display">
+                        <span id="displayDist">0.00</span>
+                    </div>
+                    <div class="unit-label">
+                        <span>이동거리</span>
+                        <span>km</span>
+                    </div>
+                </div>
 
-    <div class="scaffold">
-        <div class="safe-area">
-            
-            <div class="header-section">
-                <div class="distance-display">
-                    <span id="displayDist">0.00</span>
+                <div class="divider"></div>
+
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <div class="metric-label">시간</div>
+                        <div class="metric-value" id="valTime">00:00</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">평균 페이스</div>
+                        <div class="metric-value" id="valPace">0'00"</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">칼로리</div>
+                        <div class="metric-value" id="valCal">0</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">현재 속도</div>
+                        <div class="metric-value" id="valSpeed">0.0</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">평균 속도</div>
+                        <div class="metric-value" id="valAvgSpeed">0.0</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">케이던스</div>
+                        <div class="metric-value" id="valCadence">0</div>
+                    </div>
                 </div>
-                <div class="unit-label">
-                    <span>이동거리</span>
-                    <span>km</span>
+
+                <div class="divider" style="opacity: 0.5; margin-top: 20px;"></div>
+
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="gps-status" id="gpsStatus">GPS 연결 중...</div>
                 </div>
+
             </div>
 
-            <div class="divider"></div>
+            <div class="bottom-controls">
+                
+                <div id="controlReady" class="control-group">
+                    <button id="btnLoad" class="icon-btn-circle">
+                        <span class="material-icons">download</span>
+                    </button>
+                    <button id="btnStart" class="start-btn">
+                        S T A R T
+                    </button>
+                    <div style="width: 50px;"></div> </div>
 
-            <div class="metrics-grid">
-                <div class="metric-item">
-                    <div class="metric-label">시간</div>
-                    <div class="metric-value" id="valTime">00:00</div>
+                <div id="controlRunning" class="control-group hidden">
+                    <button id="btnPause" class="action-btn pause">
+                        <span class="material-icons">pause</span>
+                    </button>
+                    <button id="btnStopRun" class="action-btn stop">
+                        <span class="material-icons">stop</span>
+                    </button>
                 </div>
-                <div class="metric-item">
-                    <div class="metric-label">평균 페이스</div>
-                    <div class="metric-value" id="valPace">0'00"</div>
+
+                <div id="controlPaused" class="control-group hidden">
+                    <button id="btnResume" class="action-btn resume">
+                        <span class="material-icons">play_arrow</span>
+                    </button>
+                    <button id="btnStopPaused" class="action-btn stop">
+                        <span class="material-icons">stop</span>
+                    </button>
                 </div>
-                <div class="metric-item">
-                    <div class="metric-label">칼로리</div>
-                    <div class="metric-value" id="valCal">0</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">현재 속도</div>
-                    <div class="metric-value" id="valSpeed">0.0</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">평균 속도</div>
-                    <div class="metric-value" id="valAvgSpeed">0.0</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">케이던스</div>
-                    <div class="metric-value" id="valCadence">0</div>
-                </div>
+
             </div>
 
-            <div class="divider" style="opacity: 0.5; margin-top: 20px;"></div>
-
-            <div class="map-container">
-                <div id="map"></div>
-                <div class="gps-status" id="gpsStatus">GPS 연결 중...</div>
+            <div id="loadModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span>저장된 코스 불러오기</span>
+                        <button id="closeLoadBtn" class="close-icon"><span class="material-icons">close</span></button>
+                    </div>
+                    <ul id="savedList" class="saved-list"></ul>
+                </div>
             </div>
 
         </div>
-
-        <div class="bottom-controls">
-            
-            <div id="controlReady" class="control-group">
-                <button id="btnLoad" class="icon-btn-circle">
-                    <span class="material-icons">download</span>
-                </button>
-                <button id="btnStart" class="start-btn">
-                    S T A R T
-                </button>
-                <div style="width: 50px;"></div> </div>
-
-            <div id="controlRunning" class="control-group hidden">
-                <button id="btnPause" class="action-btn pause">
-                    <span class="material-icons">pause</span>
-                </button>
-                <button id="btnStopRun" class="action-btn stop">
-                    <span class="material-icons">stop</span>
-                </button>
-            </div>
-
-            <div id="controlPaused" class="control-group hidden">
-                <button id="btnResume" class="action-btn resume">
-                    <span class="material-icons">play_arrow</span>
-                </button>
-                <button id="btnStopPaused" class="action-btn stop">
-                    <span class="material-icons">stop</span>
-                </button>
-            </div>
-
-        </div>
-
-        <div id="loadModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span>저장된 코스 불러오기</span>
-                    <button id="closeLoadBtn" class="close-icon"><span class="material-icons">close</span></button>
-                </div>
-                <ul id="savedList" class="saved-list"></ul>
-            </div>
-        </div>
-
-    </div>
-
+    </main>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="run_running.js"></script>
     <script src="layout.js"></script>

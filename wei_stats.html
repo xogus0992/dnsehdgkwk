@@ -11,60 +11,56 @@
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
+    <main class="app-content">
+        <div class="scaffold">
+            <div class="safe-area app-content">
 
-    <div class="scaffold">
-        <div class="safe-area">
-            
-            <div class="header-section">
-                <div class="page-title">STATISTICS</div>
-            </div>
-
-            <div class="filter-card">
-                <div class="date-inputs">
-                    <input type="date" id="startDate">
-                    <span class="tilde">~</span>
-                    <input type="date" id="endDate">
-                </div>
-                <button id="btnSearch" class="search-btn">
-                    <span class="material-icons">search</span> 조회
-                </button>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-header-row">
-                    <span class="chart-title">운동 볼륨 추이</span>
-                    <div class="legend-hint">단위: kg</div>
-                </div>
-                
-                <div id="statsTabs" class="stats-tabs-container">
+                <div class="filter-card">
+                    <div class="date-inputs">
+                        <input type="date" id="startDate">
+                        <span class="tilde">~</span>
+                        <input type="date" id="endDate">
                     </div>
-
-                <div class="chart-wrapper">
-                    <canvas id="volumeChart"></canvas>
+                    <button id="btnSearch" class="search-btn">
+                        <span class="material-icons">search</span> 조회
+                    </button>
                 </div>
-            </div>
 
-            <div class="summary-row">
-                <div class="summary-box">
-                    <span class="label">운동 횟수</span>
-                    <span class="val" id="totalCount">0회</span>
+                <div class="chart-container">
+                    <div class="chart-header-row">
+                        <span class="chart-title">운동 볼륨 추이</span>
+                        <div class="legend-hint">단위: kg</div>
+                    </div>
+                    
+                    <div id="statsTabs" class="stats-tabs-container">
+                        </div>
+
+                    <div class="chart-wrapper">
+                        <canvas id="volumeChart"></canvas>
+                    </div>
                 </div>
-                <div class="summary-box">
-                    <span class="label">선택 부위 볼륨</span>
-                    <span class="val" id="totalVolumeSum">0kg</span>
+
+                <div class="summary-row">
+                    <div class="summary-box">
+                        <span class="label">운동 횟수</span>
+                        <span class="val" id="totalCount">0회</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="label">선택 부위 볼륨</span>
+                        <span class="val" id="totalVolumeSum">0kg</span>
+                    </div>
                 </div>
+
+                <div class="divider"></div>
+
+                <div class="list-container">
+                    <div class="list-title">기록 내역</div>
+                    <ul id="recentRecordList" class="record-list"></ul>
+                </div>
+
             </div>
-
-            <div class="divider"></div>
-
-            <div class="list-container">
-                <div class="list-title">기록 내역</div>
-                <ul id="recentRecordList" class="record-list"></ul>
-            </div>
-
         </div>
-    </div>
-
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="exercises.js"></script> 
     <script src="wei_stats.js"></script>
