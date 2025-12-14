@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -307,48 +308,78 @@
         // ===============================================
         // 6. 핵심 기능: 포켓몬 프로필 데이터 로드
         // ===============================================
-        window.loadPokemonProfile = async (pokemonId) => {
+        window.loadPokemonProfile = (pokemonId) => {
             const profileContent = document.getElementById('profile-content');
-            
-            profileContent.classList.add('opacity-100'); 
+            profileContent.classList.add('opacity-100');
 
+            // 1. 더미 데이터 (ID가 없거나 dummy_test일 때)
             if (!pokemonId || pokemonId === 'dummy_test') {
-                // 🆕 랭킹, 점수 더미 데이터 추가
                 const dummyData = {
-                    rank: 15, // 랭킹
-                    score: 2500, // 점수
-                    battle: { wins: 30, loses: 10, draws: 0 }, 
+                    rank: 15,
+                    score: 2500,
+                    battle: { wins: 30, loses: 10 }
                 };
                 updateUI(dummyData);
                 currentPokemonId = 'dummy_test'; 
                 allBattleHistory = dummyBattleHistory;
+                return;
+            }
 
-            } else {
-                // ⭐️ 실제 Firebase 데이터 로드 ⭐️
+            // 2. 실제 Firebase 데이터 로드 (실시간 연동)
+            // ★ 중요: 'users/' + 닉네임 경로에서 데이터를 가져옵니다.
+            const userRef = db.ref('users/' + pokemonId);
+
+            userRef.on('value', (snap) => {
                 try {
-                    const snap = await db.ref(`pokemon_profiles/${pokemonId}`).once('value');
-                    
-                    if (snap.exists()) {
-                        const data = snap.val();
-                        // ⭐️ 실제 데이터 구조가 { rank: 15, score: 2500, battle: { ... }, ...} 형태여야 합니다.
-                        updateUI(data);
-                        allBattleHistory = data.battleHistory || []; 
+                    const data = snap.val();
+
+                    if (data) {
+                        // (1) 기록 데이터 변환 (객체 -> 리스트)
+                        let historyList = [];
+                        if (data.battleHistory) {
+                            historyList = Object.values(data.battleHistory);
+                        }
+
+                        // (2) 승/패 직접 계산 (게임에서 숫자 계산을 안 해주므로 여기서 함)
+                        let wins = 0;
+                        let losses = 0;
+                        historyList.forEach(record => {
+                            if (record.result === "승리") wins++;
+                            else if (record.result === "패배") losses++;
+                        });
+
+                        // (3) 화면 업데이트용 데이터 만들기
+                        const uiData = {
+                            rank: '--',       // 랭킹은 일단 비워둠
+                            score: (wins * 500) + (losses * 50), // 점수 계산 예시
+                            battle: {
+                                wins: wins,
+                                loses: losses
+                            }
+                        };
+
+                        // 화면 갱신
+                        updateUI(uiData);
+                        
+                        // 전역 변수에 기록 저장 (날짜 내림차순 정렬)
+                        allBattleHistory = historyList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
                     } else {
-                        updateUI({}); 
+                        // 데이터가 없는 경우 (첫 방문)
+                        updateUI({ battle: { wins: 0, loses: 0 } });
                         allBattleHistory = [];
                     }
-                    currentPokemonId = pokemonId; 
+                    currentPokemonId = pokemonId;
 
                 } catch (error) {
-                    console.error("🔥 포켓몬 프로필 로드 실패:", error);
-                    updateUI({}); 
-                    allBattleHistory = [];
+                    console.error("🔥 데이터 로드 오류:", error);
                 }
-            }
-            
+            });
+
+            // 필터 초기화
             document.getElementById('battle-history').classList.add('hidden');
             currentFilter = null;
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         };
 
         // ===============================================
@@ -362,12 +393,23 @@
         };
 
         // 페이지 로드시 실행
-        window.onload = () => {
+       window.onload = () => {
             loadTheme();
             const urlParams = new URLSearchParams(window.location.search);
-            currentPokemonId = urlParams.get('id'); 
+            let targetId = urlParams.get('id'); 
 
-            loadPokemonProfile(currentPokemonId || 'dummy_test'); 
+            // 1. 주소에 ID가 없다면? -> 내 저장된 닉네임 찾아보기
+            if (!targetId) {
+                const savedNickname = localStorage.getItem('pokerun_name');
+                if (savedNickname && savedNickname !== "Trainer") {
+                    targetId = savedNickname; // 내 닉네임으로 설정
+                    // (선택사항) 주소창도 예쁘게 바꿔주기
+                    window.history.replaceState({}, '', `?id=${targetId}`);
+                }
+            }
+
+            // 2. 그래도 없으면? -> 더미 데이터 보여주기
+            loadPokemonProfile(targetId || 'dummy_test'); 
         };
     </script>
 </body>

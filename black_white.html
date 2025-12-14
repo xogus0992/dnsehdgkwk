@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6,9 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>RUN: POKEMON CLUB ULTIMATE</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="layout.css">
@@ -214,28 +215,62 @@
         };
 
         const app = {
-            init: () => {
-                if(state.inventory.length === 0) {
+            saveData: () => {
+        if (!state.nickname) return;
+        const userRef = window.fb.ref(window.fb.db, 'users/' + state.nickname + '/userData');
+        window.fb.update(userRef, {
+            coins: state.coins,
+            inventory: state.inventory,
+            team: state.team,
+            lastSave: Date.now()
+        });
+    },
+            init: async () => {
+                const myId = state.nickname;
+                let loaded = false;
+
+                // 1. 서버에서 데이터(포켓몬, 돈) 가져오기
+                if (myId) {
+                    try {
+                        const snapshot = await window.fb.get(window.fb.ref(window.fb.db, 'users/' + myId + '/userData'));
+                        if (snapshot.exists()) {
+                            const data = snapshot.val();
+                            state.coins = data.coins || 0;
+                            state.inventory = data.inventory || [];
+                            state.team = data.team || [null, null, null];
+                            loaded = true;
+                            showToast(`${myId}님의 데이터를 불러왔습니다!`);
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // 2. 데이터가 없으면(첫 시작이면) 기본 포켓몬 지급
+                if (!loaded && state.inventory.length === 0) {
                     app.addPokemon({id: 25, name: 'Pikachu', type: 'electric', rank: 'A', hp: 100, atk: 55, move: 'Thunderbolt'}, true);
                     app.addPokemon({id: 6, name: 'Charizard', type: 'fire', rank: 'S', hp: 160, atk: 90, move: 'Flamethrower'}, true);
                     app.addPokemon({id: 9, name: 'Blastoise', type: 'water', rank: 'A', hp: 140, atk: 75, move: 'Hydro Pump'}, true);
                     state.team = [state.inventory[1], state.inventory[0], state.inventory[2]];
+                    state.coins = 5000;
+                    app.saveData(); // 바로 저장
                 }
+
                 app.updateCoins(0);
                 app.nav('lobby');
             },
 
             addPokemon: (pkm, silent=false) => {
-                pkm.uid = Date.now() + Math.random();
-                pkm.sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
-                pkm.static = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
-                pkm.level = 1;
-                pkm.maxHp = pkm.hp;
-                pkm.currentHp = pkm.hp;
-                if(!pkm.move) pkm.move = 'Tackle';
-                state.inventory.push(pkm);
-                if(!silent) showToast(`Got ${pkm.name}!`);
-            },
+        pkm.uid = Date.now() + Math.random();
+        pkm.sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
+        pkm.static = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
+        pkm.level = 1;
+        pkm.maxHp = pkm.hp;
+        pkm.currentHp = pkm.hp;
+        if(!pkm.move) pkm.move = 'Tackle';
+        state.inventory.push(pkm);
+        if(!silent) showToast(`Got ${pkm.name}!`);
+        
+        app.saveData(); // 저장 기능 추가됨
+    },
 
             updateCoins: (amt) => {
                 state.coins += amt;
@@ -720,26 +755,86 @@
                     }
                 }
             },
-
             endBattle: (win) => {
                 state.battle.active = false;
                 app.updateCoins(win ? 500 : 50);
+
+                // 현재 닉네임 가져오기 (없으면 Trainer)
+                const myId = state.nickname || 'Trainer';
+
+                // ▼▼▼ [수정됨] 닉네임 기준으로 저장 ▼▼▼
+                try {
+                    const battleRecord = {
+                        date: new Date().toLocaleString('ko-KR'),
+                        result: win ? "승리" : "패배",
+                        myNickname: myId,
+                        myPokemon: state.battle.myTeam.filter(p => p).map(p => p.name), 
+                        opponentNickname: state.battle.role === 'guest' ? 'Host' : 'Guest',
+                        opponentPokemon: state.battle.enemyTeam.filter(p => p).map(p => p.name), 
+                        reason: win ? "멋진 승부!" : "아쉬운 패배"
+                    };
+
+                    // Firebase 경로: users/닉네임/battleHistory
+                    if (window.fb) {
+                        const historyRef = window.fb.ref(window.fb.db, 'users/' + myId + '/battleHistory');
+                        window.fb.push(historyRef, battleRecord);
+                        console.log("닉네임으로 기록 저장 완료:", myId);
+                    }
+                } catch (err) {
+                    console.error("저장 중 오류:", err);
+                }
+                // ▲▲▲ [수정 종료] ▲▲▲
+
                 const overlay = document.createElement('div');
                 overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+                
                 overlay.innerHTML = `
                     <div class="relative mb-6">
                         <div class="absolute inset-0 ${win ? 'bg-[var(--volt)]' : 'bg-red-500'} blur-[80px] opacity-30 rounded-full animate-pulse"></div>
                         <h1 class="text-7xl font-sport font-black italic relative z-10 ${win?'text-[var(--volt)]':'text-gray-500'} tracking-tighter">${win?'VICTORY':'DEFEAT'}</h1>
                     </div>
-                    <div class="bg-white px-8 py-3 rounded-full mb-8 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg"><span class="text-black font-bold text-xl">+${win?500:50} Coins</span></div>
-                    <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl">RETURN HOME</button>
+                    
+                    <div class="bg-white px-8 py-3 rounded-full mb-8 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg">
+                        <span class="text-black font-bold text-xl">+${win?500:50} Coins</span>
+                    </div>
+
+                    <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl mb-4">
+                        RETURN HOME
+                    </button>
+
+                    <button onclick="location.href='pk_profile.html?id=${myId}'" class="bg-white text-black border-2 border-black px-12 py-3 rounded-full font-bold hover:bg-gray-100 transition-transform shadow-md">
+                        내 전적 보기 &rarr;
+                    </button>
                 `;
                 $('app').appendChild(overlay);
             }
         };
+        window.onload = () => {
+            // 1. 저장된 닉네임이 있는지 확인
+            let myName = localStorage.getItem('pokerun_name');
 
-        window.app = app;
-        app.init();
+            // 2. 없으면 물어보기 (최초 1회)
+            if (!myName) {
+                myName = prompt("포켓런에 오신 것을 환영합니다!\n사용하실 닉네임을 입력해주세요:", "");
+                
+                // 취소하거나 빈칸이면 랜덤 이름 생성
+                if (!myName || myName.trim() === "") {
+                    myName = "Trainer_" + Math.floor(Math.random() * 9999);
+                }
+                // 입력받은 이름 영구 저장
+                localStorage.setItem('pokerun_name', myName);
+            }
+
+            // 3. 게임 내부 변수에 닉네임 적용
+            if (typeof state !== 'undefined') {
+                state.nickname = myName;
+            }
+
+            // 4. 앱 초기화 및 게임 시작
+            window.app = app;
+            app.init();
+        };
+        // ▲▲▲ [수정 끝] ▲▲▲
     </script>
 </body>
 </html>

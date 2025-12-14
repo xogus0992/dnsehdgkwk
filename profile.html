@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6,15 +7,23 @@
     <title>POKE RUN: PROFILE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="layout.css">
-
     <style>
-
+        /* --- 1. 기본 테마 (다크 모드) 변수 --- */
         :root { 
+            --volt: #ccff00; 
+            --bg-main: #000000; 
+            --bg-card: #111111; 
+            --bg-sub: #222222; /* 서브 배경/버튼 색상 추가 */
+            --text-main: #ffffff; 
+            --text-sub: #9ca3af; 
+            --border-color: #262626; 
+        }
+        
+        /* ⚪ 2. 화이트 모드 디자인 변수 적용 (추가) */
+        [data-theme="light"] {
             --volt: #2563eb;          
-            --bg-main: #ffffff;       
+            --bg-main: #f0f4f8;       
             --bg-card: #ffffff;       
             --bg-sub: #e5e7eb;        
             --text-main: #1a1a1a;     
@@ -23,15 +32,11 @@
         }
 
         html, body { 
-            width: 100%;
-            min-height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow-y: auto;
-            position: static;
+            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; 
             background: var(--bg-main); 
             color: var(--text-main); 
             font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            transition: background-color 0.3s, color 0.3s; /* 전환 효과 추가 */
             touch-action: pan-y; 
         }
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
@@ -55,9 +60,15 @@
 
     <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col shadow-2xl border-x border-[var(--border-color)] sm:border-x-0">
         
-        <main class="app-content overflow-y-auto">
+        <main class="flex-1 overflow-y-auto pb-20 scrollbar-hide">
             
-            <div class="px-4 pt-6 pb-6">
+            <div class="absolute top-4 right-4 z-10"> 
+                <button onclick="toggleTheme()" class="text-[var(--text-main)] hover:text-[var(--volt)] transition-colors p-2 rounded-full active:bg-[var(--bg-card)]">
+                    <i id="theme-icon" data-lucide="sun-moon" class="w-6 h-6 drop-shadow-md"></i>
+                </button>
+            </div>
+
+            <div class="px-4 pt-14 pb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="relative group cursor-pointer" onclick="openEditProfileModal()">
                         <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
@@ -209,7 +220,29 @@
             </div>
         </div>
 
-
+        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30">
+            <button onclick="location.href='log.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">피드</span>
+            </button>
+            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="clapperboard" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">릴스</span>
+            </button>
+            <div class="relative w-16 flex justify-center z-10">
+                <button onclick="location.href='upload.html'" class="absolute bottom-2 bg-[var(--volt)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)]">
+                    <i data-lucide="plus" class="w-7 h-7"></i>
+                </button>
+            </div>
+            <button onclick="location.reload()" class="flex-1 flex flex-col items-center gap-1 text-[var(--volt)] pb-1">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">프로필</span>
+            </button>
+            <button onclick="location.href='settings.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">설정</span>
+            </button>
+        </nav>
     </div>
 
     <script type="module">
@@ -217,13 +250,49 @@
         import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         
-        const firebaseConfig = { apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle", storageBucket: "firebasestorage.app", messagingSenderId: "445300582484", appId: "1:445300582484:web:f8f1373a3bbf643face5c1" };
+        const firebaseConfig = { apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle", storageBucket: "pokbattle.firebasestorage.app", messagingSenderId: "445300582484", appId: "1:445300582484:web:f8f1373a3bbf643face5c1" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
         let currentUser = null;
         let currentOpenPostId = null;
+
+        // --- ⚙️ 테마 전환 기능 (추가) ---
+        function updateThemeIcon(isLight) {
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                 if(isLight) {
+                    icon.setAttribute('data-lucide', 'moon'); // 화이트 모드일 때 달 아이콘
+                 } else {
+                    icon.setAttribute('data-lucide', 'sun-moon'); // 다크 모드일 때 해/달 아이콘
+                 }
+                 lucide.createIcons(); 
+            }
+        }
+        
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const isLight = savedTheme === 'light';
+            if (isLight) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+            updateThemeIcon(isLight);
+        }
+
+        window.toggleTheme = () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                updateThemeIcon(false);
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                updateThemeIcon(true);
+            }
+        };
+        // ----------------------------------------------------
 
         onAuthStateChanged(auth, (user) => {
             if(user) {
@@ -302,6 +371,7 @@
             const content = document.getElementById('user-list-content');
             
             modal.classList.remove('hidden');
+            // [수정] 텍스트 색상 변수 사용
             content.innerHTML = "<div class='text-center p-4 text-[var(--text-sub)]'>로딩 중...</div>"; 
 
             let refPath = "";
@@ -315,6 +385,7 @@
 
             const snapshot = await get(ref(db, refPath));
             if(!snapshot.exists()) {
+                // [수정] 텍스트 색상 변수 사용
                 content.innerHTML = "<div class='text-center p-4 text-[var(--text-sub)]'>목록이 비어있습니다.</div>";
                 return;
             }
@@ -332,9 +403,11 @@
                     const isFollowingSnap = await get(ref(db, `users/${currentUser.uid}/following/${uid}`));
                     const isFollowing = isFollowingSnap.exists();
                     const btnText = isFollowing ? "언팔로우" : "팔로우";
+                    // [수정] 언팔로우 버튼 색상 변수 사용 (bg-gray-800 -> bg-gray-600)
                     const btnClass = isFollowing ? "bg-gray-600 text-white" : "bg-[var(--volt)] text-black";
 
                     const item = document.createElement('div');
+                    // [수정] 테두리 색상 변수 사용
                     item.className = "flex items-center justify-between p-3 border-b border-[var(--border-color)]";
                     item.innerHTML = `
                         <div class="flex items-center gap-3">
@@ -547,6 +620,7 @@
             document.getElementById('tab-content-reels').classList.add('hidden');
             document.getElementById('tab-content-tags').classList.add('hidden');
             
+            // [수정] 비활성화 탭의 텍스트 색상을 변수 기반으로 변경
             ['posts', 'reels', 'tags'].forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
                 btn.className = "flex-1 py-3 flex justify-center text-[var(--text-sub)]"; 
@@ -554,6 +628,7 @@
 
             document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
             
+            // [수정] 활성화 탭의 텍스트와 테두리 색상을 변수 기반으로 유지
             const activeBtn = document.getElementById(`tab-btn-${tabName}`);
             activeBtn.className = "flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center text-[var(--text-main)]";
             
@@ -561,36 +636,56 @@
         }
 
         lucide.createIcons();
+        
+        // ⭐️ 페이지 로드 시 테마 적용 (추가)
+        document.addEventListener('DOMContentLoaded', loadTheme);
     </script>
-
     <iframe id="hProfileFrame" 
         src="" 
         frameborder="0" 
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9000; visibility: hidden;">
-    </iframe>
+</iframe>
 
-    <script>
-        // ------------------------------------
-        // H Profile 로드/닫기 함수 추가
-        // ------------------------------------
+<script>
+    // ------------------------------------
+    // H Profile 로드/닫기 함수 추가
+    // ------------------------------------
 
-        window.loadHProfile = function() {
-            const iframe = document.getElementById('hProfileFrame');
-            iframe.src = 'h_profile.html'; 
-            iframe.style.visibility = 'visible';
-            document.body.style.overflow = 'hidden'; 
-        }
-
-        window.closeHProfile = function() {
-            const iframe = document.getElementById('hProfileFrame');
-            iframe.style.visibility = 'hidden';
-            iframe.src = '';
-            document.body.style.overflow = '';
-        }
+    /**
+     * H 프로필 파일을 <iframe>에 로드하고 보이도록 설정합니다.
+     * 이 함수는 중앙 릴스 버튼에서 호출됩니다.
+     */
+    window.loadHProfile = function() {
+        const iframe = document.getElementById('hProfileFrame');
         
-        // 이외 기존 window.switchTab, window.saveProfile 등 다른 모든 코드는 그대로 유지합니다.
-    </script>
-    <script src="layout.js"></script>
+        // 1. <iframe>의 src를 'h profile.html'로 설정하여 로드 시작
+        iframe.src = 'h_profile.html'; 
+        
+        // 2. <iframe>을 화면 전체에 보이도록 설정
+        iframe.style.visibility = 'visible';
+        
+        // 3. 메인 프로필 페이지 스크롤 방지
+        document.body.style.overflow = 'hidden'; 
+    }
 
+    /**
+     * <iframe> 내의 H 프로필 페이지를 닫고 메인 프로필 페이지로 돌아옵니다.
+     * 이 함수는 h profile.html 내부의 '닫기' 버튼에서 호출됩니다.
+     */
+    window.closeHProfile = function() {
+        const iframe = document.getElementById('hProfileFrame');
+        
+        // 1. <iframe> 숨기기
+        iframe.style.visibility = 'hidden';
+        
+        // 2. 메모리 해제 및 재사용을 위해 src 비우기
+        iframe.src = '';
+        
+        // 3. 스크롤 복구
+        document.body.style.overflow = '';
+    }
+    
+    // 이외 기존 window.switchTab, window.saveProfile 등 다른 모든 코드는 그대로 유지합니다.
+</script>
 </body>
 </html>
