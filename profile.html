@@ -1,691 +1,182 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POKE RUN: PROFILE</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="layout.css">
+
     <style>
-        /* --- 1. 기본 테마 (다크 모드) 변수 --- */
         :root { 
-            --volt: #ccff00; 
-            --bg-main: #000000; 
-            --bg-card: #111111; 
-            --bg-sub: #222222; /* 서브 배경/버튼 색상 추가 */
-            --text-main: #ffffff; 
-            --text-sub: #9ca3af; 
-            --border-color: #262626; 
-        }
-        
-        /* ⚪ 2. 화이트 모드 디자인 변수 적용 (추가) */
-        [data-theme="light"] {
-            --volt: #2563eb;          
-            --bg-main: #f0f4f8;       
-            --bg-card: #ffffff;       
-            --bg-sub: #e5e7eb;        
-            --text-main: #1a1a1a;     
-            --text-sub: #4b5563;      
-            --border-color: #cccccc;  
+            --volt: #2563eb; 
+            --bg-main: #f0f4f8; 
+            --bg-card: #ffffff; 
+            --bg-sub: #e5e7eb; 
+            --text-main: #1a1a1a; 
+            --text-sub: #4b5563; 
+            --border-color: #d1d5db; 
         }
 
         html, body { 
-            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; 
-            background: var(--bg-main); 
-            color: var(--text-main); 
-            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
-            transition: background-color 0.3s, color 0.3s; /* 전환 효과 추가 */
-            touch-action: pan-y; 
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            touch-action: pan-y;
         }
+
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        
-        /* 모달 애니메이션 */
-        .modal-enter { animation: modalFadeIn 0.2s ease-out forwards; }
-        .modal-exit { animation: modalFadeOut 0.2s ease-in forwards; }
-        
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes modalFadeOut {
-            from { opacity: 1; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.95); }
-        }
     </style>
 </head>
+
 <body class="flex justify-center h-screen bg-[var(--bg-main)]">
 
-    <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col shadow-2xl border-x border-[var(--border-color)] sm:border-x-0">
-        
-        <main class="flex-1 overflow-y-auto pb-20 scrollbar-hide">
-            
-            <div class="absolute top-4 right-4 z-10"> 
-                <button onclick="toggleTheme()" class="text-[var(--text-main)] hover:text-[var(--volt)] transition-colors p-2 rounded-full active:bg-[var(--bg-card)]">
-                    <i id="theme-icon" data-lucide="sun-moon" class="w-6 h-6 drop-shadow-md"></i>
-                </button>
-            </div>
+<div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col border-x border-[var(--border-color)] sm:border-x-0">
 
-            <div class="px-4 pt-14 pb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="relative group cursor-pointer" onclick="openEditProfileModal()">
-                        <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
-                            <img id="my-profile-img" class="w-full h-full rounded-full border-2 border-[var(--bg-main)] object-cover bg-[var(--bg-card)]">
-                        </div>
-                        <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-black rounded-full p-1 border-2 border-[var(--bg-main)]"><i data-lucide="pencil" class="w-3 h-3"></i></div>
+    <main class="flex-1 overflow-y-auto pb-24 scrollbar-hide">
+
+        <div class="px-4 pt-14 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="relative group cursor-pointer" onclick="openEditProfileModal()">
+                    <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
+                        <img id="my-profile-img" class="w-full h-full rounded-full border-2 border-[var(--bg-main)] object-cover bg-[var(--bg-card)]">
                     </div>
-                    
-                    <div class="flex-1 flex justify-around text-[var(--text-main)] ml-4">
-                        <div class="flex flex-col items-center">
-                            <span id="post-count" class="font-bold text-lg">0</span>
-                            <span class="text-xs text-[var(--text-sub)]">게시물</span> </div>
-                        <button onclick="openUserListModal('followers')" class="flex flex-col items-center hover:bg-white/5 rounded-lg p-1 transition active:scale-95">
-                            <span id="follower-count" class="font-bold text-lg">0</span>
-                            <span class="text-xs text-[var(--text-sub)]">팔로워</span> </button>
-                        <button onclick="openUserListModal('following')" class="flex flex-col items-center hover:bg-white/5 rounded-lg p-1 transition active:scale-95">
-                            <span id="following-count" class="font-bold text-lg">0</span>
-                            <span class="text-xs text-[var(--text-sub)]">팔로잉</span> </button>
+                    <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-black rounded-full p-1 border-2 border-[var(--bg-main)]">
+                        <i data-lucide="pencil" class="w-3 h-3"></i>
                     </div>
                 </div>
-                
-                <div class="mb-5">
-                    <h3 id="my-profile-name" class="font-bold text-sm">Loading...</h3>
-                    <p id="my-profile-bio" class="text-xs text-[var(--text-sub)] mt-1">상태 메시지를 입력해주세요.</p> </div>
-                
-                <div class="flex gap-2 text-sm font-bold">
-                    <button onclick="openEditProfileModal()" class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)] active:scale-95 transition text-[var(--text-main)]">프로필 편집</button>
-                    <button class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)] active:scale-95 transition text-[var(--text-main)]">프로필 공유</button>
+
+                <div class="flex-1 flex justify-around ml-4">
+                    <div class="flex flex-col items-center">
+                        <span id="post-count" class="font-bold text-lg">0</span>
+                        <span class="text-xs text-[var(--text-sub)]">게시물</span>
+                    </div>
+                    <button onclick="openUserListModal('followers')" class="flex flex-col items-center">
+                        <span id="follower-count" class="font-bold text-lg">0</span>
+                        <span class="text-xs text-[var(--text-sub)]">팔로워</span>
+                    </button>
+                    <button onclick="openUserListModal('following')" class="flex flex-col items-center">
+                        <span id="following-count" class="font-bold text-lg">0</span>
+                        <span class="text-xs text-[var(--text-sub)]">팔로잉</span>
+                    </button>
                 </div>
             </div>
 
-            <div class="flex border-t border-[var(--border-color)]">
-                <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center text-[var(--text-main)]">
-                    <i data-lucide="grid-3x3" class="w-5 h-5"></i>
-                </button>
-                
-                <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
-                    <i data-lucide="clapperboard" class="w-5 h-5"></i>
-                </button>
-                
-                <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
-                    <i data-lucide="user-check" class="w-5 h-5"></i>
-                </button>
+            <div class="mb-5">
+                <h3 id="my-profile-name" class="font-bold text-sm">Loading...</h3>
+                <p id="my-profile-bio" class="text-xs text-[var(--text-sub)] mt-1">상태 메시지를 입력해주세요.</p>
             </div>
 
-            <div id="tab-content-posts">
-                <div id="my-post-grid" class="grid grid-cols-3 gap-0.5 pb-2">
-                    <div class="bg-[var(--bg-sub)] aspect-square animate-pulse"></div>
-                    <div class="bg-[var(--bg-sub)] aspect-square animate-pulse"></div>
-                    <div class="bg-[var(--bg-sub)] aspect-square animate-pulse"></div>
-                </div>
-                <div id="no-posts-msg" class="hidden py-20 text-center text-[var(--text-sub)]"> <div class="flex justify-center mb-2"><i data-lucide="camera" class="w-10 h-10 opacity-50"></i></div>
-                    <p class="text-sm">아직 게시물이 없습니다.</p>
-                </div>
+            <div class="flex gap-2 text-sm font-bold">
+                <button onclick="openEditProfileModal()" class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)]">프로필 편집</button>
+                <button class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)]">프로필 공유</button>
             </div>
+        </div>
 
-            <div id="tab-content-reels" class="hidden p-4">
-                <iframe id="reelsContentFrame" 
-                        src="h_profile.html" 
-                        frameborder="0" 
-                        style="width: 100%; height: 80vh; border: none; overflow: auto; background-color: var(--bg-main);">
-                </iframe>
+        <div class="flex border-t border-[var(--border-color)]">
+            <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center">
+                <i data-lucide="grid-3x3"></i>
+            </button>
+            <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
+                <i data-lucide="clapperboard"></i>
+            </button>
+            <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
+                <i data-lucide="user-check"></i>
+            </button>
+        </div>
+
+        <div id="tab-content-posts">
+            <div id="my-post-grid" class="grid grid-cols-3 gap-0.5"></div>
+            <div id="no-posts-msg" class="hidden py-20 text-center text-[var(--text-sub)]">
+                <i data-lucide="camera" class="mx-auto mb-2"></i>
+                <p>아직 게시물이 없습니다.</p>
             </div>
+        </div>
 
-                <div id="tab-content-tags" class="hidden p-4"> 
-    <iframe id="pkProfileContentFrame" 
-            src="pk_profile.html" 
-            frameborder="0" 
-            style="width: 100%; height: 80vh; border: none; overflow: auto; background-color: var(--bg-main);">
-    </iframe>
+        <div id="tab-content-reels" class="hidden p-4">
+            <iframe src="h_profile.html" style="width:100%;height:80vh;border:none"></iframe>
+        </div>
+
+        <div id="tab-content-tags" class="hidden p-4">
+            <iframe src="pk_profile.html" style="width:100%;height:80vh;border:none"></iframe>
+        </div>
+
+    </main>
+
 </div>
-        </main>
 
-        <div id="modal-user-list" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="w-full max-w-sm bg-[var(--bg-card)] rounded-xl overflow-hidden shadow-2xl border border-[var(--border-color)] flex flex-col max-h-[70vh]">
-                <div class="px-4 py-3 flex items-center justify-between border-b border-[var(--border-color)]">
-                    <span id="user-list-title" class="font-bold text-sm">목록</span>
-                    <button onclick="closeUserListModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                </div>
-                <div id="user-list-content" class="flex-1 overflow-y-auto p-2 scrollbar-hide">
-                    </div>
-            </div>
-        </div>
+<script src="layout.js"></script>
 
-        <div id="edit-profile-modal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="w-full max-w-sm bg-[var(--bg-card)] rounded-xl overflow-hidden shadow-2xl border border-[var(--border-color)]">
-                <div class="px-4 py-3 flex items-center justify-between border-b border-[var(--border-color)]">
-                    <span class="font-bold text-sm">프로필 편집</span>
-                    <button onclick="closeEditProfileModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                </div>
-                <div class="p-6 flex flex-col items-center">
-                    <div class="relative group cursor-pointer mb-6" onclick="document.getElementById('edit-profile-img-input').click()">
-                         <div class="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
-                            <img id="edit-profile-preview" class="w-full h-full rounded-full border-2 border-[var(--bg-main)] object-cover bg-[var(--bg-card)]">
-                        </div>
-                        <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-black rounded-full p-1.5 border-2 border-[var(--bg-main)]">
-                            <i data-lucide="camera" class="w-4 h-4"></i>
-                        </div>
-                        <input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="previewProfileImage(this)">
-                    </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-                    <div class="w-full space-y-4">
-                        <div>
-                            <label class="text-xs text-[var(--text-sub)] mb-1 block">닉네임</label>
-                            <input type="text" id="edit-nickname" class="w-full bg-[var(--bg-sub)] text-[var(--text-main)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--volt)] placeholder-[var(--text-sub)]" placeholder="닉네임 입력">
-                        </div>
-                        <div>
-                            <label class="text-xs text-[var(--text-sub)] mb-1 block">상태 메시지</label>
-                            <textarea id="edit-bio" rows="3" class="w-full bg-[var(--bg-sub)] text-[var(--text-main)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--volt)] placeholder-[var(--text-sub)] resize-none" placeholder="자신을 소개해보세요."></textarea>
-                        </div>
-                    </div>
+const firebaseConfig = {
+    apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
+    authDomain: "pokbattle.firebaseapp.com",
+    databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
+    projectId: "pokbattle",
+    storageBucket: "pokbattle.firebasestorage.app",
+    messagingSenderId: "445300582484",
+    appId: "1:445300582484:web:f8f1373a3bbf643face5c1"
+};
 
-                    <button id="btn-save-profile" onclick="saveProfile()" class="w-full mt-6 bg-[var(--volt)] hover:bg-[#b3e600] text-black font-bold py-3 rounded-lg transition active:scale-95">
-                        완료
-                    </button>
-                </div>
-            </div>
-        </div>
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-        <div id="post-modal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closePostModal()">
-            <div class="w-full max-w-sm bg-[var(--bg-card)] rounded-xl overflow-hidden shadow-2xl border border-[var(--border-color)] modal-enter" onclick="event.stopPropagation()">
-                <div class="px-4 py-3 flex items-center justify-between border-b border-[var(--border-color)]">
-                    <div class="flex items-center gap-2">
-                        <img id="modal-avatar" class="w-6 h-6 rounded-full bg-[var(--bg-sub)]">
-                        <span id="modal-username" class="font-bold text-sm">Username</span>
-                    </div>
-                    <button id="delete-post-btn" class="text-red-500 hidden hover:bg-white/10 p-1 rounded transition" onclick="deleteCurrentPost()">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
-                </div>
-                <div class="w-full h-auto bg-black flex items-center justify-center relative min-h-[300px]">
-                    <img id="modal-image" class="w-full h-auto object-contain max-h-[70vh]">
-                </div>
-                <div class="p-4">
-                    <div class="flex gap-4 mb-3">
-                        <div class="flex items-center gap-1">
-                            <i data-lucide="heart" class="w-6 h-6 text-[var(--volt)] fill-[var(--volt)]"></i>
-                            <span id="modal-likes" class="font-bold text-sm">0</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <i data-lucide="message-circle" class="w-6 h-6"></i>
-                            <span id="modal-comments" class="font-bold text-sm">0</span>
-                        </div>
-                        <i data-lucide="send" class="w-6 h-6 transform -rotate-45 mb-1 ml-auto"></i>
-                    </div>
-                    <div id="modal-content" class="text-sm mt-2 text-[var(--text-main)]"></div>
-                    <div id="modal-date" class="text-[10px] text-[var(--text-sub)] mt-2 uppercase"></div>
-                </div>
-            </div>
-        </div>
+let currentUser = null;
+let currentOpenPostId = null;
 
-        <nav class="w-full bg-[var(--bg-main)] border-t border-[var(--border-color)] px-2 py-4 flex justify-between items-end pb-8 z-30">
-            <button onclick="location.href='log.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="home" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">피드</span>
-            </button>
-            <button onclick="location.href='reels.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="clapperboard" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">릴스</span>
-            </button>
-            <div class="relative w-16 flex justify-center z-10">
-                <button onclick="location.href='upload.html'" class="absolute bottom-2 bg-[var(--volt)] text-black p-3.5 rounded-full border-4 border-[var(--bg-main)]">
-                    <i data-lucide="plus" class="w-7 h-7"></i>
-                </button>
-            </div>
-            <button onclick="location.reload()" class="flex-1 flex flex-col items-center gap-1 text-[var(--volt)] pb-1">
-                <i data-lucide="user" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">프로필</span>
-            </button>
-            <button onclick="location.href='settings.html'" class="flex-1 flex flex-col items-center gap-1 text-[var(--text-sub)] pb-1">
-                <i data-lucide="settings" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold">설정</span>
-            </button>
-        </nav>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-        
-        const firebaseConfig = { apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", authDomain: "pokbattle.firebaseapp.com", databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", projectId: "pokbattle", storageBucket: "pokbattle.firebasestorage.app", messagingSenderId: "445300582484", appId: "1:445300582484:web:f8f1373a3bbf643face5c1" };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-
-        let currentUser = null;
-        let currentOpenPostId = null;
-
-        // --- ⚙️ 테마 전환 기능 (추가) ---
-        function updateThemeIcon(isLight) {
-            const icon = document.getElementById('theme-icon');
-            if (icon) {
-                 if(isLight) {
-                    icon.setAttribute('data-lucide', 'moon'); // 화이트 모드일 때 달 아이콘
-                 } else {
-                    icon.setAttribute('data-lucide', 'sun-moon'); // 다크 모드일 때 해/달 아이콘
-                 }
-                 lucide.createIcons(); 
-            }
-        }
-        
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            const isLight = savedTheme === 'light';
-            if (isLight) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-            updateThemeIcon(isLight);
-        }
-
-        window.toggleTheme = () => {
-            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            if (isLight) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('theme', 'dark');
-                updateThemeIcon(false);
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                updateThemeIcon(true);
-            }
-        };
-        // ----------------------------------------------------
-
-        onAuthStateChanged(auth, (user) => {
-            if(user) {
-                currentUser = user;
-                updateProfileUI(user);
-                loadMyPosts(user.uid);
-                loadFollowStats(user.uid);
-            } else {
-                location.href = 'home.html';
-            }
-        });
-
-        async function updateProfileUI(user) {
-            document.getElementById('my-profile-name').innerText = user.displayName || "러너";
-            const userRef = ref(db, `users/${user.uid}`);
-            const snapshot = await get(userRef);
-            let bio = "상태 메시지를 입력해주세요.";
-            let profileImg = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
-
-            if(snapshot.exists()) {
-                const val = snapshot.val();
-                if(val.bio) bio = val.bio;
-                if(val.avatar) profileImg = val.avatar;
-            }
-
-            document.getElementById('my-profile-bio').innerText = bio;
-            document.getElementById('my-profile-img').src = profileImg;
-            document.getElementById('edit-profile-preview').src = profileImg;
-        }
-
-        function loadFollowStats(uid) {
-            const followersRef = ref(db, `users/${uid}/followers`);
-            const followingRef = ref(db, `users/${uid}/following`);
-
-            onValue(followersRef, (snapshot) => {
-                const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
-                document.getElementById('follower-count').innerText = count;
-            });
-
-            onValue(followingRef, (snapshot) => {
-                const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
-                document.getElementById('following-count').innerText = count;
-            });
-        }
-
-        window.toggleFollow = async (targetUid) => {
-            if(!currentUser) return;
-            const myUid = currentUser.uid;
-            
-            const followingRef = ref(db, `users/${myUid}/following/${targetUid}`);
-            const snapshot = await get(followingRef);
-            const isFollowing = snapshot.exists();
-
-            const updates = {};
-            if(isFollowing) {
-                updates[`users/${myUid}/following/${targetUid}`] = null;
-                updates[`users/${targetUid}/followers/${myUid}`] = null;
-                alert("언팔로우 했습니다.");
-            } else {
-                updates[`users/${myUid}/following/${targetUid}`] = true;
-                updates[`users/${targetUid}/followers/${myUid}`] = true;
-                alert("팔로우 했습니다.");
-            }
-            
-            await update(ref(db), updates);
-            
-            const modalTitle = document.getElementById('user-list-title').innerText;
-            if(modalTitle === "팔로워") openUserListModal('followers');
-            else if(modalTitle === "팔로잉") openUserListModal('following');
-        };
-
-        window.openUserListModal = async (type) => {
-            if(!currentUser) return;
-            const modal = document.getElementById('modal-user-list');
-            const title = document.getElementById('user-list-title');
-            const content = document.getElementById('user-list-content');
-            
-            modal.classList.remove('hidden');
-            // [수정] 텍스트 색상 변수 사용
-            content.innerHTML = "<div class='text-center p-4 text-[var(--text-sub)]'>로딩 중...</div>"; 
-
-            let refPath = "";
-            if(type === 'followers') {
-                title.innerText = "팔로워";
-                refPath = `users/${currentUser.uid}/followers`;
-            } else {
-                title.innerText = "팔로잉";
-                refPath = `users/${currentUser.uid}/following`;
-            }
-
-            const snapshot = await get(ref(db, refPath));
-            if(!snapshot.exists()) {
-                // [수정] 텍스트 색상 변수 사용
-                content.innerHTML = "<div class='text-center p-4 text-[var(--text-sub)]'>목록이 비어있습니다.</div>";
-                return;
-            }
-
-            const uids = Object.keys(snapshot.val());
-            content.innerHTML = ""; 
-
-            for(const uid of uids) {
-                const userSnap = await get(ref(db, `users/${uid}`));
-                if(userSnap.exists()) {
-                    const uData = userSnap.val();
-                    const uName = uData.nickname || "알 수 없음";
-                    const uAvatar = uData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
-                    
-                    const isFollowingSnap = await get(ref(db, `users/${currentUser.uid}/following/${uid}`));
-                    const isFollowing = isFollowingSnap.exists();
-                    const btnText = isFollowing ? "언팔로우" : "팔로우";
-                    // [수정] 언팔로우 버튼 색상 변수 사용 (bg-gray-800 -> bg-gray-600)
-                    const btnClass = isFollowing ? "bg-gray-600 text-white" : "bg-[var(--volt)] text-black";
-
-                    const item = document.createElement('div');
-                    // [수정] 테두리 색상 변수 사용
-                    item.className = "flex items-center justify-between p-3 border-b border-[var(--border-color)]";
-                    item.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <img src="${uAvatar}" class="w-10 h-10 rounded-full bg-[var(--bg-sub)] object-cover">
-                            <span class="font-bold text-sm text-[var(--text-main)]">${uName}</span>
-                        </div>
-                        <button onclick="toggleFollow('${uid}')" class="${btnClass} text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                            ${btnText}
-                        </button>
-                    `;
-                    content.appendChild(item);
-                }
-            }
-        };
-
-        window.closeUserListModal = () => {
-            document.getElementById('modal-user-list').classList.add('hidden');
-        };
-
-        function loadMyPosts(userId) {
-            const grid = document.getElementById('my-post-grid');
-            const postsRef = ref(db, 'posts');
-
-            onValue(postsRef, (snapshot) => {
-                grid.innerHTML = "";
-                const data = snapshot.val();
-                
-                if (!data) {
-                    showNoPosts();
-                    return;
-                }
-
-                const myPosts = Object.entries(data)
-                    .filter(([key, post]) => post.author === userId)
-                    .sort((a, b) => b[1].timestamp - a[1].timestamp);
-                
-                document.getElementById('post-count').innerText = myPosts.length;
-
-                if (myPosts.length === 0) {
-                    showNoPosts();
-                    return;
-                }
-
-                document.getElementById('no-posts-msg').classList.add('hidden');
-
-                myPosts.forEach(([key, post]) => {
-                    const div = document.createElement('div');
-                    div.className = "relative h-32 bg-black cursor-pointer group overflow-hidden mb-1"; 
-                    div.onclick = () => openPostModal(post, key);
-
-                    const likesCount = post.likes ? Object.keys(post.likes).length : 0;
-                    const commentsCount = post.comments ? Object.keys(post.comments).length : 0;
-
-                    div.innerHTML = `
-                        <img src="${post.image}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy">
-                        <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center gap-4 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div class="flex items-center"><i data-lucide="heart" class="w-5 h-5 mr-1 fill-white"></i> ${likesCount}</div>
-                            <div class="flex items-center"><i data-lucide="message-circle" class="w-5 h-5 mr-1 fill-white"></i> ${commentsCount}</div>
-                        </div>
-                    `;
-                    grid.appendChild(div);
-                });
-                lucide.createIcons();
-            });
-        }
-
-        function showNoPosts() {
-            document.getElementById('my-post-grid').innerHTML = "";
-            document.getElementById('no-posts-msg').classList.remove('hidden');
-            document.getElementById('post-count').innerText = "0";
-        }
-
-        window.openPostModal = (post, postId) => {
-            currentOpenPostId = postId;
-            const modal = document.getElementById('post-modal');
-            const likes = post.likes ? Object.keys(post.likes).length : 0;
-            const comments = post.comments ? Object.keys(post.comments).length : 0;
-
-            document.getElementById('modal-image').src = post.image;
-            document.getElementById('modal-avatar').src = post.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author}`;
-            document.getElementById('modal-username').innerText = post.authorName;
-            document.getElementById('modal-likes').innerText = likes;
-            document.getElementById('modal-comments').innerText = comments;
-            document.getElementById('modal-content').innerText = post.content;
-            document.getElementById('modal-date').innerText = new Date(post.timestamp).toLocaleDateString();
-
-            const deleteBtn = document.getElementById('delete-post-btn');
-            if(currentUser && post.author === currentUser.uid) {
-                deleteBtn.classList.remove('hidden');
-            } else {
-                deleteBtn.classList.add('hidden');
-            }
-
-            modal.classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.closePostModal = () => {
-            document.getElementById('post-modal').classList.add('hidden');
-            currentOpenPostId = null;
-        };
-
-        window.deleteCurrentPost = async () => {
-            if(!currentOpenPostId) return;
-            if(confirm("정말로 이 게시물을 삭제하시겠습니까?")) {
-                try {
-                    await remove(ref(db, `posts/${currentOpenPostId}`));
-                    closePostModal();
-                } catch(e) {
-                    console.error("삭제 실패", e);
-                    alert("게시물 삭제 중 오류가 발생했습니다.");
-                }
-            }
-        };
-
-        window.openEditProfileModal = () => {
-            if(!currentUser) return;
-            document.getElementById('edit-nickname').value = document.getElementById('my-profile-name').innerText;
-            const currentBio = document.getElementById('my-profile-bio').innerText;
-            document.getElementById('edit-bio').value = (currentBio === "상태 메시지를 입력해주세요.") ? "" : currentBio;
-            document.getElementById('edit-profile-preview').src = document.getElementById('my-profile-img').src;
-            
-            document.getElementById('edit-profile-modal').classList.remove('hidden');
-        };
-
-        window.closeEditProfileModal = () => {
-            document.getElementById('edit-profile-modal').classList.add('hidden');
-        };
-
-        window.previewProfileImage = (input) => {
-            if(input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('edit-profile-preview').src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        };
-
-        window.saveProfile = async () => {
-            if (!currentUser) return;
-            
-            const saveBtn = document.getElementById('btn-save-profile');
-            const originalText = saveBtn.innerText;
-            saveBtn.innerText = "저장 중...";
-            saveBtn.disabled = true;
-
-            const newNickname = document.getElementById('edit-nickname').value.trim();
-            const newBio = document.getElementById('edit-bio').value.trim();
-            const newPhotoURL = document.getElementById('edit-profile-preview').src;
-
-            if (!newNickname) {
-                alert("닉네임을 입력해주세요.");
-                saveBtn.innerText = originalText; saveBtn.disabled = false;
-                return;
-            }
-
-            try {
-                let authUpdates = { displayName: newNickname };
-                if (!newPhotoURL.startsWith("data:image")) {
-                    authUpdates.photoURL = newPhotoURL;
-                }
-                await updateProfile(currentUser, authUpdates);
-
-                const updates = {};
-                updates[`users/${currentUser.uid}/nickname`] = newNickname;
-                updates[`users/${currentUser.uid}/bio`] = newBio;
-                updates[`users/${currentUser.uid}/avatar`] = newPhotoURL;
-                updates[`users/${currentUser.uid}/photoURL`] = newPhotoURL;
-                
-                await update(ref(db), updates);
-
-                const postsSnapshot = await get(ref(db, 'posts'));
-                if (postsSnapshot.exists()) {
-                    const postsData = postsSnapshot.val();
-                    const postUpdates = {};
-                    let hasUpdates = false;
-
-                    for (const key in postsData) {
-                        if (postsData[key].author === currentUser.uid) {
-                            postUpdates[`posts/${key}/authorName`] = newNickname;
-                            postUpdates[`posts/${key}/authorAvatar`] = newPhotoURL;
-                            hasUpdates = true;
-                        }
-                    }
-
-                    if (hasUpdates) {
-                        await update(ref(db), postUpdates);
-                    }
-                }
-
-                document.getElementById('my-profile-name').innerText = newNickname;
-                document.getElementById('my-profile-bio').innerText = newBio || "상태 메시지를 입력해주세요.";
-                document.getElementById('my-profile-img').src = newPhotoURL;
-                
-                closeEditProfileModal();
-                alert("프로필과 게시물이 업데이트되었습니다!");
-
-            } catch (error) {
-                console.error("저장 실패:", error);
-                alert("저장 중 오류가 발생했습니다: " + error.message);
-            } finally {
-                saveBtn.innerText = originalText;
-                saveBtn.disabled = false;
-            }
-        };
-
-        window.switchTab = (tabName) => {
-            document.getElementById('tab-content-posts').classList.add('hidden');
-            document.getElementById('tab-content-reels').classList.add('hidden');
-            document.getElementById('tab-content-tags').classList.add('hidden');
-            
-            // [수정] 비활성화 탭의 텍스트 색상을 변수 기반으로 변경
-            ['posts', 'reels', 'tags'].forEach(t => {
-                const btn = document.getElementById(`tab-btn-${t}`);
-                btn.className = "flex-1 py-3 flex justify-center text-[var(--text-sub)]"; 
-            });
-
-            document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
-            
-            // [수정] 활성화 탭의 텍스트와 테두리 색상을 변수 기반으로 유지
-            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-            activeBtn.className = "flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center text-[var(--text-main)]";
-            
-            lucide.createIcons();
-        }
-
-        lucide.createIcons();
-        
-        // ⭐️ 페이지 로드 시 테마 적용 (추가)
-        document.addEventListener('DOMContentLoaded', loadTheme);
-    </script>
-    <iframe id="hProfileFrame" 
-        src="" 
-        frameborder="0" 
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9000; visibility: hidden;">
-</iframe>
-
-<script>
-    // ------------------------------------
-    // H Profile 로드/닫기 함수 추가
-    // ------------------------------------
-
-    /**
-     * H 프로필 파일을 <iframe>에 로드하고 보이도록 설정합니다.
-     * 이 함수는 중앙 릴스 버튼에서 호출됩니다.
-     */
-    window.loadHProfile = function() {
-        const iframe = document.getElementById('hProfileFrame');
-        
-        // 1. <iframe>의 src를 'h profile.html'로 설정하여 로드 시작
-        iframe.src = 'h_profile.html'; 
-        
-        // 2. <iframe>을 화면 전체에 보이도록 설정
-        iframe.style.visibility = 'visible';
-        
-        // 3. 메인 프로필 페이지 스크롤 방지
-        document.body.style.overflow = 'hidden'; 
+onAuthStateChanged(auth, (user) => {
+    if(user) {
+        currentUser = user;
+        updateProfileUI(user);
+        loadMyPosts(user.uid);
+        loadFollowStats(user.uid);
+    } else {
+        location.href = 'home.html';
     }
+});
 
-    /**
-     * <iframe> 내의 H 프로필 페이지를 닫고 메인 프로필 페이지로 돌아옵니다.
-     * 이 함수는 h profile.html 내부의 '닫기' 버튼에서 호출됩니다.
-     */
-    window.closeHProfile = function() {
-        const iframe = document.getElementById('hProfileFrame');
-        
-        // 1. <iframe> 숨기기
-        iframe.style.visibility = 'hidden';
-        
-        // 2. 메모리 해제 및 재사용을 위해 src 비우기
-        iframe.src = '';
-        
-        // 3. 스크롤 복구
-        document.body.style.overflow = '';
-    }
-    
-    // 이외 기존 window.switchTab, window.saveProfile 등 다른 모든 코드는 그대로 유지합니다.
+function updateProfileUI(user) {
+    document.getElementById('my-profile-name').innerText = user.displayName || "러너";
+}
+
+function loadFollowStats(uid) {
+    onValue(ref(db, `users/${uid}/followers`), s => {
+        document.getElementById('follower-count').innerText = s.exists() ? Object.keys(s.val()).length : 0;
+    });
+    onValue(ref(db, `users/${uid}/following`), s => {
+        document.getElementById('following-count').innerText = s.exists() ? Object.keys(s.val()).length : 0;
+    });
+}
+
+window.switchTab = function(tab) {
+    ['posts','reels','tags'].forEach(t=>{
+        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+        document.getElementById(`tab-btn-${t}`).className="flex-1 py-3 flex justify-center text-[var(--text-sub)]";
+    });
+    document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+    document.getElementById(`tab-btn-${tab}`).className="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center";
+    lucide.createIcons();
+};
+
+lucide.createIcons();
 </script>
+
 </body>
 </html>
+
