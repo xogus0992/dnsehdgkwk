@@ -7,7 +7,11 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Chakra Petch', 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; }
-body { background-color: var(--bg-color); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+
+html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--bg-color); }
+
+#app-content { width: 100%; height: 100%; position: relative; overflow: hidden; }
+.app-content-inner { width: 100%; height: 100%; display: flex; justify-content: center; }
 
 .scaffold {
     width: 100%; max-width: 450px; background-color: white;
@@ -16,18 +20,18 @@ body { background-color: var(--bg-color); display: flex; justify-content: center
 }
 
 .safe-area {
-    flex: 1; padding: 20px;
-    display: flex; flex-direction: column; overflow-y: auto;
+    flex: 1; padding: 15px; /* 20 -> 15 통일 */
+    display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 50px;
 }
 
 /* 헤더 */
-.header-section { margin-bottom: 20px; padding-top: 10px; }
+.header-section { margin-bottom: 15px; }
 .page-title { font-size: 28px; font-weight: 900; font-style: italic; color: #101213; }
 
 /* 1. 필터 카드 */
 .filter-card {
     background: white; border: 1px solid #eee; border-radius: var(--radius);
-    padding: 15px; margin-bottom: 20px; display: flex; gap: 10px;
+    padding: 10px; margin-bottom: 15px; display: flex; gap: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center;
 }
 .date-inputs { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 5px; }
@@ -35,13 +39,15 @@ input[type="date"] {
     flex: 1; height: 36px; border: 1px solid #ddd; border-radius: 6px;
     padding: 0 5px; font-size: 12px; background: var(--input-bg);
     font-family: 'Chakra Petch', sans-serif; font-weight: bold; color: #333;
+    min-width: 0; /* flex 이슈 방지 */
 }
 .tilde { font-weight: bold; color: #aaa; }
 .search-btn {
-    width: 70px; height: 36px; background-color: var(--primary);
+    width: 60px; height: 36px; background-color: var(--primary);
     color: white; border: none; border-radius: 6px; font-weight: bold;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px;
 }
+.search-btn:active { opacity: 0.8; }
 .search-btn span { font-size: 16px; }
 
 /* 2. 차트 영역 */
@@ -54,56 +60,55 @@ input[type="date"] {
 .chart-title { font-size: 14px; font-weight: 800; color: #333; }
 .legend-hint { font-size: 11px; color: var(--secondary); font-style: italic; }
 
-/* [NEW] 스크롤 탭 스타일 */
+/* 스크롤 탭 */
 .stats-tabs-container {
-    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px;
-    /* 스크롤바 숨기기 */
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px;
     -ms-overflow-style: none; scrollbar-width: none;
 }
 .stats-tabs-container::-webkit-scrollbar { display: none; }
 
 .stat-tab {
-    padding: 6px 14px; border-radius: 20px; background: #f0f0f0;
-    font-size: 12px; font-weight: bold; color: #777; cursor: pointer;
-    white-space: nowrap; transition: all 0.1s; border: 1px solid transparent;
+    padding: 6px 12px; border-radius: 20px; background: #f0f0f0;
+    font-size: 11px; font-weight: bold; color: #777; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s; border: 1px solid transparent;
 }
-.stat-tab:hover { background: #e0e0e0; }
 .stat-tab.active {
     background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(53, 134, 255, 0.3);
 }
 
-.chart-wrapper { height: 250px; width: 100%; }
+.chart-wrapper { height: 220px; width: 100%; position: relative; }
 
 /* 3. 요약 박스 */
-.summary-row { display: flex; gap: 15px; margin-bottom: 20px; }
+.summary-row { display: flex; gap: 10px; margin-bottom: 20px; }
 .summary-box {
     flex: 1; background: var(--input-bg); border-radius: var(--radius);
-    padding: 15px; display: flex; flex-direction: column; align-items: center;
+    padding: 15px 10px; display: flex; flex-direction: column; align-items: center;
 }
-.summary-box .label { font-size: 12px; color: var(--secondary); font-weight: bold; margin-bottom: 5px; }
-.summary-box .val { font-size: 18px; font-weight: 900; color: #333; font-style: italic; }
+.summary-box .label { font-size: 11px; color: var(--secondary); font-weight: bold; margin-bottom: 5px; }
+.summary-box .val { font-size: 16px; font-weight: 900; color: #333; font-style: italic; }
 
-.divider { height: 1px; background-color: #e0e0e0; margin-bottom: 20px; }
+.divider { height: 1px; background-color: #eee; margin-bottom: 20px; }
 
 /* 4. 기록 리스트 */
+.list-container { flex: 1; }
 .list-title { font-size: 16px; font-weight: 900; font-style: italic; margin-bottom: 15px; color: #101213; }
-.record-list { list-style: none; padding-bottom: 40px; }
+.record-list { list-style: none; padding-bottom: 20px; }
 
 .record-card {
     background: white; border: 1px solid #eee; border-radius: var(--radius);
-    padding: 15px; margin-bottom: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    padding: 12px; margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 .rc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.rc-date { font-size: 14px; font-weight: bold; color: #333; }
-.rc-name { font-size: 14px; color: var(--primary); font-weight: 900; font-style: italic; }
+.rc-date { font-size: 13px; font-weight: bold; color: #333; }
+.rc-name { font-size: 13px; color: var(--primary); font-weight: 900; font-style: italic; }
 
 .rc-body {
-    background: var(--input-bg); padding: 10px; border-radius: 8px;
-    font-size: 12px; color: #555; line-height: 1.6;
+    background: var(--input-bg); padding: 8px; border-radius: 8px;
+    font-size: 11px; color: #555; line-height: 1.5;
 }
 .rc-row { display: flex; justify-content: space-between; }
-.rc-ex-name { font-weight: bold; }
+.rc-ex-name { font-weight: bold; color: #444; }
 .rc-total {
-    text-align: right; margin-top: 8px; font-size: 14px; font-weight: 900; color: #101213;
+    text-align: right; margin-top: 6px; font-size: 13px; font-weight: 900; color: #101213;
 }

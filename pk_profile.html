@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -11,18 +10,7 @@
     <style>
         /* --- 1. 기본 테마 (다크 모드, BLACK) 변수 --- */
         :root { 
-            --volt: #2563eb; /* 블루 */
-            --bg-main: #ffffff;
-            --bg-card: #f3f4f6;
-            --bg-sub: #e5e7eb;
-            --text-main: #1f2937;
-            --text-sub: #6b7280;
-            --border-color: #d1d5db; 
-        }
-        
-        /* ⚪ 2. 화이트 모드 디자인 변수 적용 (WHITE) */
-        .white-mode {
-            --volt: #2563eb; /* 블루 */
+            --volt: #2563eb; 
             --bg-main: #ffffff;
             --bg-card: #f3f4f6;
             --bg-sub: #e5e7eb;
@@ -40,57 +28,72 @@
             transition: background-color 0.3s, color 0.3s;
         }
         .pokemon-img-list img {
-            width: 32px; /* 포켓몬 이미지 크기 조절 */
+            width: 32px;
             height: 32px;
             object-fit: contain;
             border-radius: 50%;
             border: 1px solid var(--border-color);
             background-color: white;
+            margin-right: -8px; /* 이미지 겹침 효과 */
+            position: relative;
+            z-index: 0;
         }
+        .pokemon-img-list img:hover {
+            z-index: 10;
+            transform: scale(1.1);
+        }
+        
+        /* 스크롤바 숨김 */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-[var(--bg-main)] min-h-screen"> 
+<body class="bg-[var(--bg-main)] min-h-screen scrollbar-hide"> 
     
-    <main class="max-w-xl mx-auto container">
-        <div id="profile-content" class="p-4 opacity-100 transition-opacity duration-500">
+    <main class="max-w-xl mx-auto container pb-10">
+        <div id="profile-content" class="p-4 opacity-0 transition-opacity duration-500">
             
             <div id="rank-info" class="pt-2 pb-4 mb-4 border-b border-[var(--border-color)]">
-                <div class="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-xl shadow">
+                <div class="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-xl shadow border border-[var(--border-color)]">
                     <div class="text-center flex-1">
-                        <i data-lucide="award" class="w-6 h-6 text-yellow-500 mx-auto"></i>
-                        <span id="player-rank" class="font-bold text-3xl font-sport text-yellow-500 block mt-1">--</span>
-                        <span class="text-xs text-[var(--text-sub)] block mt-1">랭킹 (순위)</span>
+                        <i data-lucide="award" class="w-8 h-8 text-yellow-500 mx-auto mb-1"></i>
+                        <span id="player-rank" class="font-bold text-3xl font-sport text-[var(--text-main)] block">--</span>
+                        <span class="text-xs text-[var(--text-sub)] block mt-1">RANK (순위)</span>
                     </div>
                     <div class="w-px h-12 bg-[var(--border-color)]"></div>
                     <div class="text-center flex-1">
-                        <i data-lucide="star" class="w-6 h-6 text-[var(--volt)] mx-auto"></i>
-                        <span id="player-score" class="font-bold text-3xl font-sport text-[var(--volt)] block mt-1">0</span>
-                        <span class="text-xs text-[var(--text-sub)] block mt-1">점수 (SCORE)</span>
+                        <i data-lucide="star" class="w-8 h-8 text-[var(--volt)] mx-auto mb-1"></i>
+                        <span id="player-score" class="font-bold text-3xl font-sport text-[var(--volt)] block">0</span>
+                        <span class="text-xs text-[var(--text-sub)] block mt-1">SCORE (점수)</span>
                     </div>
                 </div>
             </div>
             
             <div id="battle-records" class="pt-2"> 
-                <h4 class="text-lg font-bold font-sport text-[var(--volt)] mb-4 pb-2 border-b border-[var(--border-color)]">누적 대전 기록</h4> 
+                <h4 class="text-lg font-bold font-sport text-[var(--text-main)] mb-4 pb-2 border-b border-[var(--border-color)] flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5 text-[var(--volt)]"></i> 누적 대전 기록
+                </h4> 
                 
                 <div class="grid grid-cols-2 gap-3 text-center">
-                    <button id="btn-win" onclick="toggleBattleHistory('win')" class="bg-[var(--bg-sub)] p-4 rounded-xl shadow-lg transition-all hover:ring-2 hover:ring-[var(--volt)] active:ring-4 active:ring-[var(--volt)] active:scale-[0.98]">
-                        <span id="win-count-total" class="font-bold text-4xl font-sport text-green-400">0</span>
-                        <span class="text-xs text-[var(--text-sub)] block mt-1">WIN (승)</span>
+                    <button id="btn-win" onclick="toggleBattleHistory('win')" class="bg-[var(--bg-card)] p-4 rounded-xl shadow transition-all hover:border-[var(--volt)] border border-transparent active:scale-[0.98]">
+                        <span id="win-count-total" class="font-bold text-4xl font-sport text-green-500">0</span>
+                        <span class="text-xs text-[var(--text-sub)] block mt-1 font-bold">VICTORY (승)</span>
                     </button>
-                    <button id="btn-lose" onclick="toggleBattleHistory('lose')" class="bg-[var(--bg-sub)] p-4 rounded-xl shadow-lg transition-all hover:ring-2 hover:ring-[var(--volt)] active:ring-4 active:ring-[var(--volt)] active:scale-[0.98]">
-                        <span id="lose-count-total" class="font-bold text-4xl font-sport text-red-400">0</span>
-                        <span class="text-xs text-[var(--text-sub)] block mt-1">LOSE (패)</span>
+                    <button id="btn-lose" onclick="toggleBattleHistory('lose')" class="bg-[var(--bg-card)] p-4 rounded-xl shadow transition-all hover:border-red-500 border border-transparent active:scale-[0.98]">
+                        <span id="lose-count-total" class="font-bold text-4xl font-sport text-red-500">0</span>
+                        <span class="text-xs text-[var(--text-sub)] block mt-1 font-bold">DEFEAT (패)</span>
                     </button>
                 </div>
             </div>
             
-            <div id="battle-history" class="mt-6 hidden">
-                <h5 id="history-title" class="text-md font-bold text-[var(--text-main)] mb-3">전투 상세 기록</h5>
-                <ul id="history-list" class="space-y-2">
+            <div id="battle-history" class="mt-6 hidden transition-all duration-300">
+                <h5 id="history-title" class="text-md font-bold text-[var(--text-main)] mb-3 flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4"></i> 상세 기록
+                </h5>
+                <ul id="history-list" class="space-y-3 pb-10">
                     </ul>
             </div>
-            </div>
+        </div>
     </main>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -98,7 +101,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     
     <script>
-        // 🚨🚨🚨 사용자님의 Firebase 프로젝트 설정 🚨🚨🚨
+        // ----------------------------------------------------
+        // 🚨 Firebase 설정 (사용자 제공 설정 유지)
+        // ----------------------------------------------------
         const firebaseConfig = {
              apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
              authDomain: "pokbattle.firebaseapp.com",
@@ -110,42 +115,26 @@
         };
 
         const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.database();
         
         let currentPokemonId = null; 
+        let allBattleHistory = [];
+        let currentFilter = null; 
 
         // ----------------------------------------------------
-        // 1. 🆕 더미 데이터 수정: 포켓몬 필드를 3마리 배열로 변경
+        // 1. 더미 데이터 (서버 데이터 없을 시 사용)
         // ----------------------------------------------------
         const dummyBattleHistory = [
             { id: 1, date: "2025-12-09 14:30", result: "승리", 
               myNickname: "트레이너 Seocup", myPokemon: ["피카츄", "리자몽", "꼬부기"], 
-              opponentNickname: "라이벌 철수", opponentPokemon: ["라이츄", "이상해꽃", "망나뇽"], reason: "기술력 우위" },
-              
+              opponentNickname: "라이벌 철수", opponentPokemon: ["라이츄", "이상해꽃", "망나뇽"], reason: "상성 우위" },
             { id: 2, date: "2025-12-08 10:15", result: "패배", 
               myNickname: "트레이너 Seocup", myPokemon: ["파이리", "꼬렛", "버터플"], 
-              opponentNickname: "트레이너 유리", opponentPokemon: ["꼬부기", "뮤츠", "잠만보"], reason: "상성 불리" },
-              
-            { id: 3, date: "2025-12-07 18:00", result: "승리", 
-              myNickname: "트레이너 Seocup", myPokemon: ["피카츄", "푸린", "또가스"], 
-              opponentNickname: "체육관 관장", opponentPokemon: ["이상해씨", "라프라스", "팬텀"], reason: "스피드 우위" },
-              
-            { id: 4, date: "2025-12-06 09:00", result: "패배", 
-              myNickname: "트레이너 Seocup", myPokemon: ["파이리", "구구", "롱스톤"], 
-              opponentNickname: "레벨업 마스터", opponentPokemon: ["망나뇽", "프리져", "썬더"], reason: "레벨 차이" },
-              
-            { id: 5, date: "2025-12-05 12:00", result: "승리", 
-              myNickname: "트레이너 Seocup", myPokemon: ["리자몽", "뮤", "전룡"], 
-              opponentNickname: "전설의 트레이너", opponentPokemon: ["뮤츠", "칠색조", "루기아"], reason: "극적인 승리" },
+              opponentNickname: "트레이너 유리", opponentPokemon: ["꼬부기", "뮤츠", "잠만보"], reason: "화력 부족" }
         ];
         
-        // 전역 변수 설정
-        let allBattleHistory = [];
-        let currentFilter = null; // 'win', 'lose', or null
-        
         // ----------------------------------------------------
-        // 2. 포켓몬 이름과 외부 이미지 URL 매핑 (API 대체)
+        // 2. 포켓몬 이미지 URL 매핑
         // ----------------------------------------------------
         const POKEMON_URL_MAP = {
             "피카츄": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png",
@@ -159,60 +148,48 @@
             "버터플": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/12.png",
             "뮤츠": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png",
             "잠만보": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png",
-            "푸린": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/39.png",
-            "또가스": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/109.png",
-            "이상해씨": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
-            "라프라스": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/131.png",
             "팬텀": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png",
-            "구구": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/16.png",
-            "롱스톤": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/95.png",
-            "프리져": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/144.png",
-            "썬더": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/145.png",
-            "뮤": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/151.png",
-            "전룡": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/181.png",
-            "칠색조": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/250.png",
-            "루기아": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png",
-            // 매핑되는 포켓몬이 없을 경우 표시할 기본 이미지
             "DEFAULT": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
         };
         
         function getPokemonImageHTML(pokemonArray) {
-            
-            if (!pokemonArray || pokemonArray.length === 0) {
-                return '<span class="text-[var(--text-sub)] text-xs">조합 정보 없음</span>';
+            if (!pokemonArray || !Array.isArray(pokemonArray) || pokemonArray.length === 0) {
+                return '<span class="text-[var(--text-sub)] text-xs">정보 없음</span>';
             }
             
             const images = pokemonArray.map(name => {
                 const url = POKEMON_URL_MAP[name] || POKEMON_URL_MAP["DEFAULT"];
-                return `<img src="${url}" alt="${name}" title="${name}" class="inline-block mr-1">`;
+                return `<img src="${url}" alt="${name}" title="${name}" class="bg-white rounded-full border border-gray-200">`;
             }).join('');
             
-            return `<div class="pokemon-img-list flex items-center">${images}</div>`;
+            return `<div class="pokemon-img-list flex items-center pl-2">${images}</div>`;
         }
 
-
         // ----------------------------------------------------
-        // 3. 🆕 UI 업데이트 함수 수정 (랭킹, 점수 반영)
+        // 3. UI 업데이트
         // ----------------------------------------------------
         function updateUI(data) {
-            const battle = data.battle || {};
+            const battle = data.battle || { wins: 0, loses: 0 };
             
-            // 랭킹 및 점수 정보 업데이트
-            document.getElementById('player-rank').innerText = data.rank !== undefined ? data.rank + '위' : '--'; // 순위
-            document.getElementById('player-score').innerText = data.score !== undefined ? data.score.toLocaleString() : 0; // 점수 (콤마 표시)
+            document.getElementById('player-rank').innerText = data.rank ? data.rank : '--';
+            document.getElementById('player-score').innerText = data.score ? data.score.toLocaleString() : 0;
 
-            // 전적 탭 정보 업데이트
-            document.getElementById('win-count-total').innerText = battle.wins || 0;
-            document.getElementById('lose-count-total').innerText = battle.loses || 0;
+            document.getElementById('win-count-total').innerText = battle.wins;
+            document.getElementById('lose-count-total').innerText = battle.loses;
+            
+            // 페이지 페이드 인
+            document.getElementById('profile-content').classList.remove('opacity-0');
+            document.getElementById('profile-content').classList.add('opacity-100');
         }
 
         // ----------------------------------------------------
-        // 4. 배틀 기록 리스트 렌더링 함수 (이미지 삽입)
+        // 4. 리스트 렌더링
         // ----------------------------------------------------
         function renderBattleHistory(historyData, filter) {
             const historyList = document.getElementById('history-list');
             historyList.innerHTML = '';
             
+            // 필터링
             const filteredData = historyData.filter(record => {
                 if (filter === 'win') return record.result === "승리";
                 if (filter === 'lose') return record.result === "패배";
@@ -220,44 +197,53 @@
             });
             
             if (filteredData.length === 0) {
-                 historyList.innerHTML = `<li class="p-3 bg-[var(--bg-sub)] rounded-lg text-sm text-[var(--text-sub)] text-center">기록된 ${filter === 'win' ? '승리' : '패배'} 전투가 없습니다.</li>`;
+                 historyList.innerHTML = `<li class="p-6 bg-[var(--bg-card)] rounded-lg text-sm text-[var(--text-sub)] text-center border border-dashed border-[var(--border-color)]">
+                    기록된 ${filter === 'win' ? '승리' : '패배'} 전투가 없습니다.
+                 </li>`;
                  return;
             }
 
             filteredData.forEach(record => {
                 const isWin = record.result === "승리";
-                const resultClass = isWin ? 'text-green-400' : 'text-red-400';
-                const icon = isWin ? 'trophy' : 'swords';
+                const resultColor = isWin ? 'text-green-500' : 'text-red-500';
+                const resultBg = isWin ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+                const icon = isWin ? 'trophy' : 'x-circle';
                 
-                const myName = record.myNickname || '나 (Unknown)';
-                const opponentName = record.opponentNickname || '상대 (Unknown)';
-                
-                // 포켓몬 이미지 리스트 HTML 생성
+                // 내 포켓몬, 상대 포켓몬 이미지
                 const myPokemonHTML = getPokemonImageHTML(record.myPokemon);
                 const opponentPokemonHTML = getPokemonImageHTML(record.opponentPokemon);
 
                 const item = document.createElement('li');
-                item.className = "p-3 bg-[var(--bg-sub)] rounded-lg border border-[var(--border-color)] flex flex-col space-y-2 transition-all hover:shadow-xl hover:ring-2 hover:ring-[var(--volt)] cursor-pointer";
+                item.className = `p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow`;
                 
                 item.innerHTML = `
-                    <div class="flex justify-between items-start">
+                    <div class="flex justify-between items-start border-b border-[var(--border-color)] pb-2">
                         <div>
-                            <span class="font-bold ${resultClass} text-md">${record.result}</span>
-                            <p class="text-[10px] text-[var(--text-sub)] mt-0.5">
-                                ${record.date} | 사유: ${record.reason || '상세 정보 없음'}
-                            </p>
+                            <span class="font-bold ${resultColor} text-lg flex items-center gap-1">
+                                <i data-lucide="${icon}" class="w-5 h-5"></i> ${record.result}
+                            </span>
+                            <p class="text-xs text-[var(--text-sub)] mt-1 font-mono">${record.date}</p>
                         </div>
-                        <i data-lucide="${icon}" class="w-6 h-6 ${resultClass} flex-shrink-0 mt-1"></i>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-[var(--text-sub)] px-2 py-1 rounded bg-[var(--bg-sub)]">
+                                ${record.reason || '사유 없음'}
+                            </span>
+                        </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border-color)]">
-                        <div>
-                            <p class="text-xs font-semibold text-[var(--text-main)] mb-1">${myName} (나)</p>
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex-1">
+                            <p class="text-xs font-bold text-[var(--text-main)] mb-1 pl-1">ME</p>
                             ${myPokemonHTML}
                         </div>
-                        <div>
-                            <p class="text-xs font-semibold text-[var(--text-main)] mb-1">${opponentName} (상대)</p>
-                            ${opponentPokemonHTML}
+                        
+                        <div class="px-2 text-[var(--text-sub)] font-bold italic">VS</div>
+                        
+                        <div class="flex-1 text-right">
+                             <p class="text-xs font-bold text-[var(--text-main)] mb-1 pr-1">OPPONENT</p>
+                            <div class="flex justify-end">
+                                ${opponentPokemonHTML}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -266,67 +252,62 @@
             lucide.createIcons();
         }
 
-
-        // ------------------------------------
-        // 5. 승/패 버튼 클릭 시 기록 토글 함수 (필터 관리)
-        // ------------------------------------
+        // ----------------------------------------------------
+        // 5. 버튼 클릭 핸들러 (토글 기능)
+        // ----------------------------------------------------
         window.toggleBattleHistory = function(filterType) {
             const historyDiv = document.getElementById('battle-history');
             const historyTitle = document.getElementById('history-title');
             const btnWin = document.getElementById('btn-win');
             const btnLose = document.getElementById('btn-lose');
             
-            // 버튼 스타일 초기화 (선택되지 않은 버튼의 불 끄기)
-            btnWin.classList.remove('ring-4', 'ring-[var(--volt)]');
-            btnLose.classList.remove('ring-4', 'ring-[var(--volt)]');
+            // 스타일 초기화
+            btnWin.classList.remove('border-[var(--volt)]', 'ring-2', 'ring-blue-100');
+            btnLose.classList.remove('border-red-500', 'ring-2', 'ring-red-100');
             
             if (currentFilter === filterType) {
-                // 이미 해당 필터가 활성화된 경우 -> 닫기 (토글)
+                // 닫기
                 historyDiv.classList.add('hidden');
                 currentFilter = null;
             } else {
-                // 새로운 필터 활성화
+                // 열기
                 currentFilter = filterType;
                 
-                // 제목 업데이트
-                historyTitle.innerText = `${currentFilter === 'win' ? '승리' : '패배'} 전투 상세 기록`;
-                
-                // 버튼에 활성화 스타일 적용 (불 켜기)
+                // 버튼 활성화 스타일
                 if (filterType === 'win') {
-                    btnWin.classList.add('ring-4', 'ring-[var(--volt)]');
+                    btnWin.classList.add('border-[var(--volt)]', 'ring-2', 'ring-blue-100');
                 } else {
-                    btnLose.classList.add('ring-4', 'ring-[var(--volt)]');
+                    btnLose.classList.add('border-red-500', 'ring-2', 'ring-red-100');
                 }
 
-                // 기록 렌더링 및 표시
+                historyTitle.innerHTML = filterType === 'win' 
+                    ? `<i data-lucide="trophy" class="w-4 h-4 text-green-500"></i> 승리 기록 모아보기`
+                    : `<i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i> 패배 기록 모아보기`;
+
                 renderBattleHistory(allBattleHistory, currentFilter);
                 historyDiv.classList.remove('hidden');
             }
+            lucide.createIcons();
         }
 
-
-        // ===============================================
-        // 6. 핵심 기능: 포켓몬 프로필 데이터 로드
-        // ===============================================
+        // ----------------------------------------------------
+        // 6. 데이터 로드 (핵심 Firebase 연동)
+        // ----------------------------------------------------
         window.loadPokemonProfile = (pokemonId) => {
-            const profileContent = document.getElementById('profile-content');
-            profileContent.classList.add('opacity-100');
-
-            // 1. 더미 데이터 (ID가 없거나 dummy_test일 때)
+            // 1. 더미 테스트
             if (!pokemonId || pokemonId === 'dummy_test') {
                 const dummyData = {
-                    rank: 15,
-                    score: 2500,
-                    battle: { wins: 30, loses: 10 }
+                    rank: 12,
+                    score: 1250,
+                    battle: { wins: 2, loses: 1 } // 계산된 값 예시
                 };
                 updateUI(dummyData);
-                currentPokemonId = 'dummy_test'; 
+                currentPokemonId = 'dummy_test';
                 allBattleHistory = dummyBattleHistory;
                 return;
             }
 
-            // 2. 실제 Firebase 데이터 로드 (실시간 연동)
-            // ★ 중요: 'users/' + 닉네임 경로에서 데이터를 가져옵니다.
+            // 2. Firebase 실시간 데이터
             const userRef = db.ref('users/' + pokemonId);
 
             userRef.on('value', (snap) => {
@@ -334,13 +315,13 @@
                     const data = snap.val();
 
                     if (data) {
-                        // (1) 기록 데이터 변환 (객체 -> 리스트)
                         let historyList = [];
                         if (data.battleHistory) {
+                            // Firebase는 배열 대신 객체 키(push ID)로 저장할 때가 많으므로 Object.values 사용
                             historyList = Object.values(data.battleHistory);
                         }
 
-                        // (2) 승/패 직접 계산 (게임에서 숫자 계산을 안 해주므로 여기서 함)
+                        // 승패 계산
                         let wins = 0;
                         let losses = 0;
                         historyList.forEach(record => {
@@ -348,68 +329,55 @@
                             else if (record.result === "패배") losses++;
                         });
 
-                        // (3) 화면 업데이트용 데이터 만들기
+                        // UI 데이터 구성
                         const uiData = {
-                            rank: '--',       // 랭킹은 일단 비워둠
-                            score: (wins * 500) + (losses * 50), // 점수 계산 예시
-                            battle: {
-                                wins: wins,
-                                loses: losses
-                            }
+                            rank: '--', // 랭킹은 전체 유저 비교가 필요하므로 일단 -- 처리
+                            score: (wins * 100) + (losses * 10), // 간단 점수 계산식
+                            battle: { wins: wins, loses: losses }
                         };
 
-                        // 화면 갱신
                         updateUI(uiData);
                         
-                        // 전역 변수에 기록 저장 (날짜 내림차순 정렬)
+                        // 날짜 내림차순 정렬
                         allBattleHistory = historyList.sort((a, b) => new Date(b.date) - new Date(a.date));
 
                     } else {
-                        // 데이터가 없는 경우 (첫 방문)
-                        updateUI({ battle: { wins: 0, loses: 0 } });
+                        // 데이터 없음 (신규)
+                        updateUI({ rank: '--', score: 0, battle: { wins: 0, loses: 0 } });
                         allBattleHistory = [];
                     }
                     currentPokemonId = pokemonId;
 
                 } catch (error) {
-                    console.error("🔥 데이터 로드 오류:", error);
+                    console.error("Firebase Data Error:", error);
+                    alert("데이터를 불러오는 중 오류가 발생했습니다.");
                 }
             });
-
-            // 필터 초기화
-            document.getElementById('battle-history').classList.add('hidden');
-            currentFilter = null;
-            if(window.lucide) lucide.createIcons();
         };
 
-        // ===============================================
-        // 7. UI 공통 기능 (테마)
-        // ===============================================
-        
-        window.loadTheme = () => {
-            if (localStorage.getItem('theme') === 'white') {
-                document.body.classList.add('white-mode');
+        // 초기화
+        window.onload = () => {
+            // 테마 로드
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'white' || savedTheme === 'light') {
+                 document.documentElement.setAttribute('data-theme', 'white');
             }
-        };
+            
+            // 아이콘 생성
+            lucide.createIcons();
 
-        // 페이지 로드시 실행
-       window.onload = () => {
-            loadTheme();
+            // ID 파싱 및 로드
             const urlParams = new URLSearchParams(window.location.search);
             let targetId = urlParams.get('id'); 
 
-            // 1. 주소에 ID가 없다면? -> 내 저장된 닉네임 찾아보기
             if (!targetId) {
                 const savedNickname = localStorage.getItem('pokerun_name');
                 if (savedNickname && savedNickname !== "Trainer") {
-                    targetId = savedNickname; // 내 닉네임으로 설정
-                    // (선택사항) 주소창도 예쁘게 바꿔주기
-                    window.history.replaceState({}, '', `?id=${targetId}`);
+                    targetId = savedNickname; 
                 }
             }
 
-            // 2. 그래도 없으면? -> 더미 데이터 보여주기
-            loadPokemonProfile(targetId || 'dummy_test'); 
+            loadPokemonProfile(targetId || 'dummy_test');
         };
     </script>
 </body>

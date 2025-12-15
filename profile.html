@@ -38,6 +38,21 @@
 
         .font-sport { font-family: 'Chakra Petch', sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* 모달 스타일 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 9999; display: flex;
+            align-items: center; justify-content: center; opacity: 0;
+            pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; width: 90%; max-width: 340px;
+            border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateY(20px); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
     </style>
 </head>
 
@@ -45,15 +60,15 @@
 
 <div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col border-x border-[var(--border-color)] sm:border-x-0">
 
-    <main class="app-content">
+    <main class="app-content overflow-y-auto scrollbar-hide">
 
-        <div class="px-4 pt-14 pb-6">
+        <div class="px-4 pt-14 pb-6 bg-white border-b border-[var(--border-color)]">
             <div class="flex items-center justify-between mb-4">
                 <div class="relative group cursor-pointer" onclick="openEditProfileModal()">
                     <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
-                        <img id="my-profile-img" class="w-full h-full rounded-full border-2 border-[var(--bg-main)] object-cover bg-[var(--bg-card)]">
+                        <img id="my-profile-img" class="w-full h-full rounded-full border-2 border-white object-cover bg-gray-100">
                     </div>
-                    <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-black rounded-full p-1 border-2 border-[var(--bg-main)]">
+                    <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-white rounded-full p-1 border-2 border-white">
                         <i data-lucide="pencil" class="w-3 h-3"></i>
                     </div>
                 </div>
@@ -75,111 +90,217 @@
             </div>
 
             <div class="mb-5">
-                <h3 id="my-profile-name" class="font-bold text-sm">Loading...</h3>
-                <p id="my-profile-bio" class="text-xs text-[var(--text-sub)] mt-1">상태 메시지를 입력해주세요.</p>
+                <h3 id="my-profile-name" class="font-bold text-lg">Loading...</h3>
+                <p id="my-profile-bio" class="text-sm text-[var(--text-sub)] mt-1 whitespace-pre-wrap">상태 메시지를 입력해주세요.</p>
             </div>
 
             <div class="flex gap-2 text-sm font-bold">
-                <button onclick="openEditProfileModal()" class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)]">프로필 편집</button>
-                <button class="flex-1 bg-[var(--bg-sub)] py-1.5 rounded-lg border border-[var(--border-color)]">프로필 공유</button>
+                <button onclick="openEditProfileModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 py-1.5 rounded-lg border border-[var(--border-color)] transition">프로필 편집</button>
+                <button onclick="shareProfile()" class="flex-1 bg-gray-100 hover:bg-gray-200 py-1.5 rounded-lg border border-[var(--border-color)] transition">프로필 공유</button>
             </div>
         </div>
 
-        <div class="flex border-t border-[var(--border-color)]">
-            <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center">
+        <div class="flex border-b border-[var(--border-color)] bg-white sticky top-0 z-10">
+            <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-black flex justify-center transition-colors">
                 <i data-lucide="grid-3x3"></i>
             </button>
-            <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
+            <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-gray-400 transition-colors">
                 <i data-lucide="clapperboard"></i>
             </button>
-            <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-[var(--text-sub)]">
+            <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-gray-400 transition-colors">
                 <i data-lucide="user-check"></i>
             </button>
         </div>
 
-        <div id="tab-content-posts">
-            <div id="my-post-grid" class="grid grid-cols-3 gap-0.5"></div>
-            <div id="no-posts-msg" class="hidden py-20 text-center text-[var(--text-sub)]">
-                <i data-lucide="camera" class="mx-auto mb-2"></i>
-                <p>아직 게시물이 없습니다.</p>
+        <div id="tab-content-posts" class="bg-white min-h-[50vh]">
+            <div id="my-post-grid" class="grid grid-cols-3 gap-0.5">
+                </div>
+            <div id="no-posts-msg" class="hidden py-20 text-center text-gray-400">
+                <div class="w-16 h-16 rounded-full border-2 border-gray-300 flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="camera" class="w-8 h-8"></i>
+                </div>
+                <p class="text-lg font-bold text-black">사진 공유</p>
+                <p class="text-sm mt-1">사진을 공유하면 프로필에 표시됩니다.</p>
             </div>
         </div>
 
-        <div id="tab-content-reels" class="hidden p-4">
-            <iframe src="h_profile.html" style="width:100%;height:80vh;border:none"></iframe>
+        <div id="tab-content-reels" class="hidden h-full">
+            <iframe src="h_profile.html" style="width:100%;height:100%;min-height:80vh;border:none"></iframe>
         </div>
 
-        <div id="tab-content-tags" class="hidden p-4">
-            <iframe src="pk_profile.html" style="width:100%;height:80vh;border:none"></iframe>
+        <div id="tab-content-tags" class="hidden h-full">
+            <iframe src="pk_profile.html" style="width:100%;height:100%;min-height:80vh;border:none"></iframe>
         </div>
 
     </main>
 
 </div>
 
-<script src="layout.js"></script>
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 class="text-lg font-bold mb-4 text-center">프로필 편집</h2>
+        
+        <div class="mb-4 text-center">
+            <img id="edit-preview-img" class="w-20 h-20 rounded-full mx-auto mb-2 object-cover border">
+            <button class="text-blue-500 text-sm font-bold" onclick="changeRandomAvatar()">랜덤 아바타 변경</button>
+        </div>
+
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">닉네임</label>
+                <input type="text" id="edit-nickname" class="w-full border rounded p-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">상태 메시지</label>
+                <textarea id="edit-bio" rows="3" class="w-full border rounded p-2 text-sm resize-none"></textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mt-6">
+            <button onclick="closeModal('edit-modal')" class="flex-1 py-2 border rounded text-sm font-bold">취소</button>
+            <button onclick="saveProfileChanges()" class="flex-1 py-2 bg-blue-600 text-white rounded text-sm font-bold">완료</button>
+        </div>
+    </div>
+</div>
+
+<div id="user-list-modal" class="modal-overlay">
+    <div class="modal-content" style="height: 50vh; display: flex; flex-direction: column;">
+        <h2 id="user-list-title" class="text-lg font-bold mb-4 text-center border-b pb-2">목록</h2>
+        <div id="user-list-container" class="flex-1 overflow-y-auto">
+            <p class="text-center text-gray-400 mt-10">목록이 비어있습니다.</p>
+        </div>
+        <button onclick="closeModal('user-list-modal')" class="mt-4 py-2 w-full border rounded text-sm font-bold">닫기</button>
+    </div>
+</div>
+
+<script type="module" src="layout.js"></script>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    // 1. 설정 및 서비스 가져오기
+    import { auth, db } from './config.js'; 
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
-    authDomain: "pokbattle.firebaseapp.com",
-    databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
-    projectId: "pokbattle",
-    storageBucket: "pokbattle.firebasestorage.app",
-    messagingSenderId: "445300582484",
-    appId: "1:445300582484:web:f8f1373a3bbf643face5c1"
-};
+    let currentUser = null;
+    let tempAvatarUrl = ""; // 아바타 변경 시 임시 저장용
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+    // 초기화
+    onAuthStateChanged(auth, (user) => {
+        if(user) {
+            currentUser = user;
+            loadUserProfile(user.uid);
+            // loadMyPosts(user.uid); // 게시물 로드 기능은 아직 DB구조가 없어서 주석처리 (추후 구현)
+            document.getElementById('no-posts-msg').classList.remove('hidden'); // 일단 게시물 없음 표시
+        } else {
+            location.href = 'log.html'; // 로그인 안 했으면 로그인 페이지로
+        }
+    });
 
-let currentUser = null;
-let currentOpenPostId = null;
+    // 프로필 정보 실시간 로드
+    function loadUserProfile(uid) {
+        onValue(ref(db, `users/${uid}`), (snap) => {
+            const data = snap.val();
+            if(!data) return;
 
-onAuthStateChanged(auth, (user) => {
-    if(user) {
-        currentUser = user;
-        updateProfileUI(user);
-        loadMyPosts(user.uid);
-        loadFollowStats(user.uid);
-    } else {
-        location.href = 'home.html';
+            // 화면 업데이트
+            document.getElementById('my-profile-name').innerText = data.nickname || "러너";
+            document.getElementById('my-profile-bio').innerText = data.bio || "상태 메시지가 없습니다.";
+            
+            const avatarUrl = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
+            document.getElementById('my-profile-img').src = avatarUrl;
+            tempAvatarUrl = avatarUrl; // 편집용 변수 초기화
+
+            // 숫자 업데이트 (데이터 없으면 0)
+            const followers = data.followers ? Object.keys(data.followers).length : 0;
+            const following = data.following ? Object.keys(data.following).length : 0;
+            const posts = data.posts ? Object.keys(data.posts).length : 0;
+
+            document.getElementById('follower-count').innerText = followers;
+            document.getElementById('following-count').innerText = following;
+            document.getElementById('post-count').innerText = posts;
+        });
     }
-});
 
-function updateProfileUI(user) {
-    document.getElementById('my-profile-name').innerText = user.displayName || "러너";
-}
+    // -------------------------
+    // 전역 함수 (버튼 클릭용)
+    // -------------------------
 
-function loadFollowStats(uid) {
-    onValue(ref(db, `users/${uid}/followers`), s => {
-        document.getElementById('follower-count').innerText = s.exists() ? Object.keys(s.val()).length : 0;
-    });
-    onValue(ref(db, `users/${uid}/following`), s => {
-        document.getElementById('following-count').innerText = s.exists() ? Object.keys(s.val()).length : 0;
-    });
-}
+    // 1. 탭 전환
+    window.switchTab = (tab) => {
+        const tabs = ['posts', 'reels', 'tags'];
+        tabs.forEach(t => {
+            const content = document.getElementById(`tab-content-${t}`);
+            const btn = document.getElementById(`tab-btn-${t}`);
+            
+            if (t === tab) {
+                content.classList.remove('hidden');
+                btn.className = "flex-1 py-3 border-b-2 border-black flex justify-center transition-colors text-black";
+            } else {
+                content.classList.add('hidden');
+                btn.className = "flex-1 py-3 flex justify-center text-gray-400 transition-colors";
+            }
+        });
+    };
 
-window.switchTab = function(tab) {
-    ['posts','reels','tags'].forEach(t=>{
-        document.getElementById(`tab-content-${t}`).classList.add('hidden');
-        document.getElementById(`tab-btn-${t}`).className="flex-1 py-3 flex justify-center text-[var(--text-sub)]";
-    });
-    document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
-    document.getElementById(`tab-btn-${tab}`).className="flex-1 py-3 border-b-2 border-[var(--text-main)] flex justify-center";
+    // 2. 모달 열기/닫기
+    window.openEditProfileModal = () => {
+        if(!currentUser) return;
+        // 현재 값 채워넣기
+        document.getElementById('edit-nickname').value = document.getElementById('my-profile-name').innerText;
+        document.getElementById('edit-bio').value = document.getElementById('my-profile-bio').innerText === "상태 메시지가 없습니다." ? "" : document.getElementById('my-profile-bio').innerText;
+        document.getElementById('edit-preview-img').src = document.getElementById('my-profile-img').src;
+        
+        document.getElementById('edit-modal').classList.add('show');
+    };
+
+    window.closeModal = (id) => {
+        document.getElementById(id).classList.remove('show');
+    };
+
+    // 3. 랜덤 아바타 변경
+    window.changeRandomAvatar = () => {
+        const randomSeed = Math.random().toString(36).substring(7);
+        tempAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+        document.getElementById('edit-preview-img').src = tempAvatarUrl;
+    };
+
+    // 4. 프로필 저장 (서버 전송)
+    window.saveProfileChanges = async () => {
+        const newNick = document.getElementById('edit-nickname').value;
+        const newBio = document.getElementById('edit-bio').value;
+
+        if(!newNick) return alert("닉네임을 입력해주세요.");
+
+        try {
+            await update(ref(db, `users/${currentUser.uid}`), {
+                nickname: newNick,
+                bio: newBio,
+                avatar: tempAvatarUrl
+            });
+            closeModal('edit-modal');
+            // alert("프로필이 수정되었습니다."); // 너무 잦은 알림 방지 위해 생략 가능
+        } catch (e) {
+            alert("저장 실패: " + e.message);
+        }
+    };
+
+    // 5. 유저 리스트 모달 (껍데기만 구현, 실제 데이터는 추후 연결)
+    window.openUserListModal = (type) => {
+        const title = type === 'followers' ? "팔로워" : "팔로잉";
+        document.getElementById('user-list-title').innerText = title;
+        document.getElementById('user-list-modal').classList.add('show');
+    };
+
+    // 6. 공유 기능
+    window.shareProfile = () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            alert("프로필 주소가 복사되었습니다!");
+        });
+    };
+
     lucide.createIcons();
-};
-
-lucide.createIcons();
 </script>
 
 </body>
 </html>
-
-
-

@@ -1,30 +1,47 @@
+import { db, auth } from './firebase-service.js';
+import { ref, get, child } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+
 /* ============================================================
-   POKERUN HOME LOGIC (Updated)
-   - Calendar Click: Highlights date & Shows daily records
-   - Daily Record List: Same design as Record Tab
-   - Friend Feed: Dummy Data
+   POKERUN HOME LOGIC (FINAL v2.3 Firebase + Modules)
+   - Connection: Firebase Realtime Database
+   - Calendar: Fetches user history and aggregates by date.
+   - Feed: Uses dummy data (since friend system DB is not set up)
    ============================================================ */
 
 const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
 
 // State
 let currDate = new Date();
-let selectedDay = null; // 현재 선택된 날짜 (숫자)
+let selectedDay = null; 
+let currentUser = null;
+let userRecords = []; // 메모리에 저장된 전체 기록 (매번 요청 방지)
 
-// Dummy Data
+// Dummy Data (친구 피드용 - 실제 DB 구현 시 이 부분만 교체하면 됨)
 const DUMMY_FRIENDS = [
-    { id: 1, name: "김철수", date: "2023-10-24", dist: "5.12", time: "32:10", pace: "6'15\"", cadence: "170", path: [[37.5665, 126.9780], [37.5675, 126.9800], [37.5655, 126.9820]] },
-    { id: 2, name: "RunningQueen", date: "2023-10-23", dist: "10.05", time: "55:40", pace: "5'32\"", cadence: "180", path: [[37.5547, 126.9707], [37.5560, 126.9720], [37.5530, 126.9750]] },
-    { id: 3, name: "포켓러너", date: "2023-10-22", dist: "3.20", time: "20:05", pace: "6'40\"", cadence: "165", path: [[37.5575, 126.9245], [37.5585, 126.9260], [37.5565, 126.9280]] }
+    { id: 1, name: "김철수", date: "어제", dist: "5.12", time: "32:10", pace: "6'15\"", cadence: "170", path: [[37.5665, 126.9780], [37.5675, 126.9800], [37.5655, 126.9820]] },
+    { id: 2, name: "RunQueen", date: "2일 전", dist: "10.05", time: "55:40", pace: "5'32\"", cadence: "180", path: [[37.5547, 126.9707], [37.5560, 126.9720], [37.5530, 126.9750]] },
 ];
 
-window.onload = function() {
-    renderCalendar();
+window.addEventListener('load', () => {
+    // 1. 친구 피드 먼저 렌더링 (데이터 없어도 보임)
     renderFriendFeed();
 
+    // 2. 인증 체크 후 내 기록 로드
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            loadUserHistory(user.uid);
+        } else {
+            // 비로그인 상태면 캘린더 비움
+            document.getElementById('currentMonthLabel').innerText = "Login Required";
+        }
+    });
+
+    // 버튼 이벤트 리스너
     document.getElementById('prevMonthBtn').addEventListener('click', () => {
         currDate.setMonth(currDate.getMonth() - 1);
-        selectedDay = null; // 달 바뀌면 선택 초기화
+        selectedDay = null; 
         closeDailyRecord();
         renderCalendar();
     });
@@ -34,30 +51,44 @@ window.onload = function() {
         closeDailyRecord();
         renderCalendar();
     });
-
     document.getElementById('closeDailyBtn').addEventListener('click', () => {
         selectedDay = null;
-        renderCalendar(); // 선택 해제 반영
+        renderCalendar(); 
         closeDailyRecord();
     });
-};
+});
 
-// --- 1. 캘린더 로직 ---
+// --- 1. Firebase 데이터 로드 ---
+function loadUserHistory(uid) {
+    const dbRef = ref(db);
+    get(child(dbRef, `users/${uid}/history`)).then((snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            // 객체를 배열로 변환
+            userRecords = Object.values(data);
+        } else {
+            userRecords = [];
+        }
+        renderCalendar(); // 데이터 로드 완료 후 캘린더 그리기
+    }).catch((error) => {
+        console.error("Home Data Load Error:", error);
+    });
+}
+
+// --- 2. 캘린더 로직 ---
 function renderCalendar() {
     const year = currDate.getFullYear();
     const month = currDate.getMonth();
     
     document.getElementById('currentMonthLabel').innerText = `${year}. ${String(month+1).padStart(2,'0')}`;
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // 이번 달 1일의 요일 (0:일 ~ 6:토)
+    const lastDate = new Date(year, month + 1, 0).getDate(); // 이번 달 마지막 날짜
 
-    // 데이터 로드
-    const records = JSON.parse(localStorage.getItem('myRunningRecords') || "[]");
+    // 이번 달 기록 집계
     const dailySum = {};
-
-    records.forEach(rec => {
-        const d = new Date(rec.id);
+    userRecords.forEach(rec => {
+        const d = new Date(rec.id); // rec.id는 timestamp
         if(d.getFullYear() === year && d.getMonth() === month) {
             const dayKey = d.getDate();
             if(!dailySum[dayKey]) dailySum[dayKey] = 0;
@@ -68,7 +99,7 @@ function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
     grid.innerHTML = '';
 
-    // 빈 칸
+    // 앞쪽 빈 칸
     for(let i=0; i<firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
@@ -86,12 +117,12 @@ function renderCalendar() {
             cell.classList.add('today');
         }
 
-        // [NEW] 선택된 날짜 표시
+        // 선택된 날짜 표시
         if(selectedDay === day) {
             cell.classList.add('selected-day');
         }
 
-        // 거리 표시
+        // 뛴 거리 표시
         let distHtml = '';
         if(dailySum[day]) {
             distHtml = `<div class="day-dist">${dailySum[day].toFixed(1)}</div>`;
@@ -99,77 +130,95 @@ function renderCalendar() {
 
         cell.innerHTML = `<span class="day-num">${day}</span>${distHtml}`;
         
-        // [NEW] 클릭 이벤트 (토글)
+        // 클릭 이벤트
         cell.onclick = () => {
             if(selectedDay === day) {
                 // 이미 선택된거 누르면 닫기
                 selectedDay = null;
                 closeDailyRecord();
             } else {
-                // 새로운 날짜 누르면 열기
+                // 새로운 날짜 선택
                 selectedDay = day;
                 openDailyRecord(day, year, month);
             }
-            renderCalendar(); // UI 갱신 (Highlight 적용)
+            renderCalendar(); // UI 갱신 (선택 스타일 적용)
         };
 
         grid.appendChild(cell);
     }
 }
 
-// --- 2. 일별 기록 상세 보기 ---
+// --- 3. 일별 상세 기록 (SVG 포함) ---
 function openDailyRecord(day, year, month) {
     const container = document.getElementById('dailyRecordSection');
     const label = document.getElementById('selectedDateLabel');
     const listEl = document.getElementById('dailyRecordList');
     
-    label.innerText = `${month+1}월 ${day}일의 기록`;
+    label.innerText = `${month+1}월 ${day}일의 활동`;
     listEl.innerHTML = '';
     
-    // 데이터 필터링
-    const records = JSON.parse(localStorage.getItem('myRunningRecords') || "[]");
-    const targetRecords = records.filter(rec => {
+    // 메모리에 있는 데이터에서 필터링
+    const targetRecords = userRecords.filter(rec => {
         const d = new Date(rec.id);
         return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     });
 
+    // 최신순 정렬
+    targetRecords.sort((a,b) => b.id - a.id);
+
     if(targetRecords.length === 0) {
-        listEl.innerHTML = '<li style="text-align:center; padding:15px; color:#999; font-size:14px;">기록이 없습니다.</li>';
+        listEl.innerHTML = '<li style="text-align:center; padding:15px; color:#999; font-size:13px;">기록이 없습니다.</li>';
     } else {
-        // 기록 탭과 동일한 디자인으로 렌더링
         targetRecords.forEach(rec => {
             const li = document.createElement('li');
-            li.className = 'record-item'; // record.css 스타일 사용
+            li.className = 'record-item'; 
 
-            // 미니맵 SVG
-            let allPoints = [];
-            if(Array.isArray(rec.path)) {
-                rec.path.forEach(seg => { if(Array.isArray(seg)) allPoints.push(...seg); });
-            }
+            // SVG 미니맵 경로 생성 (run_record.js와 동일 로직)
             let svgPath = "";
+            let allPoints = [];
+            if(rec.path) {
+                // 중첩 배열 평탄화
+                if(Array.isArray(rec.path)) {
+                    rec.path.forEach(seg => {
+                        if(Array.isArray(seg)) allPoints.push(...seg);
+                        else allPoints.push(seg);
+                    });
+                }
+            }
+
             if (allPoints.length > 0) {
                 const lats = allPoints.map(p => p.lat);
                 const lngs = allPoints.map(p => p.lng);
                 const minLat = Math.min(...lats), maxLat = Math.max(...lats);
                 const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+                const latRange = maxLat - minLat || 0.001;
+                const lngRange = maxLng - minLng || 0.001;
+
                 allPoints.forEach((p, i) => {
-                    const y = 60 - ((p.lat - minLat) / (maxLat - minLat || 1)) * 60;
-                    const x = ((p.lng - minLng) / (maxLng - minLng || 1)) * 60;
+                    const y = 60 - ((p.lat - minLat) / latRange) * 60;
+                    const x = ((p.lng - minLng) / lngRange) * 60;
                     svgPath += `${i===0?'M':'L'} ${x} ${y} `;
                 });
+            } else {
+                 svgPath = "M 30 30 L 30 30";
             }
+
+            // 시간 포맷 (오전/오후 HH:MM)
+            const timeStr = new Date(rec.id).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
             li.innerHTML = `
                 <div class="record-info">
-                    <div class="r-date">${rec.time}</div> <div class="r-dist">${rec.dist} km</div>
-                    <div class="r-time">페이스: ${rec.pace}</div>
-                    <div class="r-pace">칼로리: ${rec.cal}</div>
+                    <div class="r-date">${timeStr}</div> 
+                    <div class="r-dist">${rec.dist} km</div>
+                    <div class="r-pace">${rec.pace} /km</div>
                 </div>
-                <svg class="record-map-preview" viewBox="0 0 60 60">
-                    <path d="${svgPath}" fill="none" stroke="#3586ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="record-map-preview" viewBox="-5 -5 70 70">
+                    <path d="${svgPath}" fill="none" stroke="#3586ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             `;
-            // 클릭 시 어디로 갈지? 일단은 alert or nothing (요청 없으므로)
+            // 클릭 시 run_record.html의 상세 팝업을 띄우려면 복잡해지므로, 
+            // 여기서는 단순 리스트 확인 용도로만 둡니다.
+            
             listEl.appendChild(li);
         });
     }
@@ -181,7 +230,7 @@ function closeDailyRecord() {
     document.getElementById('dailyRecordSection').classList.add('hidden');
 }
 
-// --- 3. 친구 피드 로직 ---
+// --- 4. 친구 피드 (Dummy) ---
 function renderFriendFeed() {
     const listEl = document.getElementById('friendList');
     listEl.innerHTML = '';
@@ -207,12 +256,9 @@ function renderFriendFeed() {
             </div>
         `;
 
-        li.addEventListener('click', () => {
-            window.location.href = 'index.html'; // 코스 탭 이동
-        });
-
         listEl.appendChild(li);
 
+        // Leaflet 지도 초기화 (타임아웃으로 DOM 생성 후 실행)
         setTimeout(() => {
             const mapId = `friendMap${index}`;
             const mapEl = document.getElementById(mapId);
@@ -224,7 +270,10 @@ function renderFriendFeed() {
                 L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, { maxZoom: 19 }).addTo(fMap);
                 const polyline = L.polyline(friend.path, { color: '#3586ff', weight: 4 }).addTo(fMap);
                 fMap.fitBounds(polyline.getBounds(), { padding: [20,20] });
+                
+                // 지도 클릭 시 확대/이동 방지
+                fMap.dragging.disable();
             }
-        }, 100);
+        }, 150);
     });
 }

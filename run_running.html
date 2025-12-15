@@ -10,8 +10,8 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <link rel="stylesheet" href="run_running.css">
     <link rel="stylesheet" href="layout.css">
+    <link rel="stylesheet" href="run_running.css">
 </head>
 <body>
     <main class="app-content">
@@ -36,7 +36,7 @@
                         <div class="metric-value" id="valTime">00:00</div>
                     </div>
                     <div class="metric-item">
-                        <div class="metric-label">평균 페이스</div>
+                        <div class="metric-label">페이스</div>
                         <div class="metric-value" id="valPace">0'00"</div>
                     </div>
                     <div class="metric-item">
@@ -57,7 +57,7 @@
                     </div>
                 </div>
 
-                <div class="divider" style="opacity: 0.5; margin-top: 20px;"></div>
+                <div class="divider" style="opacity: 0.5; margin: 15px 0;"></div>
 
                 <div class="map-container">
                     <div id="map"></div>
@@ -69,13 +69,14 @@
             <div class="bottom-controls">
                 
                 <div id="controlReady" class="control-group">
-                    <button id="btnLoad" class="icon-btn-circle">
+                    <button id="btnLoad" class="icon-btn-circle" aria-label="코스 불러오기">
                         <span class="material-icons">download</span>
                     </button>
                     <button id="btnStart" class="start-btn">
-                        S T A R T
+                        RUN
                     </button>
-                    <div style="width: 50px;"></div> </div>
+                    <div style="width: 50px;"></div> 
+                </div>
 
                 <div id="controlRunning" class="control-group hidden">
                     <button id="btnPause" class="action-btn pause">
@@ -100,7 +101,7 @@
             <div id="loadModal" class="modal hidden">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <span>저장된 코스 불러오기</span>
+                        <span>내 코스 불러오기</span>
                         <button id="closeLoadBtn" class="close-icon"><span class="material-icons">close</span></button>
                     </div>
                     <ul id="savedList" class="saved-list"></ul>
@@ -109,8 +110,9 @@
 
         </div>
     </main>
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="run_running.js"></script>
-    <script src="layout.js"></script>
+    <script type="module" src="run_running.js"></script>
+    <script type="module" src="layout.js"></script>
 </body>
 </html>

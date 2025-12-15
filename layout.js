@@ -1,14 +1,20 @@
 /* ============================================================
-   POKERUN LAYOUT INJECTOR (SAFE MOBILE VERSION)
-   - DESIGN / ANIMATION UNCHANGED
-   - ONLY RATIO & HEIGHT CALCULATION
+   POKERUN LAYOUT INJECTOR (SERVER CONNECTED)
+   - 이제 상단바 코인이 실제 데이터베이스와 연동됩니다.
    ============================================================ */
+
+// 1. config.js에서 설정 가져오기
+import { auth, db } from './config.js';
+
+// 2. Firebase 기능 가져오기 (인증 상태 확인, DB 데이터 읽기)
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     injectLayout();
     adjustContentHeight();
     highlightCurrentNav();
-    fetchUserCoin();
+    initCoinListener(); // 👈 함수 이름 변경 (실시간 감지 시작)
     window.addEventListener('resize', adjustContentHeight);
 });
 
@@ -33,7 +39,7 @@ function injectLayout() {
                 </button>
                 <div class="coin-capsule">
                     <span class="material-icons coin-icon">monetization_on</span>
-                    <span id="userCoinDisplay">0</span>
+                    <span id="userCoinDisplay">...</span>
                 </div>
             </div>
         </header>
@@ -153,7 +159,26 @@ function highlightCurrentNav() {
     else if (page === 'wei_stats.html') document.getElementById('nav-stats')?.classList.add('active');
 }
 
-function fetchUserCoin() {
-    const el = document.getElementById('userCoinDisplay');
-    if (el) el.innerText = "3,500";
+// ---------------------------------------------------------
+// [핵심 변경] 코인 정보를 서버에서 실시간으로 가져오는 함수
+// ---------------------------------------------------------
+function initCoinListener() {
+    onAuthStateChanged(auth, (user) => {
+        const coinEl = document.getElementById('userCoinDisplay');
+        
+        if (user) {
+            // 로그인 상태라면: DB의 users/{uid}/coins 경로를 감시
+            const coinRef = ref(db, `users/${user.uid}/coins`);
+            
+            // onValue는 데이터가 바뀔 때마다 실행됨 (실시간 반영)
+            onValue(coinRef, (snapshot) => {
+                const coinValue = snapshot.val();
+                // 데이터가 없으면 0, 있으면 쉼표(,) 찍어서 표시
+                coinEl.innerText = (coinValue || 0).toLocaleString(); 
+            });
+        } else {
+            // 비로그인 상태라면
+            coinEl.innerText = "-";
+        }
+    });
 }

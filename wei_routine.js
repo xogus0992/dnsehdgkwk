@@ -1,9 +1,29 @@
 /* ============================================================
-   POKERUN ROUTINE LOGIC (FINAL v2 - Layout Updated)
-   - Updated Summary Layout: Left(Name) - Right(Details)
+   POKERUN ROUTINE LOGIC (Firebase Version)
+   - exercises.js 데이터 사용
+   - Firebase Realtime Database Integrated
    ============================================================ */
 
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, set, get, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = { 
+    apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
+    authDomain: "pokbattle.firebaseapp.com", 
+    databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
+    projectId: "pokbattle" 
+};
+
+// layout.js에서 이미 앱을 켰을 수 있으므로 체크 후 가져옴
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ----------------------------------------------------
 // 상태 변수
+// ----------------------------------------------------
+let currentUser = null;
 let currentRoutine = []; 
 let selectedBodyPart = "가슴"; 
 let selectedExercise = null;   
@@ -31,11 +51,25 @@ const els = {
     customName: document.getElementById('customExerciseName')
 };
 
+// ----------------------------------------------------
+// 초기화 및 이벤트 리스너
+// ----------------------------------------------------
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        renderRoutineList(); // 로그인 되면 DB에서 루틴 불러오기
+    } else {
+        els.listContainer.innerHTML = '<div style="padding:40px; text-align:center;">로그인이 필요합니다.</div>';
+    }
+});
+
 window.onload = function() {
-    renderRoutineList();
     initCreationPopup();
     
-    document.getElementById('btnAddRoutine').addEventListener('click', () => openRoutineModal());
+    document.getElementById('btnAddRoutine').addEventListener('click', () => {
+        if(!currentUser) return alert("로그인이 필요합니다.");
+        openRoutineModal();
+    });
     document.getElementById('closeRoutineBtn').addEventListener('click', () => els.modal.classList.add('hidden'));
     
     document.getElementById('btnAddExerciseToStart').addEventListener('click', addExerciseToRoutine);
@@ -46,56 +80,82 @@ window.onload = function() {
     document.getElementById('btnSaveCustomExercise').addEventListener('click', saveCustomExercise);
 };
 
-// --- 1. 메인 리스트 렌더링 ---
-function renderRoutineList() {
-    const routines = JSON.parse(localStorage.getItem('myRoutines') || "[]");
-    els.listContainer.innerHTML = '';
+// --- 1. 메인 리스트 렌더링 (Firebase) ---
+async function renderRoutineList() {
+    if(!currentUser) return;
+    els.listContainer.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">로딩 중...</div>';
 
-    if (routines.length === 0) {
-        els.listContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#aaa;">등록된 루틴이 없습니다.<br>+ 버튼을 눌러 루틴을 만들어보세요!</div>';
-        return;
-    }
-
-    routines.forEach(routine => {
-        // 부위 태그
-        const parts = [...new Set(routine.exercises.map(e => e.part))];
-        const tagsHtml = parts.map(p => `<span class="tag">${p}</span>`).join('');
+    const routinesRef = ref(db, `users/${currentUser.uid}/routines`);
+    try {
+        const snapshot = await get(routinesRef);
+        els.listContainer.innerHTML = '';
         
-        // [수정] 운동 목록 HTML 생성 (좌우 정렬 구조)
-        const summaryHtml = routine.exercises.map(e => {
-            const weight = e.kg > 0 ? `${e.kg}kg` : '맨몸';
-            return `
-                <div class="summary-row">
-                    <span class="ex-name">${e.name}</span>
-                    <span class="ex-info">${weight} X ${e.sets}세트</span>
-                </div>
-            `;
-        }).join('');
+        if (!snapshot.exists()) {
+            els.listContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#aaa;">등록된 루틴이 없습니다.<br>+ 버튼을 눌러 루틴을 만들어보세요!</div>';
+            return;
+        }
 
-        const card = document.createElement('div');
-        card.className = 'routine-card';
-        card.innerHTML = `
-            <div class="card-top">
-                <div class="routine-title">${routine.name}</div>
-                <div class="card-actions">
-                    <button onclick="editRoutine(${routine.id})"><span class="material-icons">edit</span></button>
-                    <button onclick="deleteRoutine(${routine.id})"><span class="material-icons">delete</span></button>
+        const data = snapshot.val();
+        // Firebase 객체를 배열로 변환
+        const routines = Object.keys(data).map(key => ({
+            id: key, // Firebase Key를 ID로 사용
+            ...data[key]
+        }));
+
+        routines.forEach(routine => {
+            const exercises = routine.exercises || [];
+            // 부위 태그
+            const parts = [...new Set(exercises.map(e => e.part))];
+            const tagsHtml = parts.map(p => `<span class="tag">${p}</span>`).join('');
+            
+            // 요약 리스트
+            const summaryHtml = exercises.map(e => {
+                const weight = e.kg > 0 ? `${e.kg}kg` : '맨몸';
+                return `
+                    <div class="summary-row">
+                        <span class="ex-name">${e.name}</span>
+                        <span class="ex-info">${weight} X ${e.sets}세트</span>
+                    </div>
+                `;
+            }).join('');
+
+            const card = document.createElement('div');
+            card.className = 'routine-card';
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="routine-title">${routine.name}</div>
+                    <div class="card-actions">
+                        <button class="btn-edit-routine" data-id="${routine.id}"><span class="material-icons">edit</span></button>
+                        <button class="btn-del-routine" data-id="${routine.id}"><span class="material-icons">delete</span></button>
+                    </div>
                 </div>
-            </div>
-            <div class="routine-tags">${tagsHtml}</div>
-            
-            <div class="routine-summary-box">
-                ${summaryHtml}
-            </div>
-            
-            <button class="btn-start-routine" onclick="startRoutine(${routine.id})">시 작 하 기</button>
-        `;
-        els.listContainer.appendChild(card);
-    });
+                <div class="routine-tags">${tagsHtml}</div>
+                
+                <div class="routine-summary-box">
+                    ${summaryHtml}
+                </div>
+                
+                <button class="btn-start-routine" data-id="${routine.id}">시 작 하 기</button>
+            `;
+            els.listContainer.appendChild(card);
+        });
+
+        // 동적 생성된 버튼에 이벤트 바인딩
+        document.querySelectorAll('.btn-edit-routine').forEach(btn => 
+            btn.addEventListener('click', (e) => editRoutine(e.currentTarget.dataset.id)));
+        document.querySelectorAll('.btn-del-routine').forEach(btn => 
+            btn.addEventListener('click', (e) => deleteRoutine(e.currentTarget.dataset.id)));
+        document.querySelectorAll('.btn-start-routine').forEach(btn => 
+            btn.addEventListener('click', (e) => startRoutine(e.currentTarget.dataset.id)));
+
+    } catch (error) {
+        console.error(error);
+        els.listContainer.innerHTML = '불러오기 실패';
+    }
 }
 
 // --- 2. 루틴 생성/수정 팝업 로직 ---
-function openRoutineModal(id = null) {
+async function openRoutineModal(id = null) {
     editingRoutineId = id;
     currentRoutine = [];
     els.routineName.value = '';
@@ -103,18 +163,23 @@ function openRoutineModal(id = null) {
     
     document.getElementById('modalTitle').innerText = id ? "루틴 수정" : "루틴 만들기";
 
-    if (id) {
-        const routines = JSON.parse(localStorage.getItem('myRoutines') || "[]");
-        const target = routines.find(r => r.id === id);
-        if (target) {
-            els.routineName.value = target.name;
-            currentRoutine = [...target.exercises];
+    if (id && currentUser) {
+        // 수정 모드: DB에서 데이터 가져오기
+        const rRef = ref(db, `users/${currentUser.uid}/routines/${id}`);
+        const snap = await get(rRef);
+        if(snap.exists()){
+            const data = snap.val();
+            els.routineName.value = data.name;
+            currentRoutine = data.exercises || [];
         }
     }
 
     renderAddedList();
     renderBodyPartTabs();
-    selectBodyPart(Object.keys(bodyPartImages)[0]); 
+    // bodyPartImages는 exercises.js에 있다고 가정
+    if(typeof bodyPartImages !== 'undefined') {
+        selectBodyPart(Object.keys(bodyPartImages)[0]); 
+    }
     els.modal.classList.remove('hidden');
 }
 
@@ -124,6 +189,9 @@ function initCreationPopup() {
 
 function renderBodyPartTabs() {
     els.bodyPartTabs.innerHTML = '';
+    // bodyPartImages가 exercises.js에 정의되어 있어야 함
+    if(typeof bodyPartImages === 'undefined') return;
+
     Object.keys(bodyPartImages).forEach(part => {
         const chip = document.createElement('div');
         chip.className = `chip ${part === selectedBodyPart ? 'active' : ''}`;
@@ -142,11 +210,24 @@ function selectBodyPart(part) {
     renderExerciseList(part);
 }
 
-function renderExerciseList(part) {
+async function renderExerciseList(part) {
     els.exList.innerHTML = '';
-    let list = exercisesData[part] || [];
-    const customData = JSON.parse(localStorage.getItem('myCustomExercises') || "{}");
-    if(customData[part]) list = [...list, ...customData[part]];
+    
+    // 1. 기본 운동 리스트 (exercises.js)
+    let list = (typeof exercisesData !== 'undefined' && exercisesData[part]) ? exercisesData[part] : [];
+
+    // 2. 커스텀 운동 리스트 (DB에서 가져오기)
+    if (currentUser) {
+        try {
+            const customRef = ref(db, `users/${currentUser.uid}/customExercises/${part}`);
+            const snap = await get(customRef);
+            if(snap.exists()) {
+                const customObj = snap.val();
+                const customArr = Object.values(customObj);
+                list = [...list, ...customArr];
+            }
+        } catch(e) { console.log(e); }
+    }
 
     list.forEach(ex => {
         const div = document.createElement('div');
@@ -177,11 +258,11 @@ function addExerciseToRoutine() {
     const newEx = {
         name: selectedExercise.name,
         part: selectedBodyPart,
-        image: selectedExercise.image,
+        image: selectedExercise.image || null,
         kg: kg || 0,
         reps: reps,
         sets: sets,
-        id: Date.now() + Math.random() 
+        tempId: Date.now() + Math.random() // 로컬 식별용
     };
 
     currentRoutine.push(newEx);
@@ -205,21 +286,25 @@ function renderAddedList() {
                     <div>${ex.kg > 0 ? ex.kg+'kg' : '맨몸'} * ${ex.reps}회 * ${ex.sets}세트</div>
                 </div>
             </div>
-            <button class="btn-delete-ex" onclick="removeExercise(${idx})">
+            <button class="btn-delete-ex" data-idx="${idx}">
                 <span class="material-icons">close</span>
             </button>
         `;
         els.addedList.appendChild(li);
     });
+
+    document.querySelectorAll('.btn-delete-ex').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.currentTarget.dataset.idx);
+            currentRoutine.splice(idx, 1);
+            renderAddedList();
+        });
+    });
 }
 
-window.removeExercise = function(idx) {
-    currentRoutine.splice(idx, 1);
-    renderAddedList();
-};
-
-// --- 3. 루틴 저장 ---
-function saveRoutine() {
+// --- 3. 루틴 저장 (Firebase) ---
+async function saveRoutine() {
+    if(!currentUser) return alert("로그인 상태가 아닙니다.");
     if (currentRoutine.length === 0) return alert("운동을 최소 1개 이상 추가해주세요.");
 
     let name = els.routineName.value.trim();
@@ -228,60 +313,73 @@ function saveRoutine() {
         name = parts.join(', ') + " 루틴";
     }
 
-    const routines = JSON.parse(localStorage.getItem('myRoutines') || "[]");
+    const routineData = {
+        name: name,
+        exercises: currentRoutine,
+        updatedAt: new Date().toISOString()
+    };
 
-    if (editingRoutineId) {
-        const idx = routines.findIndex(r => r.id === editingRoutineId);
-        if (idx !== -1) {
-            routines[idx].name = name;
-            routines[idx].exercises = currentRoutine;
+    try {
+        if (editingRoutineId) {
+            // 수정 (Update)
+            await update(ref(db, `users/${currentUser.uid}/routines/${editingRoutineId}`), routineData);
+        } else {
+            // 생성 (Push)
+            const newRef = push(ref(db, `users/${currentUser.uid}/routines`));
+            await set(newRef, {
+                ...routineData,
+                createdAt: new Date().toISOString()
+            });
         }
-    } else {
-        const newRoutine = {
-            id: Date.now(),
-            name: name,
-            exercises: currentRoutine,
-            createdAt: new Date().toISOString()
-        };
-        routines.push(newRoutine);
-    }
+        
+        els.modal.classList.add('hidden');
+        renderRoutineList(); // 목록 갱신
 
-    localStorage.setItem('myRoutines', JSON.stringify(routines));
-    els.modal.classList.add('hidden');
-    renderRoutineList();
+    } catch(e) {
+        alert("저장 실패: " + e.message);
+    }
 }
 
-window.deleteRoutine = function(id) {
+async function deleteRoutine(id) {
+    if(!currentUser) return;
     if(confirm("이 루틴을 삭제하시겠습니까?")) {
-        let routines = JSON.parse(localStorage.getItem('myRoutines') || "[]");
-        routines = routines.filter(r => r.id !== id);
-        localStorage.setItem('myRoutines', JSON.stringify(routines));
-        renderRoutineList();
+        try {
+            await remove(ref(db, `users/${currentUser.uid}/routines/${id}`));
+            renderRoutineList();
+        } catch(e) {
+            alert("삭제 실패");
+        }
     }
-};
+}
 
 window.editRoutine = function(id) {
     openRoutineModal(id);
 };
 
 window.startRoutine = function(id) {
-    alert(`루틴 ID ${id} 시작! (다음 단계에서 구현)`);
+    alert(`루틴 ID ${id} 시작! (실행 페이지로 이동 예정)`);
 };
 
-// --- 4. 커스텀 운동 추가 ---
-function saveCustomExercise() {
+// --- 4. 커스텀 운동 추가 (Firebase) ---
+async function saveCustomExercise() {
+    if(!currentUser) return alert("로그인이 필요합니다.");
     const part = els.customPart.value;
     const name = els.customName.value.trim();
     if(!name) return alert("운동 이름을 입력해주세요.");
 
-    let customData = JSON.parse(localStorage.getItem('myCustomExercises') || "{}");
-    if(!customData[part]) customData[part] = [];
-    
-    customData[part].push({ name: name, image: null }); 
-    localStorage.setItem('myCustomExercises', JSON.stringify(customData));
+    try {
+        const newRef = push(ref(db, `users/${currentUser.uid}/customExercises/${part}`));
+        await set(newRef, {
+            name: name,
+            image: null
+        });
 
-    alert(`"${name}" 운동이 추가되었습니다!`);
-    els.customName.value = '';
-    els.customModal.classList.add('hidden');
-    if (selectedBodyPart === part) renderExerciseList(part);
+        alert(`"${name}" 운동이 추가되었습니다!`);
+        els.customName.value = '';
+        els.customModal.classList.add('hidden');
+        if (selectedBodyPart === part) renderExerciseList(part);
+
+    } catch(e) {
+        alert("추가 실패: " + e.message);
+    }
 }

@@ -7,100 +7,106 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
     <link rel="stylesheet" href="wei_home.css">
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
-    <main class="app-content">
-        <div class="scaffold">
-            <div class="safe-area">
-                
-                <div class="header-section">
-                    <div class="page-title">POKERUN <span style="font-size:14px; color:#717171;">GYM</span></div>
-                </div>
-
-                <div class="summary-card">
-                    <div class="sc-title">이번 주 득근 현황 🔥</div>
-                    <div class="sc-row">
-                        <div class="sc-item">
-                            <span class="label">총 볼륨</span>
-                            <span class="value" id="weeklyVolume">0 kg</span>
-                        </div>
-                        <div class="vertical-line"></div>
-                        <div class="sc-item">
-                            <span class="label">연속 운동</span>
-                            <span class="value" id="streakDays">1 일</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="feed-section">
-                    <div class="section-title">친구들의 득근 인증</div>
-                    <ul id="friendFeedList" class="feed-list">
-                        </ul>
-                </div>
-
-                <div style="height: 100px;"></div>
-
-            </div>
-
-            <div class="bottom-fixed-area">
-                <button id="btnQuickStart" class="quick-start-btn">
-                    <span class="material-icons">fitness_center</span>
-                    <span>오늘 운동 바로 시작하기</span>
-                </button>
-            </div>
-
-            <div id="routineSelectModal" class="modal hidden">
-                <div class="modal-content small-content">
-                    <div class="modal-header">
-                        <span>루틴 선택</span>
-                        <button class="close-btn" id="closeRoutineSelectBtn"><span class="material-icons">close</span></button>
-                    </div>
-                    <ul id="selectRoutineList" class="select-list"></ul>
-                    <div style="text-align: center; margin-top: 10px;">
-                        <button id="btnStartEmpty" class="text-btn">빈 세션으로 시작하기</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="sessionModal" class="modal hidden" style="z-index: 3000;">
-                <div class="modal-content fullscreen-content">
+    <div id="app-content">
+        <main class="app-content-inner">
+            <div class="scaffold">
+                <div class="safe-area">
                     
-                    <div class="timer-section-compact">
-                        <div class="analog-timer-small">
-                            <svg viewBox="0 0 36 36" class="circular-chart">
-                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path id="timerPath" class="circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                        </div>
-                        <div class="digital-wrapper">
-                            <div id="timerDisplayStr" class="time-text">1:00</div>
-                            <input type="hidden" id="timerInput" value="60">
-                        </div>
-                        <div class="timer-ctrl-btns">
-                            <button id="btnMinus30" class="t-btn"><span class="material-icons">remove</span></button>
-                            <button id="btnPlus30" class="t-btn"><span class="material-icons">add</span></button>
+                    <div class="header-section">
+                        <div class="page-title">POKERUN <span style="font-size:14px; color:#717171;">GYM</span></div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="sc-title">이번 주 득근 현황 🔥</div>
+                        <div class="sc-row">
+                            <div class="sc-item">
+                                <span class="label">Weekly Volume</span>
+                                <span class="value" id="weeklyVolume">0 kg</span>
+                            </div>
+                            <div class="vertical-line"></div>
+                            <div class="sc-item">
+                                <span class="label">Current Streak</span>
+                                <span class="value" id="streakDays">0 Day</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="session-header-row">
-                        <span id="sessionTitle">운동 세션</span>
-                        <button class="close-btn" id="closeSessionBtn"><span class="material-icons">close</span></button>
+                    <div class="feed-section">
+                        <div class="section-title">친구들의 득근 인증</div>
+                        <ul id="friendFeedList" class="feed-list">
+                            </ul>
                     </div>
 
-                    <div id="sessionExerciseList" class="session-body"></div>
+                    <div style="height: 100px;"></div>
 
-                    <div class="session-footer">
-                        <button id="btnFinishSession" class="finish-btn">운동 완료 및 저장</button>
+                </div>
+
+                <div class="bottom-fixed-area">
+                    <button id="btnQuickStart" class="quick-start-btn">
+                        <span class="material-icons">fitness_center</span>
+                        <span>오늘 운동 바로 시작하기</span>
+                    </button>
+                </div>
+
+                <div id="routineSelectModal" class="modal hidden">
+                    <div class="modal-content small-content">
+                        <div class="modal-header">
+                            <span>루틴 불러오기</span>
+                            <button class="close-btn" id="closeRoutineSelectBtn"><span class="material-icons">close</span></button>
+                        </div>
+                        <ul id="selectRoutineList" class="select-list">
+                            <li style="padding:15px; text-align:center; color:#999;">로딩 중...</li>
+                        </ul>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button id="btnStartEmpty" class="text-btn">빈 세션으로 시작하기</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+                <div id="sessionModal" class="modal hidden" style="z-index: 3000;">
+                    <div class="modal-content fullscreen-content">
+                        
+                        <div class="timer-section-compact">
+                            <div class="analog-timer-small">
+                                <svg viewBox="0 0 36 36" class="circular-chart">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path id="timerPath" class="circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                            </div>
+                            <div class="digital-wrapper">
+                                <div id="timerDisplayStr" class="time-text">1:00</div>
+                            </div>
+                            <div class="timer-ctrl-btns">
+                                <button id="btnMinus30" class="t-btn"><span class="material-icons">remove</span></button>
+                                <button id="btnPlus30" class="t-btn"><span class="material-icons">add</span></button>
+                            </div>
+                        </div>
+
+                        <div class="session-header-row">
+                            <span id="sessionTitle">운동 세션</span>
+                            <button class="close-btn" id="closeSessionBtn"><span class="material-icons">close</span></button>
+                        </div>
+
+                        <div id="sessionExerciseList" class="session-body">
+                            </div>
+
+                        <div class="session-footer">
+                            <button id="btnFinishSession" class="finish-btn">운동 완료 및 저장</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
     <script src="exercises.js"></script>
-    <script src="wei_home.js"></script>
-    <script src="layout.js"></script>
+    <script type="module" src="layout.js"></script>
+    <script type="module" src="wei_home.js"></script>
 </body>
 </html>

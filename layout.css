@@ -15,7 +15,31 @@
     --header-h: 60px;
     --footer-h: 70px;
 }
+/* layout.css 에 추가하세요 */
 
+/* 1. 버튼 눌렀을 때 웹 특유의 파란색 박스 제거 */
+* {
+    -webkit-tap-highlight-color: transparent; 
+}
+
+/* 2. 앱처럼 텍스트 드래그 선택 방지 (입력창 제외) */
+body {
+    user-select: none; 
+    -webkit-user-select: none;
+}
+
+/* 3. 입력창에서는 텍스트 선택 가능하게 복구 */
+input, textarea {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* 4. 스크롤바 아예 안 보이게 (모든 요소) */
+::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
 /* ===============================
    기본 리셋
 ================================ */

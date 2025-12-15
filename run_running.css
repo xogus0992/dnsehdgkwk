@@ -18,59 +18,67 @@ body { background-color: #f5f5f5; display: flex; justify-content: center; height
     position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
+/* [중요] 스크롤 없이 화면 꽉 채우기 설정 */
 .safe-area {
-    flex: 1; padding: 20px 20px 0 20px;
-    display: flex; flex-direction: column; overflow-y: auto;
+    flex: 1; 
+    padding: 15px 20px 0 20px;
+    display: flex; flex-direction: column; 
+    overflow: hidden; /* 지도 스크롤 방지 */
 }
 
-/* 1. 헤더 (코스 탭과 통일) */
+/* 1. 헤더 */
 .header-section { 
     display: flex; justify-content: center; align-items: flex-end;     
-    margin-bottom: 25px; margin-top: 15px; position: relative;
+    margin-bottom: 5px; margin-top: 5px;
+    flex-shrink: 0; /* 높이 고정 */
 }
 
 .distance-display {
     flex: 1; display: flex; justify-content: center; padding-right: 10px;
 }
 
+/* [모바일 최적화] 화면 폭에 따라 글자 크기 자동 조절 (50px ~ 75px) */
 .distance-display span {
-    font-size: 70px; font-weight: 800; font-style: italic;
+    font-size: clamp(50px, 18vw, 75px); 
+    font-weight: 800; font-style: italic;
     color: #101213; text-shadow: 2px 2px 2px rgba(0,0,0,0.1);
-    line-height: 1;
+    line-height: 1; letter-spacing: -2px;
 }
 
 .unit-label { 
     display: flex; flex-direction: column; justify-content: flex-end;
     width: 50px; padding-bottom: 8px;
 }
-.unit-label span:first-child { font-size: 14px; color: var(--secondary); font-style: italic; }
+.unit-label span:first-child { font-size: 12px; color: var(--secondary); font-style: italic; }
 .unit-label span:last-child { font-size: 32px; font-weight: 800; font-style: italic; line-height: 1; }
 
-/* 구분선 */
-.divider { height: 1px; background-color: #e0e0e0; margin-bottom: 20px; width: 100%; }
+.divider { height: 1px; background: #eee; width: 100%; margin: 10px 0; flex-shrink: 0; }
 
 /* 2. 지표 그리드 */
 .metrics-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-    margin-bottom: 10px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    flex-shrink: 0; /* 높이 고정 */
 }
 .metric-item { display: flex; flex-direction: column; align-items: flex-start; }
 .metric-label {
-    font-size: 12px; color: var(--secondary); font-weight: bold; font-style: italic; margin-bottom: 4px;
+    font-size: 11px; color: var(--secondary); font-weight: bold; font-style: italic; margin-bottom: 2px;
 }
 .metric-value {
-    font-size: 24px; font-weight: 800; color: #101213; font-style: italic;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+    font-size: 22px; font-weight: 800; color: #101213; font-style: italic;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.1); white-space: nowrap;
 }
 
-/* 3. 지도 (코스 탭 디자인 적용) */
+/* 3. 지도 (남는 공간 전부 차지) */
 .map-container {
-    flex: 1; width: 100%; border-radius: var(--radius);
+    flex-grow: 1; /* 남는 높이 모두 차지 */
+    width: 100%; border-radius: var(--radius);
     overflow: hidden; position: relative;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    min-height: 200px; margin-bottom: 20px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    border: 1px solid #eee;
 }
-#map { width: 100%; height: 100%; }
+#map { width: 100%; height: 100%; background: #f0f0f0; } /* 배경색 지정 */
+
 .gps-status {
     position: absolute; top: 10px; left: 10px;
     background: rgba(0,0,0,0.6); color: white;
@@ -79,44 +87,47 @@ body { background-color: #f5f5f5; display: flex; justify-content: center; height
 
 /* 4. 컨트롤 버튼 */
 .bottom-controls {
-    padding: 20px; background: white; border-top: 1px solid #eee;
-    height: 120px; display: flex; justify-content: center; align-items: center;
+    background: white; padding: 15px 25px 30px 25px; 
+    border-top: 1px solid #eee;
+    display: flex; justify-content: space-between; align-items: center; 
+    position: relative; z-index: 2000; /* 지도 위에 확실히 뜸 */
+    flex-shrink: 0;
 }
 .control-group { display: flex; gap: 20px; align-items: center; justify-content: center; width: 100%; }
 
-/* 다운로드 버튼 (코스 탭과 유사하게) */
 .icon-btn-circle {
-    background: none; border: none; cursor: pointer; color: #333;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: #f5f5f5; border: none; cursor: pointer; color: #333;
+    display: flex; align-items: center; justify-content: center;
 }
-.icon-btn-circle span { font-size: 32px; }
+.icon-btn-circle span { font-size: 24px; }
 
-/* START 버튼 (코스 탭과 동일) */
 .start-btn {
     background-color: var(--primary); color: white; border: none;
-    width: 140px; height: 50px; border-radius: var(--radius);
-    font-size: 20px; font-weight: 900; font-style: italic;
-    box-shadow: 2px 2px 0px #1e60cc; cursor: pointer;
+    width: 140px; height: 50px; border-radius: 30px; /* 둥글게 */
+    font-size: 24px; font-weight: 900; font-style: italic;
+    box-shadow: 0 4px 10px rgba(53, 134, 255, 0.4); cursor: pointer;
 }
 
-/* 러닝 중 버튼들 */
 .action-btn {
-    width: 80px; height: 80px; border-radius: 50%;
+    width: 70px; height: 70px; border-radius: 50%;
     border: none; color: white; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.1s;
 }
 .action-btn:active { transform: scale(0.95); }
-.action-btn .material-icons { font-size: 36px; }
+.action-btn .material-icons { font-size: 32px; }
 
 .pause { background-color: var(--warning); }
 .stop { background-color: var(--danger); }
 .resume { background-color: var(--success); }
 
 /* 모달 */
-.modal { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 20000; display: flex; justify-content: center; align-items: center; }
-.modal-content { background: white; width: 90%; max-height: 80%; border-radius: var(--radius); padding: 15px; display: flex; flex-direction: column; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; }
-.close-icon { background: none; border: none; cursor: pointer; }
-.saved-list { list-style: none; overflow-y: auto; }
-.saved-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-.mini-map { width: 50px; height: 50px; border: 1px solid #ddd; border-radius: 4px; }
+.modal { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; justify-content: center; align-items: center; }
+.modal-content { background: white; width: 85%; max-height: 70%; border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; }
+.close-icon { background: none; border: none; cursor: pointer; padding: 5px; }
+.saved-list { list-style: none; overflow-y: auto; padding-right: 5px; }
+.saved-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; cursor: pointer; }
+.saved-item:last-child { border-bottom: none; }
+.mini-map { width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; }

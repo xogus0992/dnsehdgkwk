@@ -218,8 +218,7 @@
 
     </div>
 
-    <script src="layout.js"></script>
-
+    <script type="module" src="layout.js"></script>
     <script type="module">
     // ⭐️ 중요: config.js에서 로그인(auth)과 데이터베이스(db)를 가져옵니다.
     import { auth, db } from "./config.js";
@@ -277,7 +276,7 @@
             <div class="bg-[var(--bg-card)] rounded-2xl p-5 mb-4 shadow-sm border border-[var(--border-color)]">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                        <img src="${post.authorAvatar || 'https://via.placeholder.com/40'}" class="w-full h-full object-cover">
+                        <img src="${post.authorAvatar || 'https://cdn-icons-png.flaticon.com/512/287/287221.png'}"}" class="w-full h-full object-cover">
                     </div>
                     <div>
                         <div class="font-bold text-[var(--text-main)]">${post.authorName || 'User'}</div>
@@ -407,7 +406,7 @@
                     
                     allCommentsHtml += `
                     <div class="flex gap-3 ${borderClass}">
-                        <img src="${c.userAvatar || 'https://via.placeholder.com/30'}" class="w-8 h-8 rounded-full bg-gray-200 object-cover flex-shrink-0">
+                        <img src="${c.userAvatar || 'https://cdn-icons-png.flaticon.com/512/287/287221.png'}"}" class="w-8 h-8 rounded-full bg-gray-200 object-cover flex-shrink-0">
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-1">
                                 <span class="text-sm font-bold text-[var(--text-main)]">${c.userName}</span>
@@ -455,7 +454,7 @@
             console.log("Logged in:", user.email);
             // 내 아바타 설정
             const myAvatar = document.getElementById('my-avatar-input');
-            if(myAvatar) myAvatar.src = user.photoURL || 'https://via.placeholder.com/30';
+            if(myAvatar) myAvatar.src = user.photoURL || 'https://cdn-icons-png.flaticon.com/512/287/287221.png';;
         } else {
             currentUser = null;
             // 로그아웃 상태 처리

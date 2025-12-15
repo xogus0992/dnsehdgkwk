@@ -273,119 +273,107 @@
         </div>
     </div>
 
-    <script src="layout.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <script type="module" src="layout.js"></script>
+<script type="module">
+    // [핵심] config.js에서 이미 만들어둔 auth와 db를 가져옵니다.
+    import { auth, db } from './config.js'; 
 
-        const firebaseConfig = { 
-            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
-            authDomain: "pokbattle.firebaseapp.com", 
-            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
-            projectId: "pokbattle" 
-        };
+    // 필요한 기능(함수)만 CDN에서 가져옵니다. (initializeApp 삭제됨)
+    import { onAuthStateChanged, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { ref, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-        let currentUser = null;
+    let currentUser = null;
 
-        // 1. 초기화 및 데이터 로드
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                loadUserData(user.uid);
-            } else {
-                location.href = 'log.html';
-            }
-        });
-
-        function loadUserData(uid) {
-            const userRef = ref(db, `users/${uid}`);
-            
-            onValue(userRef, (snap) => {
-                const data = snap.val();
-                if (!data) return;
-
-                // 프로필 정보
-                document.getElementById('user-name').innerText = data.nickname || "러너";
-                document.getElementById('user-email').innerText = data.email || "";
-                document.getElementById('user-avatar').src = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
-                
-                // 코인 정보 (없으면 0)
-                const coins = data.coins || 0;
-                document.getElementById('my-coin').innerText = coins.toLocaleString();
-
-                // 설정값 반영 (없으면 기본값)
-                const s = data.settings || {};
-                
-                // 체크박스 (true/false)
-                document.getElementById('set-voice').checked = s.voiceGuide !== false; // 기본 true
-                document.getElementById('set-screen').checked = s.screenAlwaysOn === true; // 기본 false
-                document.getElementById('set-private').checked = s.privateAccount === true; 
-                document.getElementById('set-autoplay').checked = s.autoPlay !== false; 
-                document.getElementById('set-push-act').checked = s.pushActivity !== false;
-                document.getElementById('set-push-mkt').checked = s.pushMarketing === true;
-
-                // 선택값
-                document.getElementById('set-countdown').value = s.countdown || "3";
-                document.getElementById('set-rest').value = s.restTime || "60";
-            });
+    // 1. 초기화 및 데이터 로드
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            loadUserData(user.uid);
+        } else {
+            location.href = 'log.html';
         }
+    });
 
-        // 2. 설정 업데이트 (전역 함수)
-        window.updateSetting = (key, value) => {
-            if (!currentUser) return;
+    function loadUserData(uid) {
+        // config.js에서 가져온 db 변수 사용
+        const userRef = ref(db, `users/${uid}`);
+        
+        onValue(userRef, (snap) => {
+            const data = snap.val();
+            if (!data) return;
+
+            // 프로필 정보
+            document.getElementById('user-name').innerText = data.nickname || "러너";
+            document.getElementById('user-email').innerText = data.email || "";
+            document.getElementById('user-avatar').src = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
             
-            // 숫자형 변환 (restTime 등)
-            if (key === 'restTime') value = parseInt(value) || 60;
+            // 코인 정보
+            const coins = data.coins || 0;
+            document.getElementById('my-coin').innerText = coins.toLocaleString();
+
+            // 설정값 반영
+            const s = data.settings || {};
             
-            update(ref(db, `users/${currentUser.uid}/settings`), {
-                [key]: value
-            }).then(() => {
-                // 로컬 스토리지에도 백업 (오프라인/빠른 로딩용)
-                const currentSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-                currentSettings[key] = value;
-                localStorage.setItem('userSettings', JSON.stringify(currentSettings));
-            }).catch(err => console.error("설정 저장 실패:", err));
-        };
+            document.getElementById('set-voice').checked = s.voiceGuide !== false;
+            document.getElementById('set-screen').checked = s.screenAlwaysOn === true;
+            document.getElementById('set-private').checked = s.privateAccount === true; 
+            document.getElementById('set-autoplay').checked = s.autoPlay !== false; 
+            document.getElementById('set-push-act').checked = s.pushActivity !== false;
+            document.getElementById('set-push-mkt').checked = s.pushMarketing === true;
 
-        // 3. 계정 관리 기능
-        window.clearAppCache = () => {
-            if(confirm("앱의 임시 데이터를 정리하시겠습니까?\n로그인 정보는 유지됩니다.")) {
-                // settings, records 등 핵심 키 제외하고 삭제하거나,
-                // 간단하게 관련 없는 키만 지우는 로직. 여기선 단순 알림.
-                localStorage.removeItem('myWorkoutRecords'); // 로컬 운동기록 초기화 예시
-                alert("캐시 데이터가 삭제되었습니다.");
-                location.reload();
+            document.getElementById('set-countdown').value = s.countdown || "3";
+            document.getElementById('set-rest').value = s.restTime || "60";
+        });
+    }
+
+    // 2. 설정 업데이트 (전역 함수 유지)
+    window.updateSetting = (key, value) => {
+        if (!currentUser) return;
+        
+        if (key === 'restTime') value = parseInt(value) || 60;
+        
+        // config.js의 db 사용
+        update(ref(db, `users/${currentUser.uid}/settings`), {
+            [key]: value
+        }).then(() => {
+            const currentSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+            currentSettings[key] = value;
+            localStorage.setItem('userSettings', JSON.stringify(currentSettings));
+        }).catch(err => console.error("설정 저장 실패:", err));
+    };
+
+    // 3. 계정 관리 기능
+    window.clearAppCache = () => {
+        if(confirm("앱의 임시 데이터를 정리하시겠습니까?\n로그인 정보는 유지됩니다.")) {
+            localStorage.removeItem('myWorkoutRecords');
+            alert("캐시 데이터가 삭제되었습니다.");
+            location.reload();
+        }
+    };
+
+    window.handleLogout = () => {
+        if(confirm("로그아웃 하시겠습니까?")) {
+            // config.js의 auth 사용
+            signOut(auth).then(() => location.href='log.html');
+        }
+    };
+
+    window.handleDeleteAccount = async () => {
+        const msg = "정말로 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.";
+        if(confirm(msg)) {
+            const uid = currentUser.uid;
+            try {
+                await remove(ref(db, `users/${uid}`));
+                await deleteUser(currentUser);
+                alert("탈퇴가 완료되었습니다.");
+                location.href = 'log.html';
+            } catch (e) {
+                alert("탈퇴 실패: " + e.message);
             }
-        };
+        }
+    };
 
-        window.handleLogout = () => {
-            if(confirm("로그아웃 하시겠습니까?")) {
-                signOut(auth).then(() => location.href='log.html');
-            }
-        };
-
-        window.handleDeleteAccount = async () => {
-            const msg = "정말로 탈퇴하시겠습니까?\n모든 데이터(코인, 기록, 친구)가 즉시 삭제되며 복구할 수 없습니다.";
-            if(confirm(msg)) {
-                const uid = currentUser.uid;
-                try {
-                    // DB 데이터 삭제
-                    await remove(ref(db, `users/${uid}`));
-                    // 인증 계정 삭제
-                    await deleteUser(currentUser);
-                    alert("탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
-                    location.href = 'log.html';
-                } catch (e) {
-                    alert("탈퇴 실패: " + e.message + "\n(재로그인 후 다시 시도해주세요)");
-                }
-            }
-        };
-
-        lucide.createIcons();
-    </script>
+    lucide.createIcons();
+</script>
 </body>
 </html>

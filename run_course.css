@@ -91,7 +91,8 @@ input[type=number]::-webkit-outer-spin-button {
     background: white; border-radius: var(--radius);
     box-shadow: 0 4px 25px rgba(0,0,0,0.2);
     max-height: 250px; overflow-y: auto; 
-    display: none; z-index: 10000;
+    display: none; 
+    z-index: 9999 !important;
     margin-top: 5px; list-style: none; border: 1px solid #eee;
 }
 .suggestions-list.active { display: block; }
@@ -162,3 +163,52 @@ input[type=number]::-webkit-outer-spin-button {
 .loading-overlay p { margin-top: 15px; font-weight: 900; color: var(--primary); font-style: italic; font-size: 16px; white-space: nowrap; }
 .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* run_course.css 맨 아래에 추가/수정 */
+
+.header-section { 
+    display: flex; justify-content: center; align-items: flex-end;     
+    margin-bottom: 5px; margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.distance-display {
+    flex: 1; display: flex; justify-content: center; padding-right: 10px;
+}
+
+/* ★ Input 스타일 커스텀 (핵심) */
+#targetDistance {
+    width: 100%;
+    border: none;             /* 테두리 제거 */
+    background: transparent;  /* 배경 투명 */
+    outline: none;            /* 포커스시 파란 테두리 제거 */
+    text-align: right;        /* 숫자를 오른쪽(km 쪽)으로 붙임 */
+    
+    /* 폰트 스타일 (러닝 탭과 동일) */
+    font-size: clamp(50px, 18vw, 75px); 
+    font-weight: 800; 
+    font-style: italic;
+    color: #101213; 
+    text-shadow: 2px 2px 2px rgba(0,0,0,0.1);
+    line-height: 1; 
+    letter-spacing: -2px;
+    
+    /* 숫자만 깔끔하게 */
+    padding: 0;
+    margin: 0;
+}
+
+/* 숫자 입력창의 화살표(스피너) 숨기기 - 크롬/사파리/엣지 */
+#targetDistance::-webkit-outer-spin-button,
+#targetDistance::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.unit-label { 
+    display: flex; flex-direction: column; justify-content: flex-end;
+    width: 50px; padding-bottom: 8px;
+}
+.unit-label span:first-child { font-size: 12px; color: #717171; font-style: italic; }
+.unit-label span:last-child { font-size: 32px; font-weight: 800; font-style: italic; line-height: 1; }
+
+.divider { height: 1px; background: #eee; width: 100%; margin: 10px 0; flex-shrink: 0; }

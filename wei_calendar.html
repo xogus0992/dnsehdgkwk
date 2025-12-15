@@ -7,97 +7,100 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
     <link rel="stylesheet" href="wei_calendar.css">
     <link rel="stylesheet" href="layout.css">
-    
 </head>
 <body>
-<main class="app-content">
-    <div class="scaffold">
-        <div class="safe-area">
-            
-            <div class="calendar-wrapper">
-                <div class="calendar-header">
-                    <button id="prevMonthBtn" class="nav-btn"><span class="material-icons">chevron_left</span></button>
-                    <span id="currentMonthLabel">2023. 10</span>
-                    <button id="nextMonthBtn" class="nav-btn"><span class="material-icons">chevron_right</span></button>
-                </div>
-                
-                <div class="weekdays-grid">
-                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                </div>
-                
-                <div id="calendarGrid" class="days-grid">
+    <div id="app-content">
+        <main class="app-content-inner">
+            <div class="scaffold">
+                <div class="safe-area">
+                    
+                    <div class="calendar-wrapper">
+                        <div class="calendar-header">
+                            <button id="prevMonthBtn" class="nav-btn"><span class="material-icons">chevron_left</span></button>
+                            <span id="currentMonthLabel">2023. 10</span>
+                            <button id="nextMonthBtn" class="nav-btn"><span class="material-icons">chevron_right</span></button>
+                        </div>
+                        
+                        <div class="weekdays-grid">
+                            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                        </div>
+                        
+                        <div id="calendarGrid" class="days-grid">
+                            </div>
                     </div>
+
+                    <div class="divider"></div>
+
+                    <div class="record-list-container">
+                        <div class="list-title"><span id="selectedDateText">오늘</span>의 운동</div>
+                        <ul id="dailyWorkoutList" class="workout-list">
+                            </ul>
+                    </div>
+
+                </div>
+
+                <button id="btnStartWorkout" class="fab-btn">
+                    <span class="material-icons">fitness_center</span>
+                </button>
+
+                <div id="routineSelectModal" class="modal hidden">
+                    <div class="modal-content small-content">
+                        <div class="modal-header">
+                            <span>루틴 불러오기</span>
+                            <button class="close-btn" id="closeRoutineSelectBtn"><span class="material-icons">close</span></button>
+                        </div>
+                        <ul id="selectRoutineList" class="select-list">
+                            </ul>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button id="btnStartEmpty" class="text-btn">빈 세션으로 시작하기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sessionModal" class="modal hidden" style="z-index: 3000;">
+                    <div class="modal-content fullscreen-content">
+                        
+                        <div class="timer-section-compact">
+                            <div class="analog-timer-small">
+                                <svg viewBox="0 0 36 36" class="circular-chart">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path id="timerPath" class="circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                            </div>
+
+                            <div class="digital-wrapper">
+                                <div id="timerDisplayStr" class="time-text">1:00</div>
+                            </div>
+
+                            <div class="timer-ctrl-btns">
+                                <button id="btnMinus30" class="t-btn"><span class="material-icons">remove</span></button>
+                                <button id="btnPlus30" class="t-btn"><span class="material-icons">add</span></button>
+                            </div>
+                        </div>
+
+                        <div class="session-header-row">
+                            <span id="sessionTitle">운동 세션</span>
+                            <button class="close-btn" id="closeSessionBtn"><span class="material-icons">close</span></button>
+                        </div>
+
+                        <div id="sessionExerciseList" class="session-body">
+                            </div>
+
+                        <div class="session-footer">
+                            <button id="btnFinishSession" class="finish-btn">운동 완료 및 저장</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-
-            <div class="divider"></div>
-
-            <div class="record-list-container">
-                <div class="list-title"><span id="selectedDateText">오늘</span>의 운동</div>
-                <ul id="dailyWorkoutList" class="workout-list">
-                    </ul>
-            </div>
-
-        </div>
-
-        <button id="btnStartWorkout" class="fab-btn">
-            <span class="material-icons">fitness_center</span>
-        </button>
-
-        <div id="routineSelectModal" class="modal hidden">
-            <div class="modal-content small-content">
-                <div class="modal-header">
-                    <span>루틴 불러오기</span>
-                    <button class="close-btn" id="closeRoutineSelectBtn"><span class="material-icons">close</span></button>
-                </div>
-                <ul id="selectRoutineList" class="select-list"></ul>
-                <div style="text-align: center; margin-top: 10px;">
-                    <button id="btnStartEmpty" class="text-btn">빈 세션으로 시작하기</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="sessionModal" class="modal hidden" style="z-index: 3000;">
-            <div class="modal-content fullscreen-content">
-                
-                <div class="timer-section-compact">
-                    <div class="analog-timer-small">
-                        <svg viewBox="0 0 36 36" class="circular-chart">
-                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path id="timerPath" class="circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        </svg>
-                    </div>
-
-                    <div class="digital-wrapper">
-                        <div id="timerDisplayStr" class="time-text">1:00</div>
-                        <input type="hidden" id="timerInput" value="60">
-                    </div>
-
-                    <div class="timer-ctrl-btns">
-                        <button id="btnMinus30" class="t-btn"><span class="material-icons">remove</span></button>
-                        <button id="btnPlus30" class="t-btn"><span class="material-icons">add</span></button>
-                    </div>
-                </div>
-
-                <div class="session-header-row">
-                    <span id="sessionTitle">운동 세션</span>
-                    <button class="close-btn" id="closeSessionBtn"><span class="material-icons">close</span></button>
-                </div>
-
-                <div id="sessionExerciseList" class="session-body">
-                    </div>
-
-                <div class="session-footer">
-                    <button id="btnFinishSession" class="finish-btn">운동 완료 및 저장</button>
-                </div>
-            </div>
-        </div>
-
+        </main>
     </div>
-</main>
+
+    <script type="module" src="layout.js"></script>
     <script src="exercises.js"></script>
-    <script src="wei_calendar.js"></script>
-    <script src="layout.js"></script>
+    <script type="module" src="wei_calendar.js"></script>
 </body>
 </html>

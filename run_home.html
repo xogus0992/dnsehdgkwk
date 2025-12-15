@@ -14,7 +14,6 @@
 </head>
 <body>
 
-    <!-- ★ 핵심: 상단바 아래로 밀어주는 wrapper -->
     <main class="app-content">
 
         <div class="scaffold">
@@ -25,7 +24,7 @@
                         <button id="prevMonthBtn" class="nav-btn">
                             <span class="material-icons">chevron_left</span>
                         </button>
-                        <span id="currentMonthLabel">2023. 10</span>
+                        <span id="currentMonthLabel">Loading...</span>
                         <button id="nextMonthBtn" class="nav-btn">
                             <span class="material-icons">chevron_right</span>
                         </button>
@@ -41,7 +40,7 @@
 
                 <div id="dailyRecordSection" class="daily-record-container hidden">
                     <div class="section-header">
-                        <span id="selectedDateLabel">10월 25일</span>
+                        <span id="selectedDateLabel">날짜 선택</span>
                         <button id="closeDailyBtn" class="icon-btn-small">
                             <span class="material-icons">close</span>
                         </button>
@@ -53,7 +52,8 @@
 
                 <div class="feed-container">
                     <div class="feed-title">친구들의 활동</div>
-                    <ul id="friendList" class="feed-list"></ul>
+                    <ul id="friendList" class="feed-list">
+                        </ul>
                 </div>
 
             </div>
@@ -62,7 +62,8 @@
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="run_home.js"></script>
-    <script src="layout.js"></script>
+    
+    <script type="module" src="run_home.js"></script>
+    <script type="module" src="layout.js"></script>
 </body>
 </html>

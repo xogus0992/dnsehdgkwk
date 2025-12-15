@@ -1,27 +1,29 @@
 // firebase-service.js
 // ----------------------------------------------------
-// (1) Import 및 Firebase 초기화 (export)
+// (1) Import: 설정은 config.js에서, 기능은 CDN에서 가져옴
 // ----------------------------------------------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
-    authDomain: "pokbattle.firebaseapp.com",
-    databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
-    projectId: "pokbattle",
-    storageBucket: "pokbattle.firebasestorage.app",
-    messagingSenderId: "445300582484",
-    appId: "1:445300582484:web:f8f1373a3bbf643face5c1",
-    measurementId: "G-PNXLYD0D0X"
-};
+// 1. 이미 초기화된 auth, db 객체를 config.js에서 가져옵니다. (중복 초기화 방지)
+import { auth, db } from './config.js';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app); // 👈 외부에서 사용할 수 있도록 export
-export const db = getDatabase(app); // 👈 외부에서 사용할 수 있도록 export
+// 2. 인증 관련 함수들 (로그인, 회원가입 등 기능)
+import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// 상태 변수도 export
+// 3. 데이터베이스 관련 함수들 (읽기, 쓰기, 검색)
+import { 
+    ref, 
+    set, 
+    get, 
+    query, 
+    orderByChild, 
+    equalTo 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+
+// 상태 변수 export (다른 파일에서 import 해서 사용 가능)
 export let isIdChecked = false;
 export let isNickChecked = false;
 
@@ -32,6 +34,7 @@ export let isNickChecked = false;
 /** 로그인 처리 (DOM 접근 없이 순수 로직만) */
 export const handleLoginLogic = async (email, pw) => {
     if(!email || !pw) throw new Error("이메일과 비밀번호를 입력해주세요.");
+    // config.js에서 가져온 auth 객체 사용
     await signInWithEmailAndPassword(auth, email, pw);
 };
 
@@ -39,6 +42,7 @@ export const handleLoginLogic = async (email, pw) => {
 export const checkDuplicateIDLogic = async (val) => {
     if(val.length < 4) throw new Error("아이디는 4글자 이상이어야 합니다.");
     
+    // config.js에서 가져온 db 객체 사용
     const q = query(ref(db, 'users'), orderByChild('userId'), equalTo(val));
     const snap = await get(q);
     
@@ -64,7 +68,10 @@ export const handleSignupLogic = async (email, customId, nick, pw, name, phone, 
     if(!isIdChecked) throw new Error("아이디 중복확인 필수.");
     if(!isNickChecked) throw new Error("닉네임 중복확인 필수.");
 
+    // 1. 인증(Auth)에 이메일/비번으로 계정 생성
     const cred = await createUserWithEmailAndPassword(auth, email, pw);
+    
+    // 2. DB에 상세 정보 저장
     await set(ref(db, 'users/' + cred.user.uid), {
         userId: customId,
         nickname: nick,
@@ -109,4 +116,5 @@ export const findPWLogic = async (targetId, targetEmail) => {
         throw new Error("존재하지 않는 아이디.");
     }
 };
-// ----------------------------------------------------
+
+export { auth, db };

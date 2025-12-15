@@ -12,91 +12,98 @@
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
-    <main class="app-content">
-        <div class="scaffold">
-            <div class="safe-area">
-                <div id="routineListContainer" class="routine-list-container">
+    <div id="app-content">
+        <main class="app-content-inner">
+            <div class="scaffold">
+                <div class="safe-area">
+                    <div class="header-section">
+                        <div class="page-title">MY ROUTINES</div>
                     </div>
 
-            </div>
-
-            <button id="btnAddRoutine" class="fab-btn">
-                <span class="material-icons">add</span>
-            </button>
-
-            <div id="routineModal" class="modal hidden">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <span id="modalTitle">루틴 만들기</span>
-                        <button class="close-btn" id="closeRoutineBtn"><span class="material-icons">close</span></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="input-group">
-                            <label>루틴 이름 (비워두면 자동 생성)</label>
-                            <input type="text" id="routineNameInput" placeholder="예: 가슴 파괴하기">
-                        </div>
-
-                        <div class="section-label">부위 선택</div>
-                        <div id="bodyPartTabs" class="chips-container">
-                            </div>
-
-                        <div class="section-label">종목 선택</div>
-                        <div id="exerciseSelectScroll" class="exercise-scroll-box">
-                            </div>
-                        
-                        <button id="btnOpenCustom" class="text-btn">+ 나만의 운동 추가하기</button>
-
-                        <div class="detail-inputs">
-                            <div class="input-wrap"><input type="number" id="inputKg" placeholder="0"><span>kg</span></div>
-                            <div class="input-wrap"><input type="number" id="inputReps" placeholder="0"><span>회</span></div>
-                            <div class="input-wrap"><input type="number" id="inputSets" placeholder="0"><span>세트</span></div>
-                            <button id="btnAddExerciseToStart" class="add-exercise-btn">추가</button>
-                        </div>
-
-                        <div class="divider"></div>
-
-                        <div class="section-label">루틴 구성</div>
-                        <ul id="addedExerciseList" class="added-list">
-                            </ul>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button id="btnSaveRoutine" class="save-btn">루틴 저장</button>
+                    <div id="routineListContainer" class="routine-list-container">
+                        <div style="text-align:center; padding:40px; color:#aaa;">데이터를 불러오는 중...</div>
                     </div>
                 </div>
-            </div>
 
-            <div id="customExerciseModal" class="modal hidden" style="z-index: 3000;">
-                <div class="modal-content small-content">
-                    <div class="modal-header">
-                        <span>나만의 운동 추가</span>
-                        <button class="close-btn" id="closeCustomBtn"><span class="material-icons">close</span></button>
-                    </div>
-                    <div class="modal-body">
-                        <label>부위</label>
-                        <select id="customBodyPartSelect" class="full-select">
-                            <option value="가슴">가슴</option>
-                            <option value="등">등</option>
-                            <option value="하체">하체</option>
-                            <option value="어깨">어깨</option>
-                            <option value="팔">팔</option>
-                            <option value="복근">복근</option>
-                        </select>
-                        
-                        <label style="margin-top:10px;">운동 이름</label>
-                        <input type="text" id="customExerciseName" placeholder="예: 버피 테스트">
-                    </div>
-                    <div class="modal-footer">
-                        <button id="btnSaveCustomExercise" class="save-btn">등록</button>
+                <button id="btnAddRoutine" class="fab-btn">
+                    <span class="material-icons">add</span>
+                </button>
+
+                <div id="routineModal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <span id="modalTitle">루틴 만들기</span>
+                            <button class="close-btn" id="closeRoutineBtn"><span class="material-icons">close</span></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="input-group">
+                                <label>루틴 이름</label>
+                                <input type="text" id="routineNameInput" placeholder="예: 가슴 파괴하기">
+                            </div>
+
+                            <div class="section-label">부위 선택</div>
+                            <div id="bodyPartTabs" class="chips-container">
+                                </div>
+
+                            <div class="section-label">종목 선택</div>
+                            <div id="exerciseSelectScroll" class="exercise-scroll-box">
+                                </div>
+                            
+                            <button id="btnOpenCustom" class="text-btn">+ 나만의 운동 추가하기</button>
+
+                            <div class="detail-inputs">
+                                <div class="input-wrap"><input type="number" id="inputKg" placeholder="0"><span>kg</span></div>
+                                <div class="input-wrap"><input type="number" id="inputReps" placeholder="0"><span>회</span></div>
+                                <div class="input-wrap"><input type="number" id="inputSets" placeholder="0"><span>세트</span></div>
+                                <button id="btnAddExerciseToStart" class="add-exercise-btn">추가</button>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <div class="section-label" style="margin-top: 5px;">루틴 구성</div>
+                            <ul id="addedExerciseList" class="added-list">
+                                </ul>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button id="btnSaveRoutine" class="save-btn">저장 완료</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+                <div id="customExerciseModal" class="modal hidden" style="z-index: 3000;">
+                    <div class="modal-content small-content">
+                        <div class="modal-header">
+                            <span>나만의 운동 추가</span>
+                            <button class="close-btn" id="closeCustomBtn"><span class="material-icons">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <label>부위</label>
+                            <select id="customBodyPartSelect" class="full-select">
+                                <option value="가슴">가슴</option>
+                                <option value="등">등</option>
+                                <option value="하체">하체</option>
+                                <option value="어깨">어깨</option>
+                                <option value="팔">팔</option>
+                                <option value="복근">복근</option>
+                            </select>
+                            
+                            <label style="margin-top:10px;">운동 이름</label>
+                            <input type="text" id="customExerciseName" placeholder="예: 버피 테스트">
+                        </div>
+                        <div class="modal-footer">
+                            <button id="btnSaveCustomExercise" class="save-btn">등록</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="layout.js"></script>
     <script src="exercises.js"></script> 
-    <script src="wei_routine.js"></script>
-    <script src="layout.js"></script>
+    <script type="module" src="wei_routine.js"></script>
 </body>
 </html>
