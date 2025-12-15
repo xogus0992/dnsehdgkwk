@@ -383,3 +383,18 @@ async function saveCustomExercise() {
         alert("추가 실패: " + e.message);
     }
 }
+window.startRoutine = async function(id) {
+    if (!currentUser) return alert("로그인이 필요합니다.");
+
+    const snap = await get(ref(db, `users/${currentUser.uid}/routines/${id}`));
+    if (!snap.exists()) return alert("루틴을 찾을 수 없습니다.");
+
+    // 세션 시작용 데이터 저장
+    localStorage.setItem('startRoutineData', JSON.stringify({
+        name: snap.val().name,
+        exercises: snap.val().exercises
+    }));
+
+    // 캘린더로 이동
+    window.location.href = 'wei_calendar.html';
+};

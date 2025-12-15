@@ -479,26 +479,40 @@ function updateTimerDisplay(sec) {
 }
 
 async function finishSession() {
-    if(!currentUser) return alert("로그인이 필요합니다.");
-    
-    if(confirm("운동을 완료하고 기록을 저장하시겠습니까?")) {
+    if (!currentUser) return alert("로그인이 필요합니다.");
+
+    if (confirm("운동을 완료하고 기록을 저장하시겠습니까?")) {
+
+        // 🔒 Firebase 저장 전 undefined 방어
+        activeRoutine = activeRoutine.map(ex => ({
+            ...ex,
+            image: ex.image ?? null
+        }));
+
         let totalVolume = 0;
-        
-        // 볼륨 계산 및 데이터 정리
+
+        // ✅ 요약 데이터 생성 (setsData 절대 사용 ❌)
         const exerciseSummary = activeRoutine.map(ex => {
             const doneSets = ex.setsData.filter(s => s.done);
-            if(doneSets.length > 0) {
-                let exVol = 0;
-                doneSets.forEach(s => exVol += (parseFloat(s.kg) * parseFloat(s.reps)));
-                totalVolume += exVol;
-            }
+
+            let exVol = 0;
+            doneSets.forEach(s => {
+                const kg = Number(s.kg) || 0;
+                const reps = Number(s.reps) || 0;
+                exVol += kg * reps;
+            });
+
+            totalVolume += exVol;
+
             return {
                 name: ex.name,
-                sets: doneSets.length // 완료된 세트 수만 저장
+                sets: doneSets.length   // 요약은 이것만 저장
             };
         });
 
-        // 실제 저장될 전체 데이터 구조
+        console.log('SAVE DATA', { totalVolume, activeRoutine });
+
+        // 실제 저장될 데이터
         const recordData = {
             routineName: els.sessionTitle.innerText.replace(" (수정)", ""),
             totalVolume: totalVolume,
@@ -508,22 +522,25 @@ async function finishSession() {
         };
 
         try {
-            // 저장 경로: records/YYYY-MM/YYYY-MM-DD/{pushId}
             let targetRef;
-            
+
             if (editingRecordId && editingDateKey) {
-                // 기존 데이터 수정
-                const [y, m, d] = editingDateKey.split('-');
-                targetRef = ref(db, `users/${currentUser.uid}/records/${y}-${m}/${editingDateKey}/${editingRecordId}`);
+                const [y, m] = editingDateKey.split('-');
+                targetRef = ref(
+                    db,
+                    `users/${currentUser.uid}/records/${y}-${m}/${editingDateKey}/${editingRecordId}`
+                );
                 await update(targetRef, recordData);
             } else {
-                // 신규 저장
                 const now = new Date();
                 const y = now.getFullYear();
-                const m = String(now.getMonth()+1).padStart(2,'0');
-                const d = String(now.getDate()).padStart(2,'0');
-                
-                targetRef = push(ref(db, `users/${currentUser.uid}/records/${y}-${m}/${y}-${m}-${d}`));
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+
+                targetRef = push(
+                    ref(db, `users/${currentUser.uid}/records/${y}-${m}/${y}-${m}-${d}`)
+                );
+
                 await set(targetRef, {
                     ...recordData,
                     createdAt: now.toISOString()
@@ -531,21 +548,20 @@ async function finishSession() {
             }
 
             alert(`저장 완료! 오늘 볼륨: ${totalVolume}kg 🔥`);
-            
+
             els.sessionModal.classList.add('hidden');
             stopTimer();
-            
-            // UI 갱신
-            renderCalendar(); 
-            // 만약 오늘 날짜가 선택되어 있었다면 리스트도 갱신
-            if(selectedDay) renderDailyList();
 
-        } catch(e) {
+            renderCalendar();
+            if (selectedDay) renderDailyList();
+
+        } catch (e) {
             console.error(e);
             alert("저장 실패: " + e.message);
         }
     }
 }
+
 
 // 루틴 목록 불러오기 (Firebase)
 async function renderRoutineSelect() {
@@ -573,4 +589,12 @@ async function renderRoutineSelect() {
     } catch(e) {
         list.innerHTML = '<li>불러오기 실패</li>';
     }
+}
+
+// 루틴에서 넘어온 경우 자동 세션 시작
+const routineData = localStorage.getItem('startRoutineData');
+if (routineData) {
+    const parsed = JSON.parse(routineData);
+    startSession(parsed.exercises || [], parsed.name || "루틴 운동");
+    localStorage.removeItem('startRoutineData');
 }

@@ -212,3 +212,33 @@ input[type=number]::-webkit-outer-spin-button {
 .unit-label span:last-child { font-size: 32px; font-weight: 800; font-style: italic; line-height: 1; }
 
 .divider { height: 1px; background: #eee; width: 100%; margin: 10px 0; flex-shrink: 0; }
+
+/* ===== Mobile Search Overlay ===== */
+
+.search-overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--header-h, 60px);
+    bottom: 0;
+    background: #fff;
+    z-index: 50000;
+    overflow-y: auto;
+}
+
+.search-overlay.hidden {
+    display: none;
+}
+
+.search-suggestions {
+    list-style: none;
+    padding: 10px;
+}
+
+.search-suggestions .suggestion-item {
+    padding: 14px 12px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
