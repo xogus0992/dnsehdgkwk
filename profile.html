@@ -179,7 +179,7 @@
     // 1. 설정 및 서비스 가져오기
     import { auth, db } from './config.js'; 
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     let currentUser = null;
     let tempAvatarUrl = ""; // 아바타 변경 시 임시 저장용
@@ -300,7 +300,136 @@
     };
 
     lucide.createIcons();
-</script>
+    // ==========================================
+    // [추가 기능] 게시물 보기 & 삭제 기능 시작
+    // ==========================================
+    
+    // 1. 로그인 감지 시 자동으로 게시물 불러오기
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loadMyPostsOnly(user.uid); 
+        }
+    });
 
+    // 2. 게시물 불러오기 (기존 디자인 유지하며 내용만 채움)
+    function loadMyPostsOnly(userId) {
+        // 기존 그리드 찾기
+        const grid = document.getElementById('my-post-grid');
+        if(!grid) return; // 그리드가 없으면 작동 중지 (에러 방지)
+
+        onValue(ref(db, 'posts'), (snapshot) => {
+            grid.innerHTML = ""; // 기존 내용 비우기
+            const data = snapshot.val();
+            
+            // 게시물이 없을 때 메시지 표시
+            if (!data) {
+                if(document.getElementById('no-posts-msg')) document.getElementById('no-posts-msg').classList.remove('hidden');
+                if(document.getElementById('post-count')) document.getElementById('post-count').innerText = "0";
+                return;
+            }
+
+            // 내 게시물만 골라내기 (작성자 ID 없는 옛날 글도 포함해서 보여줌)
+            const myPosts = Object.entries(data)
+                .filter(([key, post]) => post.author === userId || !post.author) 
+                .sort((a, b) => b[1].timestamp - a[1].timestamp);
+            
+            // 게시물 숫자 업데이트
+            if(document.getElementById('post-count')) document.getElementById('post-count').innerText = myPosts.length;
+
+            if (myPosts.length === 0) {
+                if(document.getElementById('no-posts-msg')) document.getElementById('no-posts-msg').classList.remove('hidden');
+                return;
+            }
+
+            // 메시지 숨기기
+            if(document.getElementById('no-posts-msg')) document.getElementById('no-posts-msg').classList.add('hidden');
+
+            // 사진 하나씩 추가
+            myPosts.forEach(([key, post]) => {
+                // 이미지 주소 찾기 (이름이 달라도 다 찾아냄)
+                const imgUrl = post.image || post.imageUrl || post.url || 'https://via.placeholder.com/150';
+                
+                const div = document.createElement('div');
+                div.className = "relative bg-black cursor-pointer group overflow-hidden aspect-square"; 
+                // 클릭하면 팝업 열기 연결
+                div.onclick = () => openPostModalOnly(post, key);
+                div.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover">`;
+                grid.appendChild(div);
+            });
+        });
+    }
+
+    // 3. 게시물 클릭했을 때 팝업 열기
+    window.openPostModalOnly = (post, postId) => {
+        currentOpenPostId = postId; // 현재 보고 있는 글 번호 저장
+        const modal = document.getElementById('post-modal');
+        
+        // 팝업창에 내용 채우기
+        const imgUrl = post.image || post.imageUrl || post.url;
+        document.getElementById('modal-image').src = imgUrl;
+        document.getElementById('modal-avatar').src = post.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author}`;
+        document.getElementById('modal-username').innerText = post.authorName || 'Unknown';
+        document.getElementById('modal-content').innerText = post.content || '';
+        document.getElementById('modal-date').innerText = post.timestamp ? new Date(post.timestamp).toLocaleDateString() : '';
+
+        // 삭제 버튼: 내가 쓴 글일 때만 보여주기
+        const deleteBtn = document.getElementById('delete-post-btn');
+        if(currentUser && (post.author === currentUser.uid || !post.author)) {
+            deleteBtn.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden'); // 팝업 보이기
+        if(window.lucide) lucide.createIcons(); // 아이콘 새로고침
+    };
+
+    // 4. 팝업 닫기
+    window.closePostModal = () => {
+        document.getElementById('post-modal').classList.add('hidden');
+        currentOpenPostId = null;
+    };
+
+    // 5. 게시물 삭제하기
+    window.deleteCurrentPost = async () => {
+        if(!currentOpenPostId) return;
+        if(confirm("정말로 삭제하시겠습니까?")) {
+            try {
+                await remove(ref(db, `posts/${currentOpenPostId}`));
+                closePostModal(); // 삭제 후 닫기
+            } catch(e) {
+                alert("삭제 중 오류가 발생했습니다.");
+            }
+        }
+    };
+</script>
+<div id="post-modal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closePostModal()">
+    <div class="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200" onclick="event.stopPropagation()">
+        <div class="px-4 py-3 flex items-center justify-between border-b border-gray-200">
+            <div class="flex items-center gap-2">
+                <img id="modal-avatar" class="w-6 h-6 rounded-full bg-gray-200 object-cover">
+                <span id="modal-username" class="font-bold text-sm text-black">Username</span>
+            </div>
+            <button id="delete-post-btn" class="text-red-500 hidden hover:bg-gray-100 p-1 rounded transition" onclick="deleteCurrentPost()">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div class="w-full h-auto bg-black flex items-center justify-center relative min-h-[300px]">
+            <img id="modal-image" class="w-full h-auto object-contain max-h-[70vh]">
+        </div>
+
+        <div class="p-4 bg-white">
+            <div class="flex gap-4 mb-3">
+                <div class="flex items-center gap-1">
+                    <i data-lucide="heart" class="w-6 h-6 text-blue-600 fill-blue-600"></i>
+                    <span id="modal-likes" class="font-bold text-sm text-black">0</span>
+                </div>
+            </div>
+            <div id="modal-content" class="text-sm mt-2 text-black"></div>
+            <div id="modal-date" class="text-[10px] text-gray-500 mt-2 uppercase"></div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
