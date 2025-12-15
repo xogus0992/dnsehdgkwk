@@ -1,867 +1,2117 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="layout.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>RUN: POKEMON CLUB ULTIMATE</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="layout.css">
-
-    <style>
-        body { padding-top: 0; } 
-
-        /* [추가 2] 만약 layout.js가 만드는 기존 헤더가 겹쳐 보이면 숨김 처리 */
-        .header-container, nav.header { display: none !important; }
-
-        /* [추가 3] 보내주신 로고 스타일을 여기에 붙여넣으세요 */
-        .pokerun-logo {
-            display: flex; align-items: center; gap: 8px;
-            cursor: pointer; user-select: none;
-            padding: 15px 20px; /* 로고 주변 여백 추가 */
-            background-color: var(--bg-main); /* 배경색 일치 */
-            z-index: 50; /* 다른 요소보다 위에 표시 */
-        }
-        .pokerun-logo .icon-box {
-            width: 34px; height: 34px;
-            background-color: #3586ff;
-            border-radius: 10px;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 2px 4px rgba(53, 134, 255, 0.25);
-        }
-        .pokerun-logo .material-icons { color: white; font-size: 22px; }
-        .pokerun-logo .logo-text {
-            font-family: 'Chakra Petch', sans-serif;
-            font-weight: 700; font-style: italic;
-            font-size: 20px; color: #101213; letter-spacing: -0.5px;
-        }
-        /* --- 1. 테마 설정 (White Mode Only) --- */
-        :root {
-            --volt: #2563eb;         /* 파랑 */
-            --bg-main: #f3f4f6;      /* 연한 회색 배경 */
-            --bg-card: #ffffff;      /* 흰색 카드 */
-            --text-main: #111827;    /* 검정 텍스트 */
-            --text-sub: #6b7280;     /* 회색 텍스트 */
-            --border-color: #e5e7eb; /* 연한 테두리 */
-            
-            --rank-s: #9333ea; 
-            --rank-a: #d97706;
-            --rank-b: #2563eb; 
-            --rank-c: #6b7280; 
-        }
-
-        /* --- 2. 모바일 전체 화면 고정 (잘림 방지) --- */
-        html, body {
-            margin: 0; padding: 0;
-            width: 100%; height: 100dvh; /* Dynamic Viewport Height */
-            overflow: hidden; /* 스크롤 방지 */
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            font-family: 'Noto Sans KR', sans-serif;
-        }
-
-        /* layout.js가 불러오는 공통 하단바 숨기기 (게임 전용바 사용) */
-        .app-bottom-nav, .center-menu-container, #menuOverlay { 
-            display: none !important; 
-        }
-        
-        /* 상단바 높이만큼 패딩 (layout.css 헤더 높이 60px) */
-        body { padding-top: 60px; }
-
-        .font-sport { font-family: 'Chakra Petch', sans-serif; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-
-        /* 유리 질감 (화이트) */
-        .glass {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-
-        .anim-pop { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        .sprite-player { transform: scaleX(-1); filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
-        .sprite-enemy { filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
-        .sprite-dead { filter: grayscale(1) opacity(0.5); transform: scale(0.8) !important; transition: all 1s; }
-
-        /* 배틀 이펙트 */
-        @keyframes smash-dash {
-            0% { transform: translate(0,0) scale(1); }
-            40% { transform: translate(var(--tx), var(--ty)) scale(1.3) skewX(-20deg); }
-            100% { transform: translate(0,0) scale(1); }
-        }
-        .anim-dash { animation: smash-dash 0.5s cubic-bezier(0.1, 0.9, 0.2, 1); z-index: 100 !important; }
-
-        @keyframes heavy-shake { 
-            0%, 100% { transform: translate(0,0); } 
-            10%, 30%, 50% { transform: translate(-5px, 0); } 
-            20%, 40% { transform: translate(5px, 0); } 
-        }
-        .anim-hit { animation: heavy-shake 0.4s ease-out; filter: brightness(1.2) sepia(0.3) hue-rotate(-20deg); }
-
-        @keyframes cam-shake {
-            0%, 100% { transform: translate(0,0); }
-            25% { transform: translate(-3px, 3px); }
-            50% { transform: translate(3px, -3px); }
-        }
-        .anim-cam-shake { animation: cam-shake 0.3s ease-out; }
-
-        .fx-particle {
-            position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; z-index: 95;
-            animation: particle-out 0.6s ease-out forwards;
-        }
-        @keyframes particle-out {
-            0% { transform: translate(0,0) scale(1); opacity: 1; }
-            100% { transform: translate(var(--vx), var(--vy)) scale(0); opacity: 0; }
-        }
-
-        .type-fire { color: #ef4444; } .type-water { color: #3b82f6; } .type-grass { color: #22c55e; }
-        .type-electric { color: #eab308; } .type-psychic { color: #a855f7; } .type-normal { color: #6b7280; }
-
-        .rank-S { color: var(--rank-s); font-weight: 900; }
-        .rank-A { color: var(--rank-a); font-weight: 800; }
-        .rank-B { color: var(--rank-b); font-weight: 700; }
-        .rank-C { color: var(--rank-c); font-weight: 600; }
-
-        .nav-active { color: var(--volt) !important; transform: translateY(-2px); }
-        .nav-btn { transition: all 0.2s; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>RUN: POKEMON CLUB ULTIMATE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="layout.css">
+  <style>
+    :root {
+      --volt: #2563eb;
+      --bg-main: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --border-color: #e5e7eb;
+      --rank-s: #9333ea;
+      --rank-a: #d97706;
+      --rank-b: #2563eb;
+      --rank-c: #6b7280;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    body { padding-top: 60px; }
+    .font-sport { font-family: 'Chakra Petch', sans-serif; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .glass {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .anim-pop { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes pop-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .sprite-player { transform: scaleX(-1); filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
+    .sprite-enemy { filter: drop-shadow(0 8px 8px rgba(0,0,0,0.15)); transition: transform 0.2s; }
+    .sprite-dead { filter: grayscale(1) opacity(0.5); transform: scale(0.8) !important; transition: all 1s; }
+    @keyframes smash-dash { 0% { transform: translate(0,0) scale(1); } 40% { transform: translate(var(--tx), var(--ty)) scale(1.3) skewX(-20deg); } 100% { transform: translate(0,0) scale(1); } }
+    .anim-dash { animation: smash-dash 0.5s cubic-bezier(0.1, 0.9, 0.2, 1); z-index: 100 !important; }
+    @keyframes heavy-shake { 0%, 100% { transform: translate(0,0); } 10%, 30%, 50% { transform: translate(-5px, 0); } 20%, 40% { transform: translate(5px, 0); } }
+    .anim-hit { animation: heavy-shake 0.4s ease-out; filter: brightness(1.2) sepia(0.3) hue-rotate(-20deg); }
+    @keyframes cam-shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-3px, 3px); } 50% { transform: translate(3px, -3px); } }
+    .anim-cam-shake { animation: cam-shake 0.3s ease-out; }
+    .fx-particle {
+      position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; z-index: 95;
+      animation: particle-out 0.6s ease-out forwards;
+    }
+    @keyframes particle-out { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--vx), var(--vy)) scale(0); opacity: 0; } }
+    .type-fire { color: #ef4444; } .type-water { color: #3b82f6; } .type-grass { color: #22c55e; }
+    .type-electric { color: #eab308; } .type-psychic { color: #a855f7; } .type-normal { color: #6b7280; }
+    .rank-S { color: var(--rank-s); font-weight: 900; }
+    .rank-A { color: var(--rank-a); font-weight: 800; }
+    .rank-B { color: var(--rank-b); font-weight: 700; }
+    .rank-C { color: var(--rank-c); font-weight: 600; }
+    .nav-active { color: var(--volt) !important; transform: translateY(-2px); }
+    .nav-btn { transition: all 0.2s; }
+    .modal-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.92); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 18px; }
+    .modal-card { width: 100%; max-width: 360px; border-radius: 18px; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 18px 40px rgba(0,0,0,0.12); overflow: hidden; }
+    .modal-head { padding: 14px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+    .modal-body { padding: 14px 16px; }
+    .pill { font-size: 10px; font-weight: 900; border-radius: 999px; padding: 6px 10px; background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06); text-transform: uppercase; letter-spacing: .12em; }
+    .cd-wrap { width: 96px; height: 6px; border-radius: 999px; overflow: hidden; background: rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 8px 16px rgba(0,0,0,0.06); }
+    .cd-bar { height: 100%; width: 0%; background: var(--volt); transition: width 0.1s linear; }
+    .cd-text { font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: rgba(0,0,0,0.55); }
+    .room-input { outline: none; }
+  </style>
 </head>
 <body class="flex justify-center bg-gray-100">
+  <div id="app" class="relative w-full max-w-md h-full bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
+    <div id="app-header"></div>
 
-    <div id="app" class="relative w-full max-w-md h-full bg-[var(--bg-main)] shadow-2xl overflow-hidden flex flex-col border-x border-[var(--border-color)]">
-        
-        <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)] w-full">
-            </main>
+    <main id="main-content" class="flex-1 relative overflow-y-auto scrollbar-hide bg-[var(--bg-main)] w-full"></main>
 
-        <nav id="main-nav" class="w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0" style="padding-bottom: calc(10px + env(safe-area-inset-bottom));">
-            <button onclick="app.nav('lobby')" id="nav-lobby" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
-                <i data-lucide="home" class="w-6 h-6"></i>
-                <span class="text-[10px] font-black italic font-sport">HOME</span>
-            </button>
-            <button onclick="app.nav('team')" id="nav-team" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
-                <i data-lucide="users" class="w-6 h-6"></i>
-                <span class="text-[10px] font-black italic font-sport">TEAM</span>
-            </button>
-            
-            <button onclick="app.nav('battle')" class="mb-1 transform transition-transform active:scale-95 group">
-                <div class="w-14 h-14 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
-                    <i data-lucide="swords" class="w-7 h-7 text-white fill-current"></i>
-                </div>
-            </button>
-            
-            <button onclick="app.nav('shop')" id="nav-shop" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
-                <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-                <span class="text-[10px] font-black italic font-sport">SHOP</span>
-            </button>
-            <button onclick="app.nav('dex')" id="nav-dex" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
-                <i data-lucide="book-open" class="w-6 h-6"></i>
-                <span class="text-[10px] font-black italic font-sport">DEX</span>
-            </button>
-        </nav>
+    <nav id="main-nav" class="w-full bg-white border-t border-[var(--border-color)] px-4 py-2 flex justify-around items-end z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0" style="padding-bottom: calc(10px + env(safe-area-inset-bottom));">
+      <button onclick="app.nav('lobby')" id="nav-lobby" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+        <i data-lucide="home" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black italic font-sport">HOME</span>
+      </button>
+      <button onclick="app.nav('team')" id="nav-team" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+        <i data-lucide="users" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black italic font-sport">TEAM</span>
+      </button>
 
-        <div id="toast" class="absolute top-24 left-1/2 -translate-x-1/2 bg-[var(--volt)] text-white px-6 py-3 rounded-full font-black italic shadow-2xl transform scale-0 transition-transform z-50 pointer-events-none text-sm whitespace-nowrap border-2 border-white flex items-center gap-2">
-            <i data-lucide="info" class="w-4 h-4"></i>
-            <span id="toast-msg">Notification</span>
+      <button onclick="app.nav('battle')" class="mb-1 transform transition-transform active:scale-95 group">
+        <div class="w-14 h-14 bg-[var(--volt)] rounded-full flex items-center justify-center border-4 border-white shadow-xl relative z-10 group-hover:scale-105 transition-all">
+          <i data-lucide="swords" class="w-7 h-7 text-white fill-current"></i>
         </div>
-        
-        <div id="camera-shake-layer" class="pointer-events-none absolute inset-0 z-0"></div>
+      </button>
+
+      <button onclick="app.nav('shop')" id="nav-shop" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+        <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black italic font-sport">SHOP</span>
+      </button>
+      <button onclick="app.nav('dex')" id="nav-dex" class="nav-btn group flex flex-col items-center gap-1 p-2 w-16 text-[var(--text-sub)] hover:text-[var(--text-main)]">
+        <i data-lucide="book-open" class="w-6 h-6"></i>
+        <span class="text-[10px] font-black italic font-sport">DEX</span>
+      </button>
+    </nav>
+
+    <div id="toast" class="absolute top-24 left-1/2 -translate-x-1/2 bg-[var(--volt)] text-white px-6 py-3 rounded-full font-black italic shadow-2xl transform scale-0 transition-transform z-50 pointer-events-none text-sm whitespace-nowrap border-2 border-white flex items-center gap-2">
+      <i data-lucide="info" class="w-4 h-4"></i>
+      <span id="toast-msg">Notification</span>
     </div>
 
-    <script src="layout.js"></script>
+    <div id="camera-shake-layer" class="pointer-events-none absolute inset-0 z-0"></div>
+  </div>
+  <script type="module">
+    import { auth, db } from './config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { ref, get, set, update, onValue, push, runTransaction, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, update, onValue, push, get, child, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    const $ = (id) => document.getElementById(id);
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-        // [주의] 실제 키 사용 필요
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE2O8aibfFZO", 
-            authDomain: "pokbattle.firebaseapp.com",
-            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
-            projectId: "pokbattle",
-            storageBucket: "pokbattle.firebasestorage.app",
-            messagingSenderId: "445300582484",
-            appId: "1:445300582484:web:f8f1373a3bbf643face5c1",
-            measurementId: "G-PNXLYD0D0X"
-        };
+    const HP_SCALE = 2;
+    const ROOMS_ROOT = "pokbattle_rooms_v1";
+    const QUEUE_ROOT = "pokbattle_queue_v1";
 
-        const appFB = initializeApp(firebaseConfig);
-        const db = getDatabase(appFB);
-        window.fb = { db, ref, set, update, onValue, push, get, child, remove, onDisconnect };
+    const TYPE_FX = {
+      fire: { style: 'type-fire', icon: 'flame', particleColor: '#ef4444', sigEmoji: '🔥' },
+      water: { style: 'type-water', icon: 'droplets', particleColor: '#3b82f6', sigEmoji: '💧' },
+      electric: { style: 'type-electric', icon: 'zap', particleColor: '#eab308', sigEmoji: '⚡' },
+      grass: { style: 'type-grass', icon: 'leaf', particleColor: '#22c55e', sigEmoji: '🌿' },
+      psychic: { style: 'type-psychic', icon: 'eye', particleColor: '#a855f7', sigEmoji: '🧠' },
+      normal: { style: 'type-normal', icon: 'circle-dot', particleColor: '#9ca3af', sigEmoji: '⬤' }
+    };
 
-        const $ = (id) => document.getElementById(id);
-        const wait = (ms) => new Promise(r => setTimeout(r, ms));
-        const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const TYPE_CHART = {
+      normal: { rock: 0.8, ghost: 0.8, steel: 0.8 },
+      fire: { grass: 1.2, ice: 1.2, bug: 1.2, steel: 1.2, water: 0.8, rock: 0.8, fire: 0.8, dragon: 0.8 },
+      water: { fire: 1.2, ground: 1.2, rock: 1.2, water: 0.8, grass: 0.8, dragon: 0.8 },
+      electric: { water: 1.2, flying: 1.2, electric: 0.8, grass: 0.8, dragon: 0.8, ground: 0.8 },
+      grass: { water: 1.2, ground: 1.2, rock: 1.2, fire: 0.8, grass: 0.8, poison: 0.8, flying: 0.8, bug: 0.8, dragon: 0.8, steel: 0.8 },
+      ice: { grass: 1.2, ground: 1.2, flying: 1.2, dragon: 1.2, fire: 0.8, water: 0.8, ice: 0.8, steel: 0.8 },
+      fighting: { normal: 1.2, ice: 1.2, rock: 1.2, dark: 1.2, steel: 1.2, poison: 0.8, flying: 0.8, psychic: 0.8, bug: 0.8, fairy: 0.8, ghost: 0.8 },
+      poison: { grass: 1.2, fairy: 1.2, poison: 0.8, ground: 0.8, rock: 0.8, ghost: 0.8, steel: 0.8 },
+      ground: { fire: 1.2, electric: 1.2, poison: 1.2, rock: 1.2, steel: 1.2, grass: 0.8, bug: 0.8, flying: 0.8 },
+      flying: { grass: 1.2, fighting: 1.2, bug: 1.2, electric: 0.8, rock: 0.8, steel: 0.8 },
+      psychic: { fighting: 1.2, poison: 1.2, psychic: 0.8, steel: 0.8, dark: 0.8 },
+      bug: { grass: 1.2, psychic: 1.2, dark: 1.2, fire: 0.8, fighting: 0.8, poison: 0.8, flying: 0.8, ghost: 0.8, steel: 0.8, fairy: 0.8 },
+      rock: { fire: 1.2, ice: 1.2, flying: 1.2, bug: 1.2, fighting: 0.8, ground: 0.8, steel: 0.8 },
+      ghost: { psychic: 1.2, ghost: 1.2, dark: 0.8, normal: 0.8 },
+      dragon: { dragon: 1.2, steel: 0.8, fairy: 0.8 },
+      dark: { psychic: 1.2, ghost: 1.2, fighting: 0.8, dark: 0.8, fairy: 0.8 },
+      steel: { ice: 1.2, rock: 1.2, fairy: 1.2, fire: 0.8, water: 0.8, electric: 0.8, steel: 0.8 },
+      fairy: { fighting: 1.2, dragon: 1.2, dark: 1.2, fire: 0.8, poison: 0.8, steel: 0.8 }
+    };
 
-        window.showToast = function(msg, type='success') {
-            const t = $('toast');
-            if(!t) return;
-            const msgEl = $('toast-msg');
-            msgEl.innerText = msg;
-            t.style.backgroundColor = type === 'error' ? '#ef4444' : 'var(--volt)'; 
-            requestAnimationFrame(() => t.style.transform = 'translate(-50%, 0) scale(1)');
-            setTimeout(() => t.style.transform = 'translate(-50%, 0) scale(0)', 2500);
-        };
+    function typeMult(atkType, defType) {
+      const row = TYPE_CHART[atkType];
+      if (!row) return 1.0;
+      const m = row[defType];
+      if (!m) return 1.0;
+      if (m > 1) return 1.2;
+      if (m < 1) return 0.8;
+      return 1.0;
+    }
 
-        // 볼 데이터 (화이트 테마용 보더 색상 조정)
-        const BALLS = [
-            { id: 'poke', name: 'Poké Ball', price: 200, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png', rates: {S: 0, A: 5, B: 20, C: 75}, color: 'border-red-500' },
-            { id: 'great', name: 'Great Ball', price: 500, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png', rates: {S: 5, A: 15, B: 40, C: 40}, color: 'border-blue-500' },
-            { id: 'ultra', name: 'Ultra Ball', price: 1500, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png', rates: {S: 15, A: 45, B: 30, C: 10}, color: 'border-yellow-500' },
-            { id: 'master', name: 'Master Ball', price: 5000, img: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png', rates: {S: 100, A: 0, B: 0, C: 0}, color: 'border-purple-500' }
+    function levelMult(level) {
+      return 1 + (Math.max(1, Math.min(30, level)) * 0.01);
+    }
+
+    function cooldownSec(power, speed) {
+      const p = Math.max(1, Number(power) || 1);
+      const s = Math.max(1, Number(speed) || 1);
+      return p / (10 + (s * 0.05));
+    }
+
+    function nowMs() { return performance.now(); }
+
+    window.showToast = function(msg, type='success') {
+      const t = $('toast');
+      if(!t) return;
+      const msgEl = $('toast-msg');
+      msgEl.innerText = msg;
+      t.style.backgroundColor = type === 'error' ? '#ef4444' : 'var(--volt)';
+      requestAnimationFrame(() => t.style.transform = 'translate(-50%, 0) scale(1)');
+      setTimeout(() => t.style.transform = 'translate(-50%, 0) scale(0)', 2500);
+    };
+
+    function capName(n) {
+      if (!n) return '';
+      return n.charAt(0).toUpperCase() + n.slice(1);
+    }
+
+    function sumBST(stats) {
+      return (stats || []).reduce((a, x) => a + (x?.base_stat || 0), 0);
+    }
+
+    function statVal(stats, name) {
+      const it = (stats || []).find(s => s?.stat?.name === name);
+      return it ? it.base_stat : 1;
+    }
+
+    function rankByBST(bst) {
+      if (bst <= 300) return 'C';
+      if (bst <= 399) return 'B';
+      if (bst <= 479) return 'A';
+      if (bst <= 579) return 'S';
+      return 'S';
+    }
+
+    function priceByRank(rank) {
+      if (rank === 'C') return 1000;
+      if (rank === 'B') return 2000;
+      if (rank === 'A') return 5000;
+      if (rank === 'S') return 10000;
+      return 10000;
+    }
+
+    async function fetchJSON(url) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('fetch_failed');
+      return await r.json();
+    }
+
+    async function pickPokemonByBSTRange(minBST, maxBST, maxTries=60) {
+      for (let t=0; t<maxTries; t++) {
+        const id = rnd(1, 151);
+        const p = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        const bst = sumBST(p.stats);
+        if (bst >= minBST && bst <= maxBST) return p;
+      }
+      const fallback = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${rnd(1,151)}`);
+      return fallback;
+    }
+    async function getRandomMovesForType(typeName, needBasics=2, needSignature=1) {
+      const typeData = await fetchJSON(`https://pokeapi.co/api/v2/type/${typeName}`);
+      const moveRefs = (typeData.moves || []).slice();
+      const shuffled = moveRefs.sort(()=>Math.random()-0.5);
+      const basics = [];
+      const sigs = [];
+      const tried = new Set();
+
+      async function pullOne(preferHigh=false) {
+        for (let i=0; i<shuffled.length; i++) {
+          const m = shuffled[i];
+          if (!m?.url) continue;
+          if (tried.has(m.url)) continue;
+          tried.add(m.url);
+          let md;
+          try { md = await fetchJSON(m.url); } catch(e) { continue; }
+          const power = md.power;
+          if (power == null) continue;
+          const name = md.name || 'move';
+          const mType = md.type?.name || typeName;
+          const acc = md.accuracy == null ? 100 : md.accuracy;
+          const pp = md.pp == null ? 10 : md.pp;
+          const dmgClass = md.damage_class?.name || 'physical';
+          if (preferHigh) {
+            if (Number(power) >= 80) return { name, power: Number(power), type: mType, accuracy: acc, pp, dmgClass };
+          } else {
+            return { name, power: Number(power), type: mType, accuracy: acc, pp, dmgClass };
+          }
+        }
+        return null;
+      }
+
+      while (basics.length < needBasics) {
+        const mv = await pullOne(false);
+        if (!mv) break;
+        basics.push(mv);
+      }
+
+      while (sigs.length < needSignature) {
+        const mv = await pullOne(true) || await pullOne(false);
+        if (!mv) break;
+        sigs.push(mv);
+      }
+
+      if (basics.length < 2) {
+        const fallback = { name: 'tackle', power: 40, type: typeName, accuracy: 100, pp: 35, dmgClass: 'physical' };
+        while (basics.length < 2) basics.push(fallback);
+      }
+      if (sigs.length < 1) {
+        sigs.push({ name: 'hyper-beam', power: 120, type: typeName, accuracy: 90, pp: 5, dmgClass: 'special' });
+      }
+
+      return { basics: basics.slice(0,2), signature: sigs[0] };
+    }
+
+    async function buildOwnedPokemonFromAPI(pokeData, preferredRank=null) {
+      const bst = sumBST(pokeData.stats);
+      const rank = preferredRank || rankByBST(bst);
+      const type = pokeData.types?.[0]?.type?.name || 'normal';
+      const name = capName(pokeData.name);
+      const id = pokeData.id;
+
+      const baseHp = statVal(pokeData.stats, 'hp');
+      const baseAtk = statVal(pokeData.stats, 'attack');
+      const baseSpd = statVal(pokeData.stats, 'speed');
+
+      const lv = 1;
+      const hpBase = Math.max(90, Math.floor(baseHp * 2.2 + (bst * 0.12)));
+      const atk = Math.max(40, Math.floor(baseAtk * 1.2 + (bst * 0.06)));
+      const speed = Math.max(1, baseSpd);
+
+      const moves = await getRandomMovesForType(type, 2, 1);
+
+      const hp = hpBase * HP_SCALE;
+
+      const pkm = {
+        uid: (Date.now() + Math.random()).toString(36),
+        id,
+        name,
+        type,
+        rank,
+        bst,
+        level: lv,
+        exp: 0,
+        hp,
+        atk,
+        speed,
+        maxHp: hp,
+        currentHp: hp,
+        sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`,
+        static: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+        basics: moves.basics,
+        signature: moves.signature
+      };
+      return pkm;
+    }
+
+    async function getEvolutionNextId(pokemonId) {
+      const species = await fetchJSON(`https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`);
+      const chainUrl = species?.evolution_chain?.url;
+      if (!chainUrl) return null;
+      const chain = await fetchJSON(chainUrl);
+
+      const targetId = String(pokemonId);
+
+      function findNode(node) {
+        if (!node) return null;
+        const url = node.species?.url || '';
+        const m = url.match(/\/pokemon-species\/(\d+)\//);
+        const sid = m ? m[1] : null;
+        if (sid === targetId) return node;
+        for (const ch of (node.evolves_to || [])) {
+          const r = findNode(ch);
+          if (r) return r;
+        }
+        return null;
+      }
+
+      const node = findNode(chain.chain);
+      if (!node) return null;
+      const next = node.evolves_to?.[0];
+      if (!next) return null;
+      const url = next.species?.url || '';
+      const mm = url.match(/\/pokemon-species\/(\d+)\//);
+      if (!mm) return null;
+      return Number(mm[1]);
+    }
+
+    const state = (() => {
+      return {
+        coins: 0,
+        mmr: 1000,
+        inventory: [],
+        team: [null, null, null],
+        dexSeen: {},
+        selectedSlot: null,
+        slotSwapFrom: null,
+        nickname: localStorage.getItem('pokerun_name') || 'Trainer',
+        profileImg: localStorage.getItem('pokerun_avatar') || null,
+        battle: { active: false, over: false, lastTs: 0, loopId: null, enemyTeam: [], myTeam: [], mode: 'local', room: null, uiPlayerSide: 'host', sideByUid: {}, teamBySide: { host: [], guest: [] }, unsubEvents: null, unsubRoom: null, eventsSeen: new Set(), displayLoopId: null },
+        auth: { uid: null, ready: false },
+        queue: { active: false, timer: null, poll: null }
+      };
+    })();
+
+    let saveTimer = null;
+    function debounceSave(fn, ms=600) {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(fn, ms);
+    }
+
+    function toSafeStateForServer() {
+      return {
+        coins: state.coins ?? 0,
+        mmr: state.mmr ?? 1000,
+        inventory: Array.isArray(state.inventory) ? state.inventory : [],
+        team: Array.isArray(state.team) ? state.team : [null, null, null],
+        dexSeen: state.dexSeen || {}
+      };
+    }
+
+    async function loadFromServer(uid) {
+      const root = ref(db, `users/${uid}/pokbattle`);
+      const snap = await get(root);
+      if (!snap.exists()) return null;
+      const s = snap.val();
+      return s || null;
+    }
+
+    async function saveToServer(uid) {
+      const root = ref(db, `users/${uid}/pokbattle`);
+      const payload = { ...toSafeStateForServer(), updatedAt: new Date().toISOString() };
+      await update(root, payload);
+    }
+
+    function setLocalFallbackCache() {
+      try { localStorage.setItem('pokbattle_local_cache_v1', JSON.stringify(toSafeStateForServer())); } catch(e) {}
+    }
+
+    function getLocalFallbackCache() {
+      try {
+        const raw = localStorage.getItem('pokbattle_local_cache_v1');
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch(e) { return null; }
+    }
+
+    function applyLoadedState(s) {
+      if (!s) return;
+      if (typeof s.coins === 'number') state.coins = s.coins;
+      else if (typeof s.coins === 'string') state.coins = Number(s.coins) || 0;
+      if (typeof s.mmr === 'number') state.mmr = s.mmr;
+      if (Array.isArray(s.inventory)) state.inventory = s.inventory;
+      if (Array.isArray(s.team)) state.team = s.team;
+      if (s.dexSeen && typeof s.dexSeen === 'object') state.dexSeen = s.dexSeen;
+      if (!Array.isArray(state.team) || state.team.length !== 3) state.team = [null, null, null];
+      if (!Array.isArray(state.inventory)) state.inventory = [];
+      if (!state.dexSeen) state.dexSeen = {};
+    }
+
+    function renderTopHeader() {
+      const el = $('app-header');
+      if (!el) return;
+      el.innerHTML = `
+        <header class="app-header">
+          <div class="header-left" onclick="location.href='index.html'">
+            <div class="logo-icon"><span class="material-icons">flash_on</span></div>
+            <div class="logo-text">
+              <span class="logo-poke">POKE</span><span class="logo-run">RUN</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" onclick="location.href='settings.html'">
+              <span class="material-icons">settings</span>
+            </button>
+            <div class="coin-capsule">
+              <span class="material-icons coin-icon">monetization_on</span>
+              <span id="userCoinDisplay">${(state.coins||0).toLocaleString()}</span>
+            </div>
+          </div>
+        </header>
+      `;
+    }
+
+    function updateHeaderCoins() {
+      const headerCoin = document.getElementById('userCoinDisplay');
+      if (headerCoin) headerCoin.innerText = (state.coins || 0).toLocaleString();
+    }
+
+    async function syncCoinsToServerDelta(uid, amt) {
+      const coinRef = ref(db, `users/${uid}/coins`);
+      const res = await runTransaction(coinRef, (cur) => {
+        const v = (typeof cur === 'number') ? cur : (Number(cur) || 0);
+        const nv = Math.max(0, v + amt);
+        return nv;
+      });
+      const final = (typeof res?.snapshot?.val() === 'number') ? res.snapshot.val() : (Number(res?.snapshot?.val()) || 0);
+      state.coins = final;
+      updateHeaderCoins();
+      setLocalFallbackCache();
+      if (uid) debounceSave(() => saveToServer(uid).catch(()=>{}), 650);
+      return final;
+    }
+
+    async function addCoins(amt) {
+      state.coins = (state.coins || 0) + amt;
+      if (state.coins < 0) state.coins = 0;
+      updateHeaderCoins();
+      setLocalFallbackCache();
+      if (state.auth.uid) {
+        try { await syncCoinsToServerDelta(state.auth.uid, amt); } catch(e) {}
+      } else {
+        setLocalFallbackCache();
+      }
+    }
+
+    function markDex(p) {
+      if (!p || !p.id) return;
+      state.dexSeen[String(p.id)] = true;
+      if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+      setLocalFallbackCache();
+    }
+
+    function gainExp(p, amt) {
+      if (!p || !amt) return;
+      const maxLv = 30;
+      p.exp = (p.exp || 0) + amt;
+      p.level = p.level || 1;
+
+      while (p.level < maxLv) {
+        const need = p.level * 100;
+        if (p.exp >= need) {
+          p.exp -= need;
+          p.level += 1;
+          const bonus = Math.floor((p.maxHp || 1) * 0.02) + 2;
+          p.maxHp = (p.maxHp || 1) + bonus;
+          p.hp = p.maxHp;
+          p.currentHp = Math.min((p.currentHp || p.maxHp) + bonus, p.maxHp);
+          p.atk = Math.floor((p.atk || 1) * 1.01 + 1);
+        } else break;
+      }
+    }
+
+    function mmrDelta(win) {
+      const d = rnd(15, 25);
+      return win ? d : -d;
+    }
+
+    function battleReward(win) {
+      const delta = mmrDelta(win);
+      state.mmr = Math.max(0, (state.mmr || 1000) + delta);
+      addCoins(win ? 500 : 50);
+      const team = (state.team || []).filter(Boolean);
+      for (const p of team) gainExp(p, win ? 10 : 0);
+
+      if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+      setLocalFallbackCache();
+      return { delta };
+    }
+
+    function normalizeTeamForBattle(teamArr) {
+      return (teamArr || []).map(p => {
+        if (!p) return null;
+        const cp = JSON.parse(JSON.stringify(p));
+        cp.currentHp = cp.maxHp;
+        cp.alive = true;
+
+        const s1 = cp.basics?.[0] || { name:'tackle', power:40, type: cp.type };
+        const s2 = cp.basics?.[1] || { name:'tackle', power:40, type: cp.type };
+        const s3 = cp.signature || { name:'hyper-beam', power:120, type: cp.type };
+
+        cp.skills = [s1, s2, s3].map(x => ({
+          name: (x.name || 'skill').toString(),
+          power: Number(x.power || 1),
+          type: (x.type || cp.type || 'normal').toString()
+        }));
+
+        cp.pendingSkill = null;
+        cp.actionCdTotal = 1;
+        cp.actionCdRemain = 0;
+
+        return cp;
+      }).filter(Boolean);
+    }
+
+    function makeEnemyTeamFromPlayer() {
+      const my = (state.team || []).filter(Boolean);
+      const avg = my.length ? Math.floor(my.reduce((a,p)=>a+(p.bst||350),0)/my.length) : 350;
+      function rangeFromBST(bst) {
+        if (bst <= 300) return [1, 300];
+        if (bst <= 399) return [301, 399];
+        if (bst <= 479) return [400, 479];
+        return [480, 579];
+      }
+      const [mn, mx] = rangeFromBST(avg);
+      return { mn, mx };
+    }
+
+    function renderModal(html) {
+      const overlay = document.createElement('div');
+      overlay.className = "modal-overlay anim-pop";
+      overlay.innerHTML = html;
+      $('app').appendChild(overlay);
+      return overlay;
+    }
+
+    function closeModal(el) {
+      if (el && el.remove) el.remove();
+    }
+
+    function battleReady() {
+      return (state.team || []).filter(p=>p).length === 3;
+    }
+
+    function setNavActive(view) {
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        const isActive = b.id === `nav-${view}`;
+        b.classList.remove('nav-active');
+        if(isActive) b.classList.add('nav-active');
+      });
+    }
+
+    function persistLocalName() {
+      try { localStorage.setItem('pokerun_name', state.nickname || 'Trainer'); } catch(e) {}
+    }
+
+    function avgTeamBST(team) {
+      const t = (team || []).filter(Boolean);
+      if (!t.length) return 350;
+      return Math.floor(t.reduce((a,p)=>a+(p.bst||350),0)/t.length);
+    }
+
+    function keyRoomCode(raw) {
+      const s = (raw || '').toString().trim();
+      return s.replace(/[^0-9]/g, '').slice(0, 8);
+    }
+
+    function stopRoomSubs() {
+      if (state.battle.unsubEvents) { state.battle.unsubEvents(); state.battle.unsubEvents = null; }
+      if (state.battle.unsubRoom) { state.battle.unsubRoom(); state.battle.unsubRoom = null; }
+      state.battle.eventsSeen = new Set();
+    }
+
+    function stopDisplayLoop() {
+      if (state.battle.displayLoopId) cancelAnimationFrame(state.battle.displayLoopId);
+      state.battle.displayLoopId = null;
+    }
+
+    function stopQueue() {
+      state.queue.active = false;
+      if (state.queue.timer) clearTimeout(state.queue.timer);
+      if (state.queue.poll) clearInterval(state.queue.poll);
+      state.queue.timer = null;
+      state.queue.poll = null;
+    }
+    const app = {
+      init: async () => {
+        renderTopHeader();
+        updateHeaderCoins();
+        app.nav('lobby');
+      },
+
+      nav: (view) => {
+        const main = $('main-content');
+        main.innerHTML = '';
+        state.selectedSlot = null;
+        state.slotSwapFrom = null;
+        setNavActive(view);
+
+        if(view === 'lobby') app.renderLobby(main);
+        if(view === 'shop') app.renderShop(main);
+        if(view === 'dex') app.renderDex(main);
+        if(view === 'team') app.renderTeam(main);
+        if(view === 'battle') app.renderBattleSetup(main);
+
+        lucide.createIcons();
+        setLocalFallbackCache();
+      },
+
+      renderLobby: (c) => {
+        const partner = state.team[0] || state.inventory[0] || null;
+        const mmr = state.mmr ?? 1000;
+
+        if (!partner) {
+          c.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full p-6 text-center anim-pop">
+              <i data-lucide="shopping-bag" class="w-12 h-12 text-[var(--volt)] mb-4"></i>
+              <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">No Pokémon Yet</h2>
+              <p class="text-sm text-gray-500 font-bold mb-6">Shop에서 3마리를 뽑아 팀을 구성하세요.</p>
+              <button onclick="app.nav('shop')" class="bg-[var(--volt)] text-white font-bold py-3 px-8 rounded-full shadow-lg">GO TO SHOP</button>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        const typeInfo = TYPE_FX[partner.type] || TYPE_FX.normal;
+        const typeColor = typeInfo.particleColor;
+
+        c.innerHTML = `
+          <div class="flex flex-col items-center justify-between h-full w-full p-4 pb-8 anim-pop">
+            <div class="relative w-full flex-1 flex items-center justify-center max-h-[40vh]">
+              <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent blur-[60px] rounded-full"></div>
+              <img src="${partner.sprite}" class="h-full object-contain relative z-10 sprite-player drop-shadow-2xl max-h-64">
+              <div class="absolute bottom-0 right-4 glass px-3 py-1 rounded-full flex items-center gap-1 border-blue-500/30">
+                <i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current"></i>
+                <span class="text-[10px] font-black italic text-[var(--text-main)]">MAIN</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-center w-full gap-3">
+              <h2 class="font-sport font-black italic text-4xl uppercase text-[var(--text-main)] drop-shadow-sm tracking-tighter text-center line-clamp-1">${partner.name}</h2>
+
+              <div class="glass px-6 py-2 rounded-full flex items-center gap-3 border border-gray-200 shadow-sm">
+                <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
+                <div class="h-4 w-[1px] bg-gray-300"></div>
+                <div class="flex items-center gap-1" style="color:${typeColor}">
+                  <i data-lucide="${typeInfo.icon}" class="w-4 h-4"></i>
+                  <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
+                </div>
+              </div>
+
+              <div class="w-full glass p-3 rounded-xl border-l-4 shadow-sm" style="border-color: ${typeColor}">
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
+                  <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
+                </div>
+                <div class="text-xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.signature?.name || 'signature'}</div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 w-full">
+                <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                  <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
+                  <p class="text-lg font-sport font-black italic text-[var(--text-main)]">${mmr.toLocaleString()}</p>
+                </div>
+                <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                  <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
+                  <p class="text-lg font-sport font-black italic text-[var(--text-main)]">0%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      renderShop: (c) => {
+        const tiers = [
+          { rank: 'C', bst: '1 ~ 300', price: 1000, color: 'border-gray-400' },
+          { rank: 'B', bst: '301 ~ 399', price: 2000, color: 'border-blue-500' },
+          { rank: 'A', bst: '400 ~ 479', price: 5000, color: 'border-yellow-500' },
+          { rank: 'S', bst: '480 ~ 579', price: 10000, color: 'border-purple-500' }
         ];
 
-        const state = {
-            coins: 5000,
-            inventory: [],
-            team: [null, null, null],
-            battle: { active: false, roomId: null, role: null, myTeam: [], enemyTeam: [], lastActionId: 0 },
-            selectedSlot: null,
-            profileImg: localStorage.getItem('pokerun_avatar') || null,
-            nickname: localStorage.getItem('pokerun_name') || "Trainer"
-        };
+        const cards = tiers.map(t => `
+          <div onclick="app.buyTier('${t.rank}')" class="bg-white rounded-2xl flex flex-col items-center relative overflow-hidden group active:scale-95 transition-all cursor-pointer border-t-4 p-4 shadow-md hover:shadow-lg ${t.color}">
+            <div class="absolute top-2 right-2 text-[9px] font-black uppercase bg-black/80 px-2 py-0.5 rounded text-white border border-white/10 z-10 relative">
+              BST ${t.bst}
+            </div>
+            <div class="w-20 h-20 flex items-center justify-center mb-3 drop-shadow-md group-hover:scale-110 transition-transform mt-2 relative z-10">
+              <span class="font-sport font-black italic text-6xl ${t.rank==='S'?'text-[var(--rank-s)]':t.rank==='A'?'text-[var(--rank-a)]':t.rank==='B'?'text-[var(--rank-b)]':'text-[var(--rank-c)]'}">${t.rank}</span>
+            </div>
+            <h3 class="font-black italic text-lg uppercase mb-0.5 relative z-10 text-[var(--text-main)]">RANDOM ${t.rank}</h3>
+            <p class="text-[var(--volt)] font-bold text-sm mb-1 relative z-10">${t.price.toLocaleString()} C</p>
+            <p class="text-[10px] text-gray-400 font-bold uppercase relative z-10">2 BASIC + 1 SIGNATURE</p>
+          </div>
+        `).join('');
 
-        const TYPE_FX = {
-            fire: { style: 'type-fire', icon: 'flame', particleColor: '#ef4444' },
-            water: { style: 'type-water', icon: 'droplets', particleColor: '#3b82f6' },
-            electric: { style: 'type-electric', icon: 'zap', particleColor: '#eab308' },
-            grass: { style: 'type-grass', icon: 'leaf', particleColor: '#22c55e' },
-            psychic: { style: 'type-psychic', icon: 'eye', particleColor: '#a855f7' },
-            normal: { style: 'type-normal', icon: 'circle-dot', particleColor: '#9ca3af' }
-        };
+        c.innerHTML = `
+          <div class="p-5 h-full flex flex-col anim-pop">
+            <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">ITEM SHOP</h2>
+            <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4 custom-scroll">${cards}</div>
+          </div>
+        `;
+      },
 
-        const app = {
-            saveData: () => {
-        if (!state.nickname) return;
-        const userRef = window.fb.ref(window.fb.db, 'users/' + state.nickname + '/userData');
-        window.fb.update(userRef, {
-            coins: state.coins,
-            inventory: state.inventory,
-            team: state.team,
-            lastSave: Date.now()
+      buyTier: async (rank) => {
+        const price = priceByRank(rank);
+        if ((state.coins||0) < price) return showToast("Not enough coins!", "error");
+
+        await addCoins(-price);
+
+        const overlay = document.createElement('div');
+        overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+        overlay.innerHTML = `<div class="relative mb-10"><div class="text-[var(--volt)] font-sport text-4xl font-black italic mb-3">SUMMONING...</div><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--volt)]"></div></div>`;
+        $('app').appendChild(overlay);
+
+        const ranges = { C: [1, 300], B: [301, 399], A: [400, 479], S: [480, 579] };
+        const [mn, mx] = ranges[rank] || [1, 300];
+
+        let pokeData;
+        try { pokeData = await pickPokemonByBSTRange(mn, mx); }
+        catch (e) { overlay.remove(); await addCoins(price); return showToast("PokeAPI failed!", "error"); }
+
+        let owned;
+        try { owned = await buildOwnedPokemonFromAPI(pokeData, rank); }
+        catch (e) { overlay.remove(); await addCoins(price); return showToast("Move load failed!", "error"); }
+
+        state.inventory.push(owned);
+        markDex(owned);
+
+        if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+        setLocalFallbackCache();
+
+        overlay.innerHTML = `
+          <div class="text-[var(--volt)] font-sport text-6xl font-black italic mb-2 anim-pop">GOTCHA!</div>
+          <img src="${owned.sprite}" class="w-56 h-56 object-contain relative z-10 sprite-player mb-4">
+          <h2 class="text-3xl font-black italic uppercase text-black mb-2">${owned.name}</h2>
+          <div class="glass px-4 py-1 rounded-full text-xs font-bold uppercase mb-3 border border-gray-300 text-gray-600">${owned.type}</div>
+          <div class="flex items-center gap-2 mb-8">
+            <span class="pill">BST ${owned.bst}</span>
+            <span class="pill">LV ${owned.level}</span>
+            <span class="pill">SPD ${owned.speed}</span>
+          </div>
+          <button onclick="this.parentElement.remove(); app.nav('team')" class="bg-[var(--volt)] text-white px-12 py-4 rounded-full font-black italic shadow-lg">GO TEAM</button>
+        `;
+        lucide.createIcons();
+      },
+
+      renderTeam: (c) => {
+        const slots = state.team.map((p, i) => {
+          const isSelected = state.selectedSlot === i;
+          const borderClass = isSelected ? 'border-[var(--volt)] bg-blue-50 ring-2 ring-[var(--volt)]' : 'border-dashed border-gray-300';
+          const isLeader = i === 0;
+          return `
+          <div onclick="app.onSlotClick(${i})" class="bg-white h-32 rounded-xl flex items-center justify-center relative cursor-pointer border-2 transition-all duration-200 ${borderClass}">
+            ${isLeader ? `<div class="absolute top-2 left-2 z-20"><i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current drop-shadow-md"></i></div>` : ''}
+            ${p ? `
+              <div class="text-center relative z-10">
+                <img src="${p.static}" class="w-20 h-20 object-contain mx-auto">
+                <div class="mt-1 text-[10px] font-black uppercase text-gray-700">${p.name}</div>
+                <div class="text-[9px] font-bold text-gray-400 uppercase">LV ${p.level} · ${p.type}</div>
+              </div>
+            ` : `<i data-lucide="${isSelected ? 'check' : 'plus'}" class="w-6 h-6 text-gray-300"></i>`}
+          </div>`;
+        }).join('');
+
+        const inv = state.inventory.map((p, i) => {
+          const isInTeam = state.team.some(t => t && t.uid === p.uid);
+          return `
+          <div data-idx="${i}" class="bg-white p-2 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 border border-gray-100 ${isInTeam ? 'opacity-50' : ''}">
+            <div class="w-full flex items-center justify-between mb-1">
+              <span class="text-[9px] font-black uppercase text-gray-400">${p.rank} · BST ${p.bst}</span>
+              <span class="text-[9px] font-black uppercase text-gray-400">LV ${p.level}</span>
+            </div>
+            <div class="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden">
+              <img src="${p.static}" class="w-16 h-16 object-contain">
+            </div>
+            <div class="w-full mt-1 text-[10px] font-black uppercase text-gray-800 text-center line-clamp-1">${p.name}</div>
+            <div class="w-full text-[9px] font-bold text-gray-400 uppercase text-center">${p.type}</div>
+          </div>`;
+        }).join('');
+
+        c.innerHTML = `
+          <div class="p-5 h-full flex flex-col anim-pop">
+            <h2 class="text-3xl font-sport font-black italic text-[var(--text-main)] mb-4">MY TEAM</h2>
+            <div class="grid grid-cols-3 gap-2 mb-6">${slots}</div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-xs font-bold text-gray-500 uppercase">Inventory</div>
+              <div class="text-xs font-bold text-gray-500 uppercase">${state.inventory.length} / ∞</div>
+            </div>
+            <div id="inv-grid" class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2 custom-scroll">${inv}</div>
+          </div>
+        `;
+
+        const grid = document.getElementById('inv-grid');
+        let clickTimer = null;
+        if (grid) {
+          grid.querySelectorAll('[data-idx]').forEach(card => {
+            const idx = Number(card.getAttribute('data-idx'));
+            card.addEventListener('click', () => {
+              if (clickTimer) return;
+              clickTimer = setTimeout(() => {
+                clickTimer = null;
+                app.onInvSingleClick(idx);
+              }, 230);
+            });
+            card.addEventListener('dblclick', (e) => {
+              e.preventDefault();
+              if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+              app.onInvDoubleClick(idx);
+            });
+          });
+        }
+
+        lucide.createIcons();
+        setLocalFallbackCache();
+      },
+
+      onSlotClick: (slotIdx) => {
+        if (state.slotSwapFrom === null || state.slotSwapFrom === undefined) {
+          state.slotSwapFrom = slotIdx;
+          state.selectedSlot = slotIdx;
+          return app.renderTeam($('main-content'));
+        }
+        if (state.slotSwapFrom === slotIdx) {
+          state.slotSwapFrom = null;
+          state.selectedSlot = null;
+          return app.renderTeam($('main-content'));
+        }
+        const a = state.slotSwapFrom;
+        const b = slotIdx;
+        const tmp = state.team[a];
+        state.team[a] = state.team[b];
+        state.team[b] = tmp;
+        state.slotSwapFrom = null;
+        state.selectedSlot = null;
+
+        if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+        setLocalFallbackCache();
+
+        showToast("Swapped!");
+        app.renderTeam($('main-content'));
+      },
+
+      onInvSingleClick: (invIdx) => {
+        const p = state.inventory[invIdx];
+        if (!p) return;
+        const inTeam = state.team.some(t => t && t.uid === p.uid);
+        if (inTeam) return showToast("Already in team!", "error");
+
+        const targetSlot = (state.selectedSlot !== null && state.selectedSlot !== undefined) ? state.selectedSlot : 0;
+        state.team[targetSlot] = p;
+        state.selectedSlot = null;
+        state.slotSwapFrom = null;
+
+        if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+        setLocalFallbackCache();
+
+        showToast(`${p.name} set!`);
+        app.renderTeam($('main-content'));
+      },
+
+      onInvDoubleClick: async (invIdx) => {
+        const p = state.inventory[invIdx];
+        if (!p) return;
+
+        const nextId = await (async () => {
+          try { return await getEvolutionNextId(p.id); } catch(e) { return null; }
+        })();
+
+        const evoCost = Math.floor((p.bst || 0) * 10);
+        const canEvo = !!nextId && (state.coins||0) >= evoCost;
+
+        const cd1 = cooldownSec(p.basics?.[0]?.power ?? 40, p.speed || 1).toFixed(1);
+        const cd2 = cooldownSec(p.basics?.[1]?.power ?? 40, p.speed || 1).toFixed(1);
+        const cd3 = cooldownSec(p.signature?.power ?? 120, p.speed || 1).toFixed(1);
+
+        const overlay = renderModal(`
+          <div class="modal-card anim-pop">
+            <div class="modal-head">
+              <div class="flex items-center gap-3">
+                <img src="${p.static}" class="w-10 h-10 object-contain">
+                <div>
+                  <div class="font-black italic uppercase text-sm">${p.name}</div>
+                  <div class="text-[10px] font-bold text-gray-400 uppercase">LV ${p.level} · BST ${p.bst} · SPD ${p.speed}</div>
+                </div>
+              </div>
+              <button id="modalClose" class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="glass p-3 rounded-xl border border-gray-200">
+                  <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Type</div>
+                  <div class="font-black uppercase text-sm">${p.type}</div>
+                </div>
+                <div class="glass p-3 rounded-xl border border-gray-200">
+                  <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Rank</div>
+                  <div class="font-black uppercase text-sm">${p.rank}</div>
+                </div>
+              </div>
+
+              <div class="glass p-3 rounded-xl border border-gray-200 mb-3">
+                <div class="flex items-center justify-between">
+                  <div class="text-[10px] font-bold text-gray-400 uppercase">Skills</div>
+                  <div class="text-[10px] font-bold text-gray-400 uppercase">CD included</div>
+                </div>
+                <div class="mt-2 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="text-xs font-black uppercase">${p.basics?.[0]?.name || 'basic1'}</div>
+                    <div class="text-xs font-bold text-gray-500">P ${p.basics?.[0]?.power ?? 40} · CD ${cd1}s</div>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <div class="text-xs font-black uppercase">${p.basics?.[1]?.name || 'basic2'}</div>
+                    <div class="text-xs font-bold text-gray-500">P ${p.basics?.[1]?.power ?? 40} · CD ${cd2}s</div>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <div class="text-xs font-black uppercase">${p.signature?.name || 'signature'}</div>
+                    <div class="text-xs font-bold text-gray-500">P ${p.signature?.power ?? 120} · CD ${cd3}s</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button id="evoBtn" class="flex-1 ${canEvo ? 'bg-[var(--volt)] text-white' : 'bg-gray-100 text-gray-400'} font-black italic py-3 rounded-xl border ${canEvo ? 'border-white/0' : 'border-gray-200'} shadow-sm">
+                  EVOLVE ${nextId ? `(${evoCost.toLocaleString()} C)` : ''}
+                </button>
+                <button id="closeBtn" class="w-28 bg-white text-black border-2 border-black font-bold py-3 rounded-xl hover:bg-gray-100 shadow-sm">
+                  CLOSE
+                </button>
+              </div>
+              ${!nextId ? `<div class="text-[10px] text-gray-400 font-bold mt-3 text-center">Evolution not available</div>` : ((state.coins||0) < evoCost ? `<div class="text-[10px] text-red-500 font-bold mt-3 text-center">Not enough coins</div>` : ``)}
+            </div>
+          </div>
+        `);
+
+        const close = () => { closeModal(overlay); };
+        overlay.querySelector('#modalClose')?.addEventListener('click', close);
+        overlay.querySelector('#closeBtn')?.addEventListener('click', close);
+
+        overlay.querySelector('#evoBtn')?.addEventListener('click', async () => {
+          if (!nextId) return;
+          const cost = evoCost;
+          if ((state.coins||0) < cost) return showToast("Not enough coins!", "error");
+
+          await addCoins(-cost);
+
+          let nextData;
+          try { nextData = await fetchJSON(`https://pokeapi.co/api/v2/pokemon/${nextId}`); }
+          catch(e) { await addCoins(cost); return showToast("PokeAPI failed!", "error"); }
+
+          const bst = sumBST(nextData.stats);
+          const type = nextData.types?.[0]?.type?.name || p.type;
+          const name = capName(nextData.name);
+          const id = nextData.id;
+
+          const baseHp = statVal(nextData.stats, 'hp');
+          const baseAtk = statVal(nextData.stats, 'attack');
+          const baseSpd = statVal(nextData.stats, 'speed');
+
+          const newHpBase = Math.max(90, Math.floor(baseHp * 2.2 + (bst * 0.12)));
+          const newHp = newHpBase * HP_SCALE;
+          const newAtk = Math.max(40, Math.floor(baseAtk * 1.2 + (bst * 0.06)));
+          const newSpeed = Math.max(1, baseSpd);
+
+          p.id = id;
+          p.name = name;
+          p.type = type;
+          p.bst = bst;
+          p.rank = rankByBST(bst);
+          p.speed = newSpeed;
+          p.atk = newAtk;
+
+          const oldLv = p.level || 1;
+          const oldExp = p.exp || 0;
+          p.level = oldLv;
+          p.exp = oldExp;
+
+          p.maxHp = Math.max(newHp, Math.floor(newHp * levelMult(p.level)));
+          p.hp = p.maxHp;
+          p.currentHp = p.maxHp;
+
+          p.sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
+          p.static = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+
+          markDex(p);
+
+          if (state.auth.uid) debounceSave(() => saveToServer(state.auth.uid).catch(()=>{}), 650);
+          setLocalFallbackCache();
+
+          showToast("Evolved!");
+          close();
+          app.renderTeam($('main-content'));
         });
-    },
-            init: async () => {
-                const myId = state.nickname;
-                let loaded = false;
 
-                // 1. 서버에서 데이터(포켓몬, 돈) 가져오기
-                if (myId) {
-                    try {
-                        const snapshot = await window.fb.get(window.fb.ref(window.fb.db, 'users/' + myId + '/userData'));
-                        if (snapshot.exists()) {
-                            const data = snapshot.val();
-                            state.coins = data.coins || 0;
-                            state.inventory = data.inventory || [];
-                            state.team = data.team || [null, null, null];
-                            loaded = true;
-                            showToast(`${myId}님의 데이터를 불러왔습니다!`);
-                        }
-                    } catch (e) { console.error(e); }
-                }
+        lucide.createIcons();
+      },
 
-                // 2. 데이터가 없으면(첫 시작이면) 기본 포켓몬 지급
-                if (!loaded && state.inventory.length === 0) {
-                    app.addPokemon({id: 25, name: 'Pikachu', type: 'electric', rank: 'A', hp: 100, atk: 55, move: 'Thunderbolt'}, true);
-                    app.addPokemon({id: 6, name: 'Charizard', type: 'fire', rank: 'S', hp: 160, atk: 90, move: 'Flamethrower'}, true);
-                    app.addPokemon({id: 9, name: 'Blastoise', type: 'water', rank: 'A', hp: 140, atk: 75, move: 'Hydro Pump'}, true);
-                    state.team = [state.inventory[1], state.inventory[0], state.inventory[2]];
-                    state.coins = 5000;
-                    app.saveData(); // 바로 저장
-                }
+      renderDex: (c) => {
+        const ownedIds = new Set(state.inventory.map(p => p.id));
+        const totalDexSize = 151;
+        let dexHtml = '';
+        for (let id = 1; id <= totalDexSize; id++) {
+          const isOwned = ownedIds.has(id) || !!state.dexSeen[String(id)];
+          const pokemon = isOwned ? (state.inventory.find(p => p.id === id) || null) : null;
+          const name = isOwned && pokemon ? pokemon.name : '???';
+          const iconOrImg = isOwned && pokemon ? `<img src="${pokemon.static}" class="w-16 h-16 object-contain">` : `<i data-lucide="help-circle" class="w-10 h-10 text-gray-300"></i>`;
+          dexHtml += `
+            <div class="bg-white border border-gray-100 p-2 rounded-xl flex flex-col items-center justify-between min-h-[120px]">
+              <span class="text-[9px] font-bold uppercase text-gray-400">${id.toString().padStart(3, '0')}</span>
+              <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-1 overflow-hidden ${isOwned ? '' : 'opacity-30 grayscale'}">${iconOrImg}</div>
+              <span class="font-black text-xs uppercase ${isOwned ? 'text-black' : 'text-gray-300'} text-center">${name}</span>
+            </div>`;
+        }
+        c.innerHTML = `
+          <div class="p-5 h-full flex flex-col anim-pop">
+            <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">POKEDEX</h2>
+            <div class="bg-white p-4 rounded-xl mb-6 border-l-4 border-[var(--volt)] shadow-sm">
+              <span class="text-xs text-gray-500 font-bold uppercase">Collected</span>
+              <div class="text-2xl font-sport font-black italic text-black mt-1">${ownedIds.size} / ${totalDexSize}</div>
+            </div>
+            <div class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2 custom-scroll">${dexHtml}</div>
+          </div>`;
+        lucide.createIcons();
+      },
 
-                app.updateCoins(0);
-                app.nav('lobby');
-            },
+      renderBattleSetup: (c) => {
+        const ready = battleReady();
+        if (!ready) {
+          c.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full p-6 text-center">
+              <i data-lucide="alert-triangle" class="w-12 h-12 text-yellow-500 mb-4"></i>
+              <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">Team Incomplete</h2>
+              <button onclick="app.nav('team')" class="bg-[var(--volt)] text-white font-bold py-3 px-8 rounded-full shadow-lg">GO TO TEAM</button>
+            </div>`;
+          lucide.createIcons();
+          return;
+        }
 
-            addPokemon: (pkm, silent=false) => {
-        pkm.uid = Date.now() + Math.random();
-        pkm.sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pkm.id}.gif`;
-        pkm.static = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`;
-        pkm.level = 1;
-        pkm.maxHp = pkm.hp;
-        pkm.currentHp = pkm.hp;
-        if(!pkm.move) pkm.move = 'Tackle';
-        state.inventory.push(pkm);
-        if(!silent) showToast(`Got ${pkm.name}!`);
-        
-        app.saveData(); // 저장 기능 추가됨
-    },
+        c.innerHTML = `
+          <div class="flex flex-col h-full p-6 anim-pop">
+            <h2 class="text-4xl font-sport font-black italic text-[var(--text-main)] mb-4">BATTLE</h2>
 
-            updateCoins: (amt) => {
-                state.coins += amt;
-                // layout.js의 헤더 코인 업데이트
-                const headerCoin = document.getElementById('userCoinDisplay');
-                if(headerCoin) headerCoin.innerText = state.coins.toLocaleString();
-            },
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-md p-4 mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-black italic text-sm uppercase text-gray-500">RANDOM MATCH</div>
+              </div>
+              <button onclick="app.startRandomMatch()" class="w-full bg-[var(--volt)] text-white font-black italic text-lg py-4 rounded-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                <i data-lucide="search" class="w-5 h-5"></i> FIND OPPONENT
+              </button>
+              <div id="match-status" class="mt-3 text-xs font-bold text-gray-500 text-center"></div>
+              <button onclick="app.cancelRandomMatch()" id="match-cancel" class="mt-3 w-full bg-white text-black border-2 border-black font-bold py-3 rounded-xl hover:bg-gray-100 shadow-sm hidden">CANCEL</button>
+            </div>
 
-            nav: (view) => {
-                const main = $('main-content');
-                main.innerHTML = '';
-                state.selectedSlot = null;
+            <div class="mt-4">
+              <div class="text-xs font-bold text-gray-400 mb-2 uppercase">ROOM MATCH</div>
 
-                document.querySelectorAll('.nav-btn').forEach(b => {
-                    const isActive = b.id === `nav-${view}`;
-                    b.classList.remove('nav-active');
-                    if(isActive) b.classList.add('nav-active');
-                });
+              <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-2">
+                <input
+                  id="roomCodeInput"
+                  type="text"
+                  placeholder="ROOM CODE"
+                  maxlength="6"
+                  class="min-w-[90px] h-11 px-3 border border-gray-200 rounded-lg font-bold text-sm text-center"
+                />
 
-                if(view === 'lobby') app.renderLobby(main);
-                if(view === 'shop') app.renderShop(main);
-                if(view === 'dex') app.renderDex(main);
-                if(view === 'team') app.renderTeam(main);
-                if(view === 'battle') app.renderBattleSetup(main);
-                
-                // [중요] 아이콘 렌더링
-                lucide.createIcons();
-            },
+                <button
+                  onclick="app.createRoom()"
+                  class="h-11 px-3 rounded-lg bg-black text-white font-black text-xs"
+                >
+                  CREATE
+                </button>
 
-            selectSlot: (index) => {
-                state.selectedSlot = (state.selectedSlot === index) ? null : index;
-                app.renderTeam($('main-content'));
-            },
+                <button
+                  onclick="app.joinRoom()"
+                  class="h-11 px-3 rounded-lg bg-blue-600 text-white font-black text-xs"
+                >
+                  JOIN
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      },
 
-            equip: (invIndex) => {
-                if (state.selectedSlot === null) return showToast("먼저 위쪽 슬롯을 선택하세요!", "error");
-                const pkm = state.inventory[invIndex];
-                if (state.team.some(p => p && p.uid === pkm.uid)) return showToast("이미 팀에 있습니다!", "error");
-                state.team[state.selectedSlot] = pkm;
-                state.selectedSlot = null;
-                showToast(`${pkm.name} 배치 완료!`);
-                app.renderTeam($('main-content'));
-            },
+      cancelRandomMatch: async () => {
+        const st = $('match-status');
+        const btn = $('match-cancel');
+        stopQueue();
+        if (state.auth.uid) {
+          try { await remove(ref(db, `${QUEUE_ROOT}/${state.auth.uid}`)); } catch(e) {}
+        }
+        if (st) st.innerText = "";
+        if (btn) btn.classList.add('hidden');
+        showToast("Canceled");
+      },
 
-            renderLobby: (c) => {
-                const partner = state.team[0] || state.inventory[0];
-                const typeInfo = TYPE_FX[partner.type] || TYPE_FX.normal;
-                const typeColor = typeInfo.particleColor;
+      startRandomMatch: async () => {
+        const st = $('match-status');
+        const btn = $('match-cancel');
+        if (!state.auth.uid) return showToast("Login required", "error");
+        if (state.queue.active) return;
 
-                // [수정] 모바일 화면 비율에 맞춰 flex로 꽉 채움 (스크롤 방지)
-                c.innerHTML = `
-                    <div class="flex flex-col items-center justify-between h-full w-full p-4 pb-8 anim-pop">
-                        
-                        <div class="relative w-full flex-1 flex items-center justify-center max-h-[40vh]">
-                            <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent blur-[60px] rounded-full"></div>
-                            <img src="${partner.sprite}" class="h-full object-contain relative z-10 sprite-player drop-shadow-2xl max-h-64">
-                            <div class="absolute bottom-0 right-4 glass px-3 py-1 rounded-full flex items-center gap-1 border-blue-500/30">
-                                <i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current"></i>
-                                <span class="text-[10px] font-black italic text-[var(--text-main)]">MAIN</span>
-                            </div>
-                        </div>
+        const uid = state.auth.uid;
+        const myMMR = state.mmr ?? 1000;
+        const myAvg = avgTeamBST(state.team);
 
-                        <div class="flex flex-col items-center w-full gap-3">
-                            <h2 class="font-sport font-black italic text-4xl uppercase text-[var(--text-main)] drop-shadow-sm tracking-tighter text-center line-clamp-1">${partner.name}</h2>
-                            
-                            <div class="glass px-6 py-2 rounded-full flex items-center gap-3 border border-gray-200 shadow-sm">
-                                <span class="font-black text-2xl italic rank-${partner.rank}">${partner.rank}</span>
-                                <div class="h-4 w-[1px] bg-gray-300"></div>
-                                <div class="flex items-center gap-1" style="color:${typeColor}">
-                                    <i data-lucide="${typeInfo.icon}" class="w-4 h-4"></i>
-                                    <span class="text-xs font-bold uppercase tracking-widest">${partner.type}</span>
-                                </div>
-                            </div>
+        state.queue.active = true;
+        if (btn) btn.classList.remove('hidden');
+        if (st) st.innerText = "Searching players...";
 
-                            <div class="w-full glass p-3 rounded-xl border-l-4 shadow-sm" style="border-color: ${typeColor}">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-[var(--text-sub)] font-bold uppercase">Signature Move</span>
-                                    <span class="text-xs font-bold text-[var(--text-main)] uppercase bg-gray-100 px-2 py-0.5 rounded">${partner.type} Type</span>
-                                </div>
-                                <div class="text-xl font-sport font-black italic text-[var(--text-main)] mt-1">${partner.move || 'Tackle'}</div>
-                            </div>
+        await set(ref(db, `${QUEUE_ROOT}/${uid}`), {
+          uid,
+          mmr: myMMR,
+          avg: myAvg,
+          ts: Date.now(),
+          status: "waiting",
+          room: null
+        });
 
-                            <div class="grid grid-cols-2 gap-3 w-full">
-                                 <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
-                                     <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">PvP Rank</p>
-                                     <p class="text-lg font-sport font-black italic text-[var(--text-main)]">Bronze</p>
-                                 </div>
-                                 <div class="glass p-3 rounded-xl flex flex-col items-center justify-center shadow-sm">
-                                     <p class="text-[10px] text-[var(--text-sub)] font-bold uppercase mb-1">Win Rate</p>
-                                     <p class="text-lg font-sport font-black italic text-[var(--text-main)]">0%</p>
-                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
+        const startAt = Date.now();
+        state.queue.timer = setTimeout(async () => {
+          if (!state.queue.active) return;
+          stopQueue();
+          try { await remove(ref(db, `${QUEUE_ROOT}/${uid}`)); } catch(e) {}
+          if (st) st.innerText = "No players found. Dummy match starting...";
+          await wait(650);
+          if (btn) btn.classList.add('hidden');
+          app.startLocalBattle();
+        }, 5000);
 
-            renderShop: (c) => {
-                const ballCards = BALLS.map(b => `
-                    <div onclick="app.confirmBuy('${b.id}')" class="bg-white rounded-2xl flex flex-col items-center relative overflow-hidden group active:scale-95 transition-all cursor-pointer border-t-4 p-4 shadow-md hover:shadow-lg ${b.color}">
-                        <div class="absolute top-2 right-2 text-[9px] font-black uppercase bg-black/80 px-2 py-0.5 rounded text-white border border-white/10 z-10 relative">
-                            ${b.id === 'master' ? '100% S' : `S: ${b.rates.S}%`}
-                        </div>
-                        <img src="${b.img}" class="w-20 h-20 object-contain mb-3 drop-shadow-md group-hover:scale-110 transition-transform mt-2 relative z-10">
-                        <h3 class="font-black italic text-lg uppercase mb-0.5 relative z-10 text-[var(--text-main)]">${b.name}</h3>
-                        <p class="text-[var(--volt)] font-bold text-sm mb-3 relative z-10">${b.price.toLocaleString()} C</p>
-                    </div>
-                `).join('');
-
-                c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
-                        <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">ITEM SHOP</h2>
-                        <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4 custom-scroll">${ballCards}</div>
-                    </div>
-                `;
-            },
-
-            // (confirmBuy, renderTeam, renderDex, renderBattleSetup, createPrivateRoom, joinPrivateRoom, startBattle, listenToBattle, renderBattleArena, updateTotalHp, hostBattleLoop, createParticles, playAction, endBattle 함수는 기존과 동일하게 유지 - 테마 색상만 CSS 변수로 자동 적용됨)
-            
-            confirmBuy: async (ballId) => {
-                // (기존 코드 유지)
-                const ball = BALLS.find(b => b.id === ballId);
-                if(state.coins < ball.price) return showToast("Not enough coins!", "error");
-                app.updateCoins(-ball.price);
-                
-                const overlay = document.createElement('div');
-                overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
-                overlay.innerHTML = `<div class="relative mb-12"><img src="${ball.img}" class="w-48 h-48 object-contain relative z-10 anim-shake"></div>`;
-                $('app').appendChild(overlay);
-
-                await wait(1500);
-
-                const rand = Math.random() * 100;
-                let rank = 'C';
-                if (rand <= ball.rates.S) rank = 'S';
-                else if (rand <= ball.rates.S + ball.rates.A) rank = 'A';
-                else if (rand <= ball.rates.S + ball.rates.A + ball.rates.B) rank = 'B';
-
-                const id = rnd(1, 151);
-                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then(r=>r.json());
-                let moveName = 'Tackle';
-                if (res.moves && res.moves.length > 0) {
-                    moveName = res.moves[Math.floor(Math.random() * Math.min(res.moves.length, 15))].move.name;
-                }
-
-                const pkm = { 
-                    id: id, 
-                    name: res.name.charAt(0).toUpperCase() + res.name.slice(1), 
-                    type: res.types[0].type.name, 
-                    rank: rank, 
-                    hp: rnd(60, 100) + (rank==='S'?60:0), 
-                    atk: rnd(40, 80),
-                    move: moveName
-                };
-                app.addPokemon(pkm, true);
-
-                overlay.innerHTML = `
-                    <div class="text-[var(--volt)] font-sport text-6xl font-black italic mb-2 anim-pop">GOTCHA!</div>
-                    <img src="${pkm.sprite}" class="w-56 h-56 object-contain relative z-10 sprite-player mb-4">
-                    <h2 class="text-3xl font-black italic uppercase text-black mb-2">${pkm.name}</h2>
-                    <div class="glass px-4 py-1 rounded-full text-xs font-bold uppercase mb-8 border border-gray-300 text-gray-600">${pkm.type}</div>
-                    <button onclick="this.parentElement.remove()" class="bg-[var(--volt)] text-white px-12 py-4 rounded-full font-black italic shadow-lg">CLOSE</button>
-                `;
-            },
-
-            renderTeam: (c) => {
-                const slots = state.team.map((p, i) => {
-                    const isSelected = state.selectedSlot === i;
-                    const borderClass = isSelected ? 'border-[var(--volt)] bg-blue-50 ring-2 ring-[var(--volt)]' : 'border-dashed border-gray-300';
-                    const isLeader = i === 0;
-                    return `
-                    <div onclick="app.selectSlot(${i})" class="bg-white h-32 rounded-xl flex items-center justify-center relative cursor-pointer border-2 transition-all duration-200 ${borderClass}">
-                        ${isLeader ? `<div class="absolute top-2 left-2 z-20"><i data-lucide="crown" class="w-4 h-4 text-yellow-400 fill-current drop-shadow-md"></i></div>` : ''}
-                        ${p ? `<div class="text-center relative z-10"><img src="${p.sprite}" class="w-20 h-20 object-contain sprite-player mx-auto"><div class="bg-gray-100 px-2 rounded text-[9px] text-gray-600 mt-1">${p.move}</div></div>` : `<i data-lucide="${isSelected ? 'check' : 'plus'}" class="w-6 h-6 text-gray-300"></i>`}
-                    </div>`;
-                }).join('');
-
-                const inv = state.inventory.map((p, i) => {
-                    const isInTeam = state.team.some(t => t && t.uid === p.uid);
-                    return `
-                    <div onclick="app.equip(${i})" class="bg-white p-2 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-gray-50 border border-gray-100 ${isInTeam ? 'opacity-50' : ''}">
-                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"><img src="${p.static}" class="w-10 h-10 object-contain"></div>
-                        <div class="flex-1">
-                            <div class="flex justify-between"><p class="font-black text-xs uppercase text-[var(--text-main)]">${p.name}</p><span class="text-[9px] font-bold text-gray-400 uppercase border border-gray-200 px-1 rounded">${p.type}</span></div>
-                            <p class="text-[10px] text-gray-500 flex items-center gap-1"><i data-lucide="swords" class="w-3 h-3"></i> ${p.move}</p>
-                        </div>
-                    </div>`;
-                }).join('');
-
-                c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
-                        <h2 class="text-3xl font-sport font-black italic text-[var(--text-main)] mb-4">MY TEAM</h2>
-                        <div class="grid grid-cols-3 gap-2 mb-6">${slots}</div>
-                        <div class="flex-1 overflow-y-auto pt-4 grid grid-cols-1 gap-2 custom-scroll">${inv}</div>
-                    </div>
-                `;
-                lucide.createIcons();
-            },
-
-            renderDex: (c) => {
-                const ownedIds = new Set(state.inventory.map(p => p.id));
-                const totalDexSize = 151; 
-                let dexHtml = '';
-                for (let id = 1; id <= totalDexSize; id++) {
-                    const isOwned = ownedIds.has(id);
-                    const pokemon = isOwned ? state.inventory.find(p => p.id === id) : null;
-                    const name = isOwned ? pokemon.name : '???';
-                    const iconOrImg = isOwned ? `<img src="${pokemon.static}" class="w-16 h-16 object-contain">` : `<i data-lucide="help-circle" class="w-10 h-10 text-gray-300"></i>`;
-                    dexHtml += `
-                        <div class="bg-white border border-gray-100 p-2 rounded-xl flex flex-col items-center justify-between min-h-[120px]">
-                            <span class="text-[9px] font-bold uppercase text-gray-400">${id.toString().padStart(3, '0')}</span>
-                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-1 overflow-hidden ${isOwned ? '' : 'opacity-30 grayscale'}">${iconOrImg}</div>
-                            <span class="font-black text-xs uppercase ${isOwned ? 'text-black' : 'text-gray-300'} text-center">${name}</span>
-                        </div>`;
-                }
-                c.innerHTML = `
-                    <div class="p-5 h-full flex flex-col anim-pop pb-20">
-                        <h2 class="text-3xl font-sport font-black italic mb-4 text-[var(--text-main)] tracking-tighter">POKEDEX</h2>
-                        <div class="bg-white p-4 rounded-xl mb-6 border-l-4 border-[var(--volt)] shadow-sm">
-                            <span class="text-xs text-gray-500 font-bold uppercase">Collected</span>
-                            <div class="text-2xl font-sport font-black italic text-black mt-1">${ownedIds.size} / ${totalDexSize}</div>
-                        </div>
-                        <div class="flex-1 overflow-y-auto pt-2 grid grid-cols-3 gap-2 custom-scroll">${dexHtml}</div>
-                    </div>`;
-                lucide.createIcons();
-            },
-
-            renderBattleSetup: (c) => {
-                const ready = state.team.filter(p=>p).length === 3;
-                if (!ready) {
-                    c.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full p-6 text-center pb-20">
-                            <i data-lucide="alert-triangle" class="w-12 h-12 text-yellow-500 mb-4"></i>
-                            <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">Team Incomplete</h2>
-                            <button onclick="app.nav('team')" class="bg-[var(--volt)] text-white font-bold py-3 px-8 rounded-full shadow-lg">GO TO TEAM</button>
-                        </div>`;
-                    lucide.createIcons();
-                    return;
-                }
-                c.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop text-center bg-gray-100 pb-20">
-                        <h2 class="text-4xl font-sport font-black italic text-[var(--text-main)] mb-8">BATTLE MODE</h2>
-                        <div class="w-full mb-8">
-                            <button onclick="app.startBattle()" class="w-full bg-[var(--volt)] text-white font-black italic text-xl py-4 rounded-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2">
-                                <i data-lucide="swords" class="w-6 h-6"></i> QUICK MATCH
-                            </button>
-                        </div>
-                        <div class="w-full h-[1px] bg-gray-300 mb-8"></div>
-                        <div class="w-full">
-                            <h3 class="text-gray-500 font-bold mb-3 uppercase tracking-wider text-sm">Private Room</h3>
-                            <div class="flex gap-2 mb-3">
-                                <input id="room-code-input" type="number" placeholder="Enter Code" class="w-full bg-white text-black p-3 rounded-lg text-center font-sport font-bold border border-gray-300">
-                                <button onclick="app.joinPrivateRoom()" class="bg-gray-800 text-white font-bold px-6 rounded-lg">JOIN</button>
-                            </div>
-                            <button onclick="app.createPrivateRoom()" class="w-full bg-white py-3 rounded-lg text-gray-500 border border-gray-300 text-sm font-bold">+ CREATE NEW ROOM</button>
-                        </div>
-                    </div>`;
-                lucide.createIcons();
-            },
-
-            // (createPrivateRoom, joinPrivateRoom, startBattle, listenToBattle, renderBattleArena, updateTotalHp, hostBattleLoop, createParticles, playAction, endBattle 함수는 위 코드와 동일하게 유지)
-            // 지면 관계상 생략된 부분은 기존 코드와 동일합니다. 
-            // 다만, renderBattleArena의 배경을 White Theme에 맞게 조정 (bg-white 등)
-            
-            createPrivateRoom: async () => {
-                const myTeamData = state.team.map((p, i) => ({
-                    uid: p.uid, name: p.name, sprite: p.sprite,
-                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
-                    move: p.move, type: p.type
-                }));
-                const code = Math.floor(10000 + Math.random() * 90000).toString(); 
-                state.battle.roomId = code; state.battle.role = 'host';
-                
-                $('main-content').innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full p-6 anim-pop bg-white pb-20">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--volt)] mb-6"></div>
-                        <p class="text-gray-500 font-bold mb-2">WAITING FOR PLAYER...</p>
-                        <h1 class="text-6xl font-sport font-black text-[var(--volt)] tracking-widest mb-8">${code}</h1>
-                        <button onclick="app.nav('battle')" class="mt-12 text-gray-400 underline">Cancel</button>
-                    </div>`;
-                
-                const roomRef = window.fb.ref(window.fb.db, `battles/${code}`);
-                await window.fb.set(roomRef, { host: myTeamData, status: 'waiting', private: true, createdAt: Date.now() });
-                window.fb.onDisconnect(roomRef).remove();
-                app.listenToBattle();
-            },
-
-            joinPrivateRoom: async () => {
-                const code = $('room-code-input').value;
-                if (!code || code.length < 5) return showToast("Invalid code", "error");
-                const myTeamData = state.team.map((p, i) => ({
-                    uid: p.uid, name: p.name, sprite: p.sprite,
-                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
-                    move: p.move, type: p.type
-                }));
-                const roomRef = window.fb.ref(window.fb.db, `battles/${code}`);
-                const snapshot = await window.fb.get(roomRef);
-                if (!snapshot.exists()) return showToast("Room not found!", "error");
-                const data = snapshot.val();
-                if (data.status !== 'waiting') return showToast("Room full!", "error");
-
-                state.battle.roomId = code; state.battle.role = 'guest';
-                await window.fb.update(roomRef, { guest: myTeamData, status: 'ready' });
-                showToast("Joining room...");
-                app.listenToBattle();
-            },
-
-            startBattle: async () => {
-                const myTeamData = state.team.map((p, i) => ({
-                    uid: p.uid, name: p.name, sprite: p.sprite,
-                    maxHp: p.hp, currentHp: p.hp, rank: p.rank, atk: p.atk,
-                    move: p.move, type: p.type
-                }));
-                showToast("Searching opponent...", "info");
-                const roomsRef = window.fb.ref(window.fb.db, 'battles');
-                let snapshot;
-                try { snapshot = await window.fb.get(roomsRef); } catch(e) { return showToast("Connection failed!", "error"); }
-                
-                let joinedRoomId = null;
-                const now = Date.now();
-                if (snapshot.exists()) {
-                    const rooms = snapshot.val();
-                    for (const [id, room] of Object.entries(rooms)) {
-                        if (room.status === 'waiting' && !room.private && (now - room.createdAt < 300000)) {
-                            joinedRoomId = id; break;
-                        }
-                    }
-                }
-
-                if (joinedRoomId) {
-                    state.battle.roomId = joinedRoomId; state.battle.role = 'guest';
-                    await window.fb.update(window.fb.ref(window.fb.db, `battles/${joinedRoomId}`), { guest: myTeamData, status: 'ready' });
-                    showToast("Opponent found!");
-                } else {
-                    const newRoomRef = window.fb.push(roomsRef);
-                    state.battle.roomId = newRoomRef.key; state.battle.role = 'host';
-                    await window.fb.set(newRoomRef, { host: myTeamData, status: 'waiting', private: false, createdAt: Date.now() });
-                    window.fb.onDisconnect(newRoomRef).remove();
-                    showToast("Waiting for opponent...");
-                }
-                app.listenToBattle();
-            },
-
-            listenToBattle: () => {
-                const roomRef = window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`);
-                window.fb.onValue(roomRef, (snapshot) => {
-                    const data = snapshot.val();
-                    if (!data) return;
-                    if (data.status === 'ready' && !state.battle.active) {
-                        state.battle.active = true;
-                        const enemyData = state.battle.role === 'host' ? data.guest : data.host;
-                        state.battle.enemyTeam = enemyData;
-                        state.battle.myTeam = state.team.map(p => ({...p, currentHp: p.hp}));
-                        app.renderBattleArena($('main-content'));
-                        if (state.battle.role === 'host') app.hostBattleLoop();
-                    }
-                    if (data.lastAction && data.lastAction.id !== state.battle.lastActionId) {
-                        state.battle.lastActionId = data.lastAction.id;
-                        app.playAction(data.lastAction);
-                    }
-                });
-            },
-
-            renderBattleArena: (c) => {
-                const myLeader = state.battle.myTeam[0];
-                const enLeader = state.battle.enemyTeam[0];
-                const renderUnit = (p, i, isP) => `
-                    <div id="unit-${isP?'p':'e'}-${i}" class="relative w-32 h-32 flex items-end justify-center transition-transform duration-100">
-                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 w-20 flex flex-col items-center z-50 pointer-events-none">
-                            <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden border border-white/50 shadow-md">
-                                <div id="hp-${isP?'p':'e'}-${i}" class="h-full bg-[var(--volt)] transition-all duration-300" style="width:${(p.currentHp/p.maxHp)*100}%"></div>
-                            </div>
-                        </div>
-                        <img src="${p.sprite}" class="w-28 h-28 object-contain ${isP?'sprite-player':'sprite-enemy'} z-10 filter drop-shadow-xl">
-                        <div class="absolute bottom-2 w-16 h-4 bg-black/20 rounded-[100%] blur-sm z-0"></div>
-                    </div>`;
-
-                c.innerHTML = `
-                    <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none pb-20">
-                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000')] bg-cover bg-center opacity-20"></div>
-                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 font-sport font-black text-9xl text-black/5 italic select-none">VS</div>
-                        <div class="relative z-10 flex justify-end gap-1 p-6 pt-32 pr-4 perspective-[1000px]">${state.battle.enemyTeam.map((p,i)=>renderUnit(p,i,false)).join('')}</div>
-                        <div class="flex-1 flex items-center justify-center z-20 pointer-events-none">
-                            <div id="battle-log" class="bg-white/90 px-8 py-2 rounded-full text-black font-black italic text-xs tracking-widest border border-gray-200 shadow-lg text-center transform scale-0 transition-transform">BATTLE START!</div>
-                        </div>
-                        <div class="relative z-10 flex justify-start gap-1 p-6 pb-40 pl-4 perspective-[1000px]">${state.battle.myTeam.map((p,i)=>renderUnit(p,i,true)).join('')}</div>
-                    </div>`;
-            },
-
-            updateTotalHp: () => {
-                const calcPct = (team) => {
-                    const totalMax = team.reduce((sum, p) => sum + p.maxHp, 0);
-                    const totalCur = team.reduce((sum, p) => sum + Math.max(0, p.currentHp), 0);
-                    return (totalCur / totalMax) * 100;
-                };
-                // $('hp-p-0').style.width = `${calcPct(state.battle.myTeam)}%`; // 개별 유닛 HP바가 이미 있으므로 전체 바는 생략 또는 별도 구현
-            },
-
-            hostBattleLoop: async () => {
-                while(state.battle.active) {
-                    await wait(2200); 
-                    const hostUnits = state.battle.myTeam.map((p, i) => ({...p, idx: i, side: 'host'})).filter(p => p.currentHp > 0);
-                    const guestUnits = state.battle.enemyTeam.map((p, i) => ({...p, idx: i, side: 'guest'})).filter(p => p.currentHp > 0);
-
-                    if (hostUnits.length === 0 || guestUnits.length === 0) {
-                        const winner = hostUnits.length > 0 ? 'host' : 'guest';
-                        window.fb.update(window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`), { lastAction: { type: 'end', winner: winner, id: Date.now() } });
-                        return;
-                    }
-
-                    const isHostTurn = Math.random() > 0.5;
-                    const attacker = isHostTurn ? hostUnits[rnd(0, hostUnits.length-1)] : guestUnits[rnd(0, guestUnits.length-1)];
-                    const target = isHostTurn ? guestUnits[rnd(0, guestUnits.length-1)] : hostUnits[rnd(0, hostUnits.length-1)];
-                    let damage = rnd(25, 40); if (attacker.rank === 'S') damage += 20;
-
-                    window.fb.update(window.fb.ref(window.fb.db, `battles/${state.battle.roomId}`), {
-                        lastAction: { type: 'attack', attackerSide: attacker.side, attackerIdx: attacker.idx, targetSide: target.side, targetIdx: target.idx, damage: damage, move: attacker.move, id: Date.now() }
-                    });
-                }
-            },
-
-            createParticles: (x, y, color) => {
-                for(let i=0; i<8; i++) {
-                    const p = document.createElement('div');
-                    p.classList.add('fx-particle');
-                    p.style.backgroundColor = color;
-                    p.style.left = x + 'px'; p.style.top = y + 'px';
-                    const angle = Math.random() * 360;
-                    const velocity = Math.random() * 80 + 20;
-                    const vx = Math.cos(angle * Math.PI / 180) * velocity + 'px';
-                    const vy = Math.sin(angle * Math.PI / 180) * velocity + 'px';
-                    p.style.setProperty('--vx', vx); p.style.setProperty('--vy', vy);
-                    document.body.appendChild(p);
-                    setTimeout(() => p.remove(), 600);
-                }
-            },
-
-            playAction: async (action) => {
-                if (action.type === 'end') {
-                    const isWin = action.winner === state.battle.role;
-                    app.endBattle(isWin); return;
-                }
-                if (action.type === 'attack') {
-                    const isMyAttack = action.attackerSide === state.battle.role;
-                    const atkIdx = action.attackerIdx; const defIdx = action.targetIdx;
-                    const atkEl = $(`unit-${isMyAttack ? 'p' : 'e'}-${atkIdx}`);
-                    const defEl = $(`unit-${!isMyAttack ? 'p' : 'e'}-${defIdx}`);
-                    if(!atkEl || !defEl) return;
-
-                    const atkName = isMyAttack ? state.battle.myTeam[atkIdx].name : state.battle.enemyTeam[atkIdx].name;
-                    const log = $('battle-log');
-                    log.innerHTML = `<span class="${isMyAttack ? 'text-[var(--volt)]' : 'text-red-500'}">${atkName}</span> used ${action.move}!`;
-                    log.style.transform = 'scale(1)';
-
-                    atkEl.style.zIndex = 100;
-                    const rectAtk = atkEl.getBoundingClientRect();
-                    const rectDef = defEl.getBoundingClientRect();
-                    atkEl.style.setProperty('--tx', `${(rectDef.left + rectDef.width/2) - (rectAtk.left + rectAtk.width/2) * 0.8}px`);
-                    atkEl.style.setProperty('--ty', `${(rectDef.top + rectDef.height/2) - (rectAtk.top + rectAtk.height/2) * 0.8}px`);
-                    atkEl.classList.add('anim-dash');
-                    
-                    await wait(250);
-                    app.createParticles(rectDef.left + rectDef.width/2, rectDef.top + rectDef.height/2, '#ef4444');
-                    defEl.classList.add('anim-hit');
-                    $('camera-shake-layer').classList.add('anim-cam-shake');
-                    
-                    let targetUnit = !isMyAttack ? state.battle.myTeam[defIdx] : state.battle.enemyTeam[defIdx];
-                    targetUnit.currentHp = Math.max(0, targetUnit.currentHp - action.damage);
-                    const hpBar = $(`hp-${!isMyAttack ? 'p' : 'e'}-${defIdx}`);
-                    hpBar.style.width = `${(targetUnit.currentHp / targetUnit.maxHp) * 100}%`;
-                    if((targetUnit.currentHp / targetUnit.maxHp) < 0.3) hpBar.style.backgroundColor = '#ef4444';
-
-                    await wait(300);
-                    atkEl.classList.remove('anim-dash'); defEl.classList.remove('anim-hit');
-                    $('camera-shake-layer').classList.remove('anim-cam-shake');
-                    log.style.transform = 'scale(0)';
-                    atkEl.style.zIndex = '';
-
-                    if(targetUnit.currentHp <= 0) {
-                        defEl.querySelector('img').classList.add('sprite-dead');
-                        hpBar.parentElement.style.opacity = 0;
-                    }
-                }
-            },
-            endBattle: (win) => {
-                state.battle.active = false;
-                app.updateCoins(win ? 500 : 50);
-
-                // 현재 닉네임 가져오기 (없으면 Trainer)
-                const myId = state.nickname || 'Trainer';
-
-                // ▼▼▼ [수정됨] 닉네임 기준으로 저장 ▼▼▼
-                try {
-                    const battleRecord = {
-                        date: new Date().toLocaleString('ko-KR'),
-                        result: win ? "승리" : "패배",
-                        myNickname: myId,
-                        myPokemon: state.battle.myTeam.filter(p => p).map(p => p.name), 
-                        opponentNickname: state.battle.role === 'guest' ? 'Host' : 'Guest',
-                        opponentPokemon: state.battle.enemyTeam.filter(p => p).map(p => p.name), 
-                        reason: win ? "멋진 승부!" : "아쉬운 패배"
-                    };
-
-                    // Firebase 경로: users/닉네임/battleHistory
-                    if (window.fb) {
-                        const historyRef = window.fb.ref(window.fb.db, 'users/' + myId + '/battleHistory');
-                        window.fb.push(historyRef, battleRecord);
-                        console.log("닉네임으로 기록 저장 완료:", myId);
-                    }
-                } catch (err) {
-                    console.error("저장 중 오류:", err);
-                }
-                // ▲▲▲ [수정 종료] ▲▲▲
-
-                const overlay = document.createElement('div');
-                overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
-                
-                overlay.innerHTML = `
-                    <div class="relative mb-6">
-                        <div class="absolute inset-0 ${win ? 'bg-[var(--volt)]' : 'bg-red-500'} blur-[80px] opacity-30 rounded-full animate-pulse"></div>
-                        <h1 class="text-7xl font-sport font-black italic relative z-10 ${win?'text-[var(--volt)]':'text-gray-500'} tracking-tighter">${win?'VICTORY':'DEFEAT'}</h1>
-                    </div>
-                    
-                    <div class="bg-white px-8 py-3 rounded-full mb-8 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg">
-                        <span class="text-black font-bold text-xl">+${win?500:50} Coins</span>
-                    </div>
-
-                    <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl mb-4">
-                        RETURN HOME
-                    </button>
-
-                    <button onclick="location.href='pk_profile.html?id=${myId}'" class="bg-white text-black border-2 border-black px-12 py-3 rounded-full font-bold hover:bg-gray-100 transition-transform shadow-md">
-                        내 전적 보기 &rarr;
-                    </button>
-                `;
-                $('app').appendChild(overlay);
+        state.queue.poll = setInterval(async () => {
+          if (!state.queue.active) return;
+          const mineSnap = await get(ref(db, `${QUEUE_ROOT}/${uid}`));
+          if (mineSnap.exists()) {
+            const mine = mineSnap.val();
+            if (mine?.status === "matched" && mine?.room) {
+              stopQueue();
+              if (btn) btn.classList.add('hidden');
+              if (st) st.innerText = `Matched! Room ${mine.room}`;
+              await wait(300);
+              app.openRoomBattle(mine.room);
+              return;
             }
+          }
+
+          const qSnap = await get(ref(db, `${QUEUE_ROOT}`));
+          if (!qSnap.exists()) return;
+          const all = qSnap.val() || {};
+          const entries = Object.values(all).filter(x => x && x.uid && x.status === "waiting" && x.uid !== uid);
+
+          entries.sort((a,b) => (a.ts||0) - (b.ts||0));
+
+          const cand = entries.find(x => Math.abs((x.mmr||1000) - myMMR) <= 250 && Math.abs((x.avg||350) - myAvg) <= 60) || entries[0];
+          if (!cand) return;
+
+          const candRef = ref(db, `${QUEUE_ROOT}/${cand.uid}/status`);
+          const claim = await runTransaction(candRef, (cur) => {
+            if (cur !== "waiting") return;
+            return "matched";
+          });
+
+          if (!claim.committed) return;
+
+          const roomCode = String(Date.now()).slice(-6) + String(rnd(10,99));
+          await set(ref(db, `${QUEUE_ROOT}/${uid}`), { uid, mmr: myMMR, avg: myAvg, ts: startAt, status: "matched", room: roomCode });
+          await update(ref(db, `${QUEUE_ROOT}/${cand.uid}`), { status: "matched", room: roomCode });
+
+          await set(ref(db, `${ROOMS_ROOT}/${roomCode}`), {
+            code: roomCode,
+            status: "waiting",
+            createdAt: Date.now(),
+            hostUid: uid,
+            guestUid: cand.uid,
+            hostTeam: state.team,
+            guestTeam: null
+          });
+
+          if (st) st.innerText = `Matched! Creating room ${roomCode}...`;
+        }, 700);
+      },
+
+      createRoom: async () => {
+        if (!state.auth.uid) return showToast("Login required", "error");
+        const input = $('roomCodeInput');
+        const st = $('room-status');
+        const btn = $('room-leave');
+
+        const code = keyRoomCode(input?.value || "");
+        if (!code) return showToast("Enter code", "error");
+
+        const roomRef = ref(db, `${ROOMS_ROOT}/${code}`);
+        const snap = await get(roomRef);
+
+        if (snap.exists()) {
+          const r = snap.val();
+          if (r?.hostUid && r.hostUid !== state.auth.uid && !r.guestUid) {
+            if (st) st.innerText = "Room exists. Use JOIN.";
+            return;
+          }
+          if (st) st.innerText = "Room already used.";
+          return;
+        }
+
+        await set(roomRef, {
+          code,
+          status: "waiting",
+          createdAt: Date.now(),
+          hostUid: state.auth.uid,
+          guestUid: null,
+          hostTeam: state.team,
+          guestTeam: null
+        });
+
+        if (st) st.innerText = `Room ${code} created. Waiting...`;
+        if (btn) btn.classList.remove('hidden');
+        state.battle.room = code;
+        app.watchRoom(code);
+      },
+
+      joinRoom: async () => {
+        if (!state.auth.uid) return showToast("Login required", "error");
+        const input = $('roomCodeInput');
+        const st = $('room-status');
+        const btn = $('room-leave');
+
+        const code = keyRoomCode(input?.value || "");
+        if (!code) return showToast("Enter code", "error");
+
+        const roomRef = ref(db, `${ROOMS_ROOT}/${code}`);
+        const snap = await get(roomRef);
+        if (!snap.exists()) {
+          if (st) st.innerText = "Room not found.";
+          return;
+        }
+
+        const r = snap.val();
+        if (r?.guestUid && r.guestUid !== state.auth.uid) {
+          if (st) st.innerText = "Room is full.";
+          return;
+        }
+
+        if (r?.hostUid === state.auth.uid) {
+          if (st) st.innerText = "You are host. Waiting guest...";
+          if (btn) btn.classList.remove('hidden');
+          state.battle.room = code;
+          app.watchRoom(code);
+          return;
+        }
+
+        await update(roomRef, {
+          guestUid: state.auth.uid,
+          guestTeam: state.team,
+          status: "ready"
+        });
+
+        if (st) st.innerText = `Joined room ${code}. Starting...`;
+        if (btn) btn.classList.remove('hidden');
+        state.battle.room = code;
+        app.watchRoom(code);
+      },
+
+      leaveRoom: async () => {
+        const st = $('room-status');
+        const btn = $('room-leave');
+        const code = state.battle.room;
+        stopRoomSubs();
+        stopDisplayLoop();
+        state.battle.room = null;
+        if (btn) btn.classList.add('hidden');
+        if (st) st.innerText = "";
+        if (!code || !state.auth.uid) return;
+
+        const roomRef = ref(db, `${ROOMS_ROOT}/${code}`);
+        const snap = await get(roomRef);
+        if (!snap.exists()) return;
+
+        const r = snap.val();
+        if (r.hostUid === state.auth.uid) {
+          try { await remove(roomRef); } catch(e) {}
+        } else if (r.guestUid === state.auth.uid) {
+          await update(roomRef, { guestUid: null, guestTeam: null, status: "waiting" });
+        }
+        showToast("Left room");
+      },
+
+      watchRoom: async (code) => {
+        stopRoomSubs();
+        const st = $('room-status');
+
+        const roomRef = ref(db, `${ROOMS_ROOT}/${code}`);
+        state.battle.unsubRoom = onValue(roomRef, async (snap) => {
+          if (!snap.exists()) {
+            if (st) st.innerText = "Room closed.";
+            return;
+          }
+          const r = snap.val();
+          const me = state.auth.uid;
+
+          if (r.status === "waiting") {
+            if (me === r.hostUid) {
+              if (st) st.innerText = `Room ${code} waiting guest...`;
+            } else {
+              if (st) st.innerText = `Room ${code} waiting host...`;
+            }
+          }
+
+          if (r.status === "ready") {
+            if (me === r.hostUid) {
+              if (st) st.innerText = "Guest joined. Starting...";
+              await app.startRoomAsHost(code);
+            } else {
+              if (st) st.innerText = "Ready. Waiting host...";
+            }
+          }
+
+          if (r.status === "playing") {
+            if (st) st.innerText = "Battle started.";
+            app.openRoomBattle(code);
+          }
+
+          if (r.status === "ended") {
+            if (st) st.innerText = "Battle ended.";
+          }
+        });
+      },
+
+      openRoomBattle: async (code) => {
+        stopDisplayLoop();
+        stopRoomSubs();
+        const roomSnap = await get(ref(db, `${ROOMS_ROOT}/${code}`));
+        if (!roomSnap.exists()) return showToast("Room not found", "error");
+        const room = roomSnap.val();
+        const me = state.auth.uid;
+        const isHost = me && room.hostUid === me;
+
+        const hostTeamRaw = Array.isArray(room.hostTeam) ? room.hostTeam : [];
+        const guestTeamRaw = Array.isArray(room.guestTeam) ? room.guestTeam : [];
+        const hostTeam = normalizeTeamForBattle(hostTeamRaw);
+        const guestTeam = normalizeTeamForBattle(guestTeamRaw);
+
+        state.battle.mode = "room";
+        state.battle.room = code;
+        state.battle.sideByUid = { [room.hostUid]: "host", [room.guestUid]: "guest" };
+        state.battle.uiPlayerSide = isHost ? "host" : "guest";
+        state.battle.teamBySide = { host: hostTeam, guest: guestTeam };
+        state.battle.active = true;
+        state.battle.over = false;
+        state.battle.eventsSeen = new Set();
+
+        const main = $('main-content');
+        main.innerHTML = '';
+        app.renderBattleArenaRoom(main);
+
+        app.startRoomDisplayLoop();
+
+        const eventsRef = ref(db, `${ROOMS_ROOT}/${code}/events`);
+        state.battle.unsubEvents = onValue(eventsRef, (snap) => {
+          if (!snap.exists()) return;
+          const evs = snap.val() || {};
+          const keys = Object.keys(evs);
+          keys.sort((a,b) => (evs[a]?.ts||0) - (evs[b]?.ts||0));
+          for (const k of keys) {
+            if (state.battle.eventsSeen.has(k)) continue;
+            state.battle.eventsSeen.add(k);
+            app.applyRoomEvent(evs[k]);
+          }
+        });
+      },
+
+      startRoomAsHost: async (code) => {
+        const roomRef = ref(db, `${ROOMS_ROOT}/${code}`);
+        const snap = await get(roomRef);
+        if (!snap.exists()) return;
+
+        const r = snap.val();
+        if (r.hostUid !== state.auth.uid) return;
+        if (!r.guestUid || !r.guestTeam) return;
+
+        await update(roomRef, {
+          status: "playing",
+          startedAt: Date.now()
+        });
+
+        try { await remove(ref(db, `${ROOMS_ROOT}/${code}/events`)); } catch(e) {}
+
+        const hostTeam = normalizeTeamForBattle(r.hostTeam || []);
+        const guestTeam = normalizeTeamForBattle(r.guestTeam || []);
+
+        const initPick = (sideTeam, sideName) => {
+          for (let i=0; i<sideTeam.length; i++) {
+            const p = sideTeam[i];
+            const sk = p.skills[rnd(0, p.skills.length-1)];
+            const cd = Math.max(0.2, cooldownSec(sk.power, p.speed || 1));
+            p.pendingSkill = sk;
+            p.actionCdTotal = cd;
+            p.actionCdRemain = cd;
+            push(ref(db, `${ROOMS_ROOT}/${code}/events`), {
+              type: "select",
+              side: sideName,
+              idx: i,
+              skill: sk,
+              total: cd,
+              ts: Date.now()
+            });
+          }
         };
-        window.onload = () => {
-            // 1. 저장된 닉네임이 있는지 확인
-            let myName = localStorage.getItem('pokerun_name');
 
-            // 2. 없으면 물어보기 (최초 1회)
-            if (!myName) {
-                myName = prompt("포켓런에 오신 것을 환영합니다!\n사용하실 닉네임을 입력해주세요:", "");
-                
-                // 취소하거나 빈칸이면 랜덤 이름 생성
-                if (!myName || myName.trim() === "") {
-                    myName = "Trainer_" + Math.floor(Math.random() * 9999);
-                }
-                // 입력받은 이름 영구 저장
-                localStorage.setItem('pokerun_name', myName);
-            }
+        initPick(hostTeam, "host");
+        initPick(guestTeam, "guest");
 
-            // 3. 게임 내부 변수에 닉네임 적용
-            if (typeof state !== 'undefined') {
-                state.nickname = myName;
-            }
-
-            // 4. 앱 초기화 및 게임 시작
-            window.app = app;
-            app.init();
+        const battle = {
+          code,
+          hostTeam,
+          guestTeam,
+          lastTs: nowMs(),
+          active: true,
+          over: false
         };
-        // ▲▲▲ [수정 끝] ▲▲▲
-    </script>
+
+        const hostLoop = async () => {
+          if (!battle.active) return;
+          const t = nowMs();
+          const dt = (t - battle.lastTs) / 1000;
+          battle.lastTs = t;
+
+          const stepSide = async (sideName) => {
+            const team = sideName === "host" ? battle.hostTeam : battle.guestTeam;
+            const enemy = sideName === "host" ? battle.guestTeam : battle.hostTeam;
+
+            for (let i=0; i<team.length; i++) {
+              const p = team[i];
+              if (!p || p.currentHp <= 0) continue;
+              if (!p.pendingSkill) {
+                const sk = p.skills[rnd(0, p.skills.length-1)];
+                const cd = Math.max(0.2, cooldownSec(sk.power, p.speed || 1));
+                p.pendingSkill = sk;
+                p.actionCdTotal = cd;
+                p.actionCdRemain = cd;
+                push(ref(db, `${ROOMS_ROOT}/${code}/events`), { type:"select", side: sideName, idx:i, skill: sk, total: cd, ts: Date.now() });
+                continue;
+              }
+
+              p.actionCdRemain = Math.max(0, (p.actionCdRemain || 0) - dt);
+              if (p.actionCdRemain > 0) continue;
+
+              const tgtAlive = enemy.map((x,ii)=>({x,ii})).filter(o => o.x && o.x.currentHp > 0);
+              if (!tgtAlive.length) return;
+              const target = tgtAlive[rnd(0, tgtAlive.length-1)];
+              const mv = p.pendingSkill;
+
+              const base = Math.max(1, Number(mv.power) || 1);
+              const lm = levelMult(p.level || 1);
+              const tm = typeMult(mv.type || p.type, target.x.type);
+              const dmg = Math.max(1, Math.floor(base * lm * tm));
+
+              target.x.currentHp = Math.max(0, target.x.currentHp - dmg);
+
+              push(ref(db, `${ROOMS_ROOT}/${code}/events`), {
+                type: "attack",
+                aSide: sideName,
+                aIdx: i,
+                dSide: (sideName === "host" ? "guest" : "host"),
+                dIdx: target.ii,
+                move: mv,
+                dmg,
+                defHp: target.x.currentHp,
+                defMax: target.x.maxHp,
+                ts: Date.now()
+              });
+
+              if (target.x.currentHp <= 0) {
+                push(ref(db, `${ROOMS_ROOT}/${code}/events`), {
+                  type: "dead",
+                  side: (sideName === "host" ? "guest" : "host"),
+                  idx: target.ii,
+                  ts: Date.now()
+                });
+              }
+
+              const sk2 = p.skills[rnd(0, p.skills.length-1)];
+              const cd2 = Math.max(0.2, cooldownSec(sk2.power, p.speed || 1));
+              p.pendingSkill = sk2;
+              p.actionCdTotal = cd2;
+              p.actionCdRemain = cd2;
+
+              push(ref(db, `${ROOMS_ROOT}/${code}/events`), {
+                type: "select",
+                side: sideName,
+                idx: i,
+                skill: sk2,
+                total: cd2,
+                ts: Date.now()
+              });
+
+              const hostAlive = battle.hostTeam.some(x => x && x.currentHp > 0);
+              const guestAlive = battle.guestTeam.some(x => x && x.currentHp > 0);
+              if (!hostAlive || !guestAlive) {
+                battle.active = false;
+                battle.over = true;
+                const winSide = hostAlive ? "host" : "guest";
+                push(ref(db, `${ROOMS_ROOT}/${code}/events`), { type:"end", winSide, ts: Date.now() });
+                await update(ref(db, `${ROOMS_ROOT}/${code}`), { status: "ended", endedAt: Date.now(), winSide });
+                return;
+              }
+            }
+          };
+
+          await stepSide("host");
+          await stepSide("guest");
+
+          requestAnimationFrame(hostLoop);
+        };
+
+        requestAnimationFrame(hostLoop);
+      },
+
+      renderBattleArenaRoom: (c) => {
+        const uiSide = state.battle.uiPlayerSide;
+        const hostTeam = state.battle.teamBySide.host || [];
+        const guestTeam = state.battle.teamBySide.guest || [];
+
+        const playerTeam = uiSide === "host" ? hostTeam : guestTeam;
+        const enemyTeam = uiSide === "host" ? guestTeam : hostTeam;
+
+        const renderUnit = (p, i, isP) => {
+          const fx = TYPE_FX[p.type] || TYPE_FX.normal;
+          const color = fx.particleColor;
+          return `
+            <div id="unit-${isP?'p':'e'}-${i}" class="relative w-32 h-32 flex flex-col items-center justify-end transition-transform duration-100">
+              <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-28 flex flex-col items-center z-50 pointer-events-none">
+                <div id="skillcd-${isP?'p':'e'}-${i}" class="text-[9px] font-black uppercase text-gray-600 mb-1 whitespace-nowrap"></div>
+                <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden border border-white/50 shadow-md">
+                  <div id="hp-${isP?'p':'e'}-${i}" class="h-full bg-[var(--volt)] transition-all duration-200" style="width:${(p.currentHp/p.maxHp)*100}%"></div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <div class="cd-wrap">
+                    <div id="cd-${isP?'p':'e'}-${i}" class="cd-bar" style="width:0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <img src="${p.sprite}" class="w-28 h-28 object-contain ${isP?'sprite-player':'sprite-enemy'} z-10 filter drop-shadow-xl">
+              <div class="absolute bottom-2 w-16 h-4 bg-black/20 rounded-[100%] blur-sm z-0"></div>
+              <div class="absolute -bottom-4 text-center w-full">
+                <div class="cd-text" style="color:${color}">${p.name}</div>
+              </div>
+            </div>`;
+        };
+
+        c.innerHTML = `
+          <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none">
+            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000')] bg-cover bg-center opacity-20"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 font-sport font-black text-9xl text-black/5 italic select-none">VS</div>
+
+            <div class="relative z-10 flex justify-end gap-1 p-6 pt-28 pr-4 perspective-[1000px]">
+              ${enemyTeam.map((p,i)=>renderUnit(p,i,false)).join('')}
+            </div>
+
+            <div class="flex-1 flex items-center justify-center z-20 pointer-events-none">
+              <div id="battle-log" class="bg-white/90 px-8 py-2 rounded-full text-black font-black italic text-xs tracking-widest border border-gray-200 shadow-lg text-center transform scale-0 transition-transform">BATTLE START!</div>
+            </div>
+
+            <div class="relative z-10 flex justify-start gap-1 p-6 pb-36 pl-4 perspective-[1000px]">
+              ${playerTeam.map((p,i)=>renderUnit(p,i,true)).join('')}
+            </div>
+
+            <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-30">
+              <div class="glass px-4 py-2 rounded-full border border-gray-200 shadow-md flex items-center gap-2">
+                <i data-lucide="hourglass" class="w-4 h-4 text-[var(--volt)]"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-600">Cooldown</span>
+              </div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      },
+
+      startRoomDisplayLoop: () => {
+        stopDisplayLoop();
+        const uiSide = state.battle.uiPlayerSide;
+
+        const tick = () => {
+          if (!state.battle.active) return;
+
+          const teamBySide = state.battle.teamBySide || { host: [], guest: [] };
+          for (const sideName of ["host", "guest"]) {
+            const team = teamBySide[sideName] || [];
+            const domPrefix = (sideName === uiSide) ? "p" : "e";
+
+            for (let i=0; i<team.length; i++) {
+              const p = team[i];
+              if (!p) continue;
+
+              const total = Math.max(0.2, Number(p.actionCdTotal || 1));
+              const remain = Math.max(0, Number(p.actionCdRemain || 0));
+              const pct = Math.max(0, Math.min(100, (1 - (remain / total)) * 100));
+
+              const bar = document.getElementById(`cd-${domPrefix}-${i}`);
+              if (bar) bar.style.width = `${pct}%`;
+
+              const label = document.getElementById(`skillcd-${domPrefix}-${i}`);
+              if (label) {
+                const sn = p.pendingSkill?.name ? String(p.pendingSkill.name).toUpperCase() : "READY";
+                const rv = p.pendingSkill ? `${remain.toFixed(1)}s` : "";
+                label.innerText = p.pendingSkill ? `${sn} · ${rv}` : "READY";
+              }
+            }
+          }
+
+          state.battle.displayLoopId = requestAnimationFrame(tick);
+        };
+
+        state.battle.displayLoopId = requestAnimationFrame(tick);
+      },
+
+      applyRoomEvent: async (ev) => {
+        if (!ev || !ev.type) return;
+
+        const uiSide = state.battle.uiPlayerSide;
+        const teamBySide = state.battle.teamBySide;
+
+        if (ev.type === "select") {
+          const team = teamBySide?.[ev.side] || [];
+          const p = team[ev.idx];
+          if (!p) return;
+          p.pendingSkill = ev.skill || null;
+          p.actionCdTotal = Number(ev.total || 1);
+          p.actionCdRemain = Number(ev.total || 1);
+          return;
+        }
+
+        if (ev.type === "attack") {
+          const aTeam = teamBySide?.[ev.aSide] || [];
+          const dTeam = teamBySide?.[ev.dSide] || [];
+          const atk = aTeam[ev.aIdx];
+          const def = dTeam[ev.dIdx];
+          if (!atk || !def) return;
+
+          def.currentHp = Math.max(0, Number(ev.defHp ?? def.currentHp ?? 0));
+
+          const isPlayerAttacker = (ev.aSide === uiSide);
+          const attackerIdx = ev.aIdx;
+          const targetIdx = ev.dIdx;
+          await app.applyDamageVisual(isPlayerAttacker, attackerIdx, targetIdx, ev.move, Number(ev.defHp ?? 0), Number(ev.defMax ?? def.maxHp ?? 1));
+          return;
+        }
+
+        if (ev.type === "dead") {
+          const domPrefix = (ev.side === uiSide) ? "p" : "e";
+          const unit = document.getElementById(`unit-${domPrefix}-${ev.idx}`);
+          const img = unit?.querySelector('img');
+          if (img) img.classList.add('sprite-dead');
+          const hpBar = document.getElementById(`hp-${domPrefix}-${ev.idx}`);
+          const barWrap = hpBar?.parentElement?.parentElement;
+          if (barWrap) barWrap.style.opacity = 0.35;
+          return;
+        }
+
+        if (ev.type === "end") {
+          state.battle.active = false;
+          state.battle.over = true;
+          stopDisplayLoop();
+          const win = (ev.winSide === uiSide);
+          app.showBattleEndOverlay(win, 0);
+          return;
+        }
+      },
+
+      showBattleEndOverlay: (win, delta) => {
+        const overlay = document.createElement('div');
+        overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+
+        overlay.innerHTML = `
+          <div class="relative mb-6">
+            <div class="absolute inset-0 ${win ? 'bg-[var(--volt)]' : 'bg-red-500'} blur-[80px] opacity-30 rounded-full animate-pulse"></div>
+            <h1 class="text-7xl font-sport font-black italic relative z-10 ${win?'text-[var(--volt)]':'text-gray-500'} tracking-tighter">${win?'VICTORY':'DEFEAT'}</h1>
+          </div>
+
+          <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl mb-4">
+            RETURN HOME
+          </button>
+        `;
+        $('app').appendChild(overlay);
+      },
+
+      renderBattleArena: (c) => {
+        const renderUnit = (p, i, isP) => {
+          const fx = TYPE_FX[p.type] || TYPE_FX.normal;
+          const color = fx.particleColor;
+          return `
+            <div id="unit-${isP?'p':'e'}-${i}" class="relative w-32 h-32 flex flex-col items-center justify-end transition-transform duration-100">
+              <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-28 flex flex-col items-center z-50 pointer-events-none">
+                <div id="skillcd-${isP?'p':'e'}-${i}" class="text-[9px] font-black uppercase text-gray-600 mb-1 whitespace-nowrap"></div>
+                <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden border border-white/50 shadow-md">
+                  <div id="hp-${isP?'p':'e'}-${i}" class="h-full bg-[var(--volt)] transition-all duration-200" style="width:${(p.currentHp/p.maxHp)*100}%"></div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <div class="cd-wrap">
+                    <div id="cd-${isP?'p':'e'}-${i}" class="cd-bar" style="width:0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <img src="${p.sprite}" class="w-28 h-28 object-contain ${isP?'sprite-player':'sprite-enemy'} z-10 filter drop-shadow-xl">
+              <div class="absolute bottom-2 w-16 h-4 bg-black/20 rounded-[100%] blur-sm z-0"></div>
+              <div class="absolute -bottom-4 text-center w-full">
+                <div class="cd-text" style="color:${color}">${p.name}</div>
+              </div>
+            </div>`;
+        };
+
+        c.innerHTML = `
+          <div class="relative h-full w-full bg-white flex flex-col overflow-hidden select-none">
+            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000')] bg-cover bg-center opacity-20"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 font-sport font-black text-9xl text-black/5 italic select-none">VS</div>
+
+            <div class="relative z-10 flex justify-end gap-1 p-6 pt-28 pr-4 perspective-[1000px]">
+              ${state.battle.enemyTeam.map((p,i)=>renderUnit(p,i,false)).join('')}
+            </div>
+
+            <div class="flex-1 flex items-center justify-center z-20 pointer-events-none">
+              <div id="battle-log" class="bg-white/90 px-8 py-2 rounded-full text-black font-black italic text-xs tracking-widest border border-gray-200 shadow-lg text-center transform scale-0 transition-transform">BATTLE START!</div>
+            </div>
+
+            <div class="relative z-10 flex justify-start gap-1 p-6 pb-36 pl-4 perspective-[1000px]">
+              ${state.battle.myTeam.map((p,i)=>renderUnit(p,i,true)).join('')}
+            </div>
+
+            <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-30">
+              <div class="glass px-4 py-2 rounded-full border border-gray-200 shadow-md flex items-center gap-2">
+                <i data-lucide="hourglass" class="w-4 h-4 text-[var(--volt)]"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-600">Cooldown</span>
+              </div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      },
+
+      createParticles: (x, y, color) => {
+        for(let i=0; i<8; i++) {
+          const p = document.createElement('div');
+          p.classList.add('fx-particle');
+          p.style.backgroundColor = color;
+          p.style.left = x + 'px';
+          p.style.top = y + 'px';
+          const angle = Math.random() * 360;
+          const velocity = Math.random() * 80 + 20;
+          const vx = Math.cos(angle * Math.PI / 180) * velocity + 'px';
+          const vy = Math.sin(angle * Math.PI / 180) * velocity + 'px';
+          p.style.setProperty('--vx', vx);
+          p.style.setProperty('--vy', vy);
+          document.body.appendChild(p);
+          setTimeout(() => p.remove(), 600);
+        }
+      },
+
+      logBattle: (html, color=null) => {
+        const log = $('battle-log');
+        if (!log) return;
+        log.innerHTML = html;
+        if (color) log.style.color = color;
+        log.style.transform = 'scale(1)';
+        setTimeout(() => { if (log) log.style.transform = 'scale(0)'; }, 850);
+      },
+
+      aliveUnits: (team) => team.map((p,i)=>({p,i})).filter(x => x.p && x.p.currentHp > 0),
+
+      pickRandomTarget: (team) => {
+        const alive = app.aliveUnits(team);
+        if (!alive.length) return null;
+        return alive[rnd(0, alive.length-1)];
+      },
+
+      initActionTimers: (team) => {
+        for (const p of team) {
+          if (!p) continue;
+          const sk = p.skills[rnd(0, p.skills.length-1)];
+          const cd = Math.max(0.2, cooldownSec(sk.power, p.speed || 1));
+          p.pendingSkill = sk;
+          p.actionCdTotal = cd;
+          p.actionCdRemain = cd;
+        }
+      },
+
+      updateCdUI: () => {
+        const upd = (team, side) => {
+          for (let i=0; i<3; i++) {
+            const p = team[i];
+            const bar = document.getElementById(`cd-${side}-${i}`);
+            const label = document.getElementById(`skillcd-${side}-${i}`);
+            if (!p) continue;
+
+            const total = Math.max(0.2, Number(p.actionCdTotal || 1));
+            const remain = Math.max(0, Number(p.actionCdRemain || 0));
+            const pct = Math.max(0, Math.min(100, (1 - (remain / total)) * 100));
+            if (bar) bar.style.width = `${pct}%`;
+
+            if (label) {
+              const sn = p.pendingSkill?.name ? String(p.pendingSkill.name).toUpperCase() : "READY";
+              const rv = p.pendingSkill ? `${remain.toFixed(1)}s` : "";
+              label.innerText = p.pendingSkill ? `${sn} · ${rv}` : "READY";
+            }
+          }
+        };
+        upd(state.battle.myTeam, 'p');
+        upd(state.battle.enemyTeam, 'e');
+      },
+
+      applyDamageVisual: async (isPlayerAttacker, attackerIdx, targetIdx, move, defHpAfter=null, defMax=null) => {
+        const atkEl = $(`unit-${isPlayerAttacker ? 'p' : 'e'}-${attackerIdx}`);
+        const defEl = $(`unit-${isPlayerAttacker ? 'e' : 'p'}-${targetIdx}`);
+        if (!atkEl || !defEl) return;
+
+        const rectAtk = atkEl.getBoundingClientRect();
+        const rectDef = defEl.getBoundingClientRect();
+
+        atkEl.style.zIndex = 100;
+        atkEl.style.setProperty('--tx', `${(rectDef.left + rectDef.width/2) - (rectAtk.left + rectAtk.width/2) * 0.8}px`);
+        atkEl.style.setProperty('--ty', `${(rectDef.top + rectDef.height/2) - (rectAtk.top + rectAtk.height/2) * 0.8}px`);
+        atkEl.classList.add('anim-dash');
+
+        const mfx = TYPE_FX[move?.type] || TYPE_FX.normal;
+
+        await wait(220);
+        app.createParticles(rectDef.left + rectDef.width/2, rectDef.top + rectDef.height/2, mfx.particleColor || '#ef4444');
+        defEl.classList.add('anim-hit');
+        $('camera-shake-layer')?.classList.add('anim-cam-shake');
+
+        const hpBar = $(`hp-${isPlayerAttacker ? 'e' : 'p'}-${targetIdx}`);
+        if (hpBar) {
+          const max = Math.max(1, Number(defMax || 1));
+          const cur = Math.max(0, Number(defHpAfter ?? 0));
+          hpBar.style.width = `${(cur / max) * 100}%`;
+          if ((cur / max) < 0.3) hpBar.style.backgroundColor = '#ef4444';
+        }
+
+        app.logBattle(`<span class="${isPlayerAttacker ? 'text-[var(--volt)]' : 'text-red-500'}">${isPlayerAttacker?'YOU':'OPP'}</span> used ${move?.name || 'skill'}!`);
+
+        await wait(260);
+        atkEl.classList.remove('anim-dash');
+        defEl.classList.remove('anim-hit');
+        $('camera-shake-layer')?.classList.remove('anim-cam-shake');
+        atkEl.style.zIndex = '';
+      },
+
+      applyDamage: async (isPlayerAttacker, attackerIdx, targetIdx, move) => {
+        const atkTeam = isPlayerAttacker ? state.battle.myTeam : state.battle.enemyTeam;
+        const defTeam = isPlayerAttacker ? state.battle.enemyTeam : state.battle.myTeam;
+
+        const atk = atkTeam[attackerIdx];
+        const def = defTeam[targetIdx];
+        if (!atk || !def) return;
+        if (atk.currentHp <= 0 || def.currentHp <= 0) return;
+
+        const mfx = TYPE_FX[move.type] || TYPE_FX[atk.type] || TYPE_FX.normal;
+
+        const base = Math.max(1, Number(move.power) || 1);
+        const lm = levelMult(atk.level || 1);
+        const tm = typeMult(move.type || atk.type, def.type);
+
+        const dmg = Math.max(1, Math.floor(base * lm * tm));
+        def.currentHp = Math.max(0, def.currentHp - dmg);
+
+        await app.applyDamageVisual(isPlayerAttacker, attackerIdx, targetIdx, move, def.currentHp, def.maxHp);
+
+        if (def.currentHp <= 0) {
+          const unit = isPlayerAttacker ? $(`unit-e-${targetIdx}`) : $(`unit-p-${targetIdx}`);
+          const img = unit?.querySelector('img');
+          if (img) img.classList.add('sprite-dead');
+          const hpBar = isPlayerAttacker ? $(`hp-e-${targetIdx}`) : $(`hp-p-${targetIdx}`);
+          const barWrap = hpBar?.parentElement?.parentElement;
+          if (barWrap) barWrap.style.opacity = 0.35;
+        }
+      },
+
+      startLocalBattle: async () => {
+        const c = $('main-content');
+        showToast("Preparing battle...", "info");
+
+        const { mn, mx } = makeEnemyTeamFromPlayer();
+        const enemy = [];
+
+        const overlay = document.createElement('div');
+        overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+        overlay.innerHTML = `<div class="relative mb-10"><div class="text-[var(--volt)] font-sport text-4xl font-black italic mb-3">MATCHING...</div><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--volt)]"></div></div>`;
+        $('app').appendChild(overlay);
+
+        try {
+          for (let i=0; i<3; i++) {
+            const pdata = await pickPokemonByBSTRange(mn, mx);
+            const o = await buildOwnedPokemonFromAPI(pdata, rankByBST(sumBST(pdata.stats)));
+            enemy.push(o);
+          }
+        } catch (e) {
+          overlay.remove();
+          return showToast("PokeAPI failed!", "error");
+        }
+
+        overlay.remove();
+
+        state.battle.mode = "local";
+        state.battle.active = true;
+        state.battle.over = false;
+        state.battle.enemyTeam = normalizeTeamForBattle(enemy);
+        state.battle.myTeam = normalizeTeamForBattle(state.team);
+
+        app.initActionTimers(state.battle.myTeam);
+        app.initActionTimers(state.battle.enemyTeam);
+
+        app.renderBattleArena(c);
+        app.beginBattleLoop();
+      },
+
+      beginBattleLoop: () => {
+        state.battle.lastTs = nowMs();
+        if (state.battle.loopId) cancelAnimationFrame(state.battle.loopId);
+
+        app.updateCdUI();
+
+        const tick = async () => {
+          if (!state.battle.active) return;
+
+          const t = nowMs();
+          const dt = (t - state.battle.lastTs) / 1000;
+          state.battle.lastTs = t;
+
+          const stepTeam = async (isPlayer) => {
+            const team = isPlayer ? state.battle.myTeam : state.battle.enemyTeam;
+            const enemy = isPlayer ? state.battle.enemyTeam : state.battle.myTeam;
+
+            for (let i=0; i<team.length; i++) {
+              const p = team[i];
+              if (!p || p.currentHp <= 0) continue;
+
+              if (!p.pendingSkill) {
+                const sk = p.skills[rnd(0, p.skills.length-1)];
+                const cd = Math.max(0.2, cooldownSec(sk.power, p.speed || 1));
+                p.pendingSkill = sk;
+                p.actionCdTotal = cd;
+                p.actionCdRemain = cd;
+                continue;
+              }
+
+              p.actionCdRemain = Math.max(0, (p.actionCdRemain || 0) - dt);
+              if (p.actionCdRemain > 0) continue;
+
+              const tgt = app.pickRandomTarget(enemy);
+              if (!tgt) continue;
+
+              const mv = p.pendingSkill;
+              await app.applyDamage(isPlayer, i, tgt.i, mv);
+              app.updateCdUI();
+              if (app.checkBattleEnd()) return;
+
+              const sk2 = p.skills[rnd(0, p.skills.length-1)];
+              const cd2 = Math.max(0.2, cooldownSec(sk2.power, p.speed || 1));
+              p.pendingSkill = sk2;
+              p.actionCdTotal = cd2;
+              p.actionCdRemain = cd2;
+            }
+          };
+
+          await stepTeam(true);
+          await stepTeam(false);
+
+          app.updateCdUI();
+          state.battle.loopId = requestAnimationFrame(tick);
+        };
+
+        state.battle.loopId = requestAnimationFrame(tick);
+      },
+
+      checkBattleEnd: () => {
+        if (state.battle.over) return true;
+        const myAlive = app.aliveUnits(state.battle.myTeam).length;
+        const enAlive = app.aliveUnits(state.battle.enemyTeam).length;
+
+        if (myAlive === 0 || enAlive === 0) {
+          state.battle.over = true;
+          state.battle.active = false;
+          if (state.battle.loopId) cancelAnimationFrame(state.battle.loopId);
+
+          const win = myAlive > 0 && enAlive === 0;
+          const { delta } = battleReward(win);
+
+          const overlay = document.createElement('div');
+          overlay.className = "absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center anim-pop";
+
+          overlay.innerHTML = `
+            <div class="relative mb-6">
+              <div class="absolute inset-0 ${win ? 'bg-[var(--volt)]' : 'bg-red-500'} blur-[80px] opacity-30 rounded-full animate-pulse"></div>
+              <h1 class="text-7xl font-sport font-black italic relative z-10 ${win?'text-[var(--volt)]':'text-gray-500'} tracking-tighter">${win?'VICTORY':'DEFEAT'}</h1>
+            </div>
+
+            <div class="bg-white px-8 py-3 rounded-full mb-3 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg">
+              <span class="text-black font-bold text-xl">${win?'+500':'+50'} Coins</span>
+            </div>
+
+            <div class="bg-white px-8 py-3 rounded-full mb-8 border-l-4 ${win?'border-[var(--volt)]':'border-red-500'} shadow-lg">
+              <span class="text-black font-bold text-sm">MMR ${delta>=0?'+':''}${delta} → ${(state.mmr||0).toLocaleString()}</span>
+            </div>
+
+            <button onclick="app.nav('lobby'); this.parentElement.remove()" class="bg-black text-white px-12 py-4 rounded-full font-black italic hover:scale-105 transition-transform shadow-xl mb-4">
+              RETURN HOME
+            </button>
+          `;
+          $('app').appendChild(overlay);
+
+          return true;
+        }
+        return false;
+      }
+    };
+
+    window.app = app;
+
+    onAuthStateChanged(auth, async (user) => {
+      state.auth.ready = true;
+      state.auth.uid = user ? user.uid : null;
+
+      const cached = getLocalFallbackCache();
+      if (cached) applyLoadedState(cached);
+
+      renderTopHeader();
+      updateHeaderCoins();
+
+      if (user) {
+        try {
+          const s = await loadFromServer(user.uid);
+          if (s) applyLoadedState(s);
+          renderTopHeader();
+          updateHeaderCoins();
+          debounceSave(() => saveToServer(user.uid).catch(()=>{}), 300);
+        } catch(e) {
+          setLocalFallbackCache();
+        }
+
+        const coinRef = ref(db, `users/${user.uid}/coins`);
+        onValue(coinRef, (snap) => {
+          const v = snap.val();
+          const vv = (typeof v === 'number') ? v : (Number(v) || 0);
+          state.coins = vv;
+          updateHeaderCoins();
+          setLocalFallbackCache();
+        });
+      } else {
+        setLocalFallbackCache();
+      }
+    });
+
+    window.onload = () => {
+      let myName = localStorage.getItem('pokerun_name');
+      if (!myName) {
+        myName = prompt("포켓런에 오신 것을 환영합니다!\n사용하실 닉네임을 입력해주세요:", "");
+        if (!myName || myName.trim() === "") myName = "Trainer_" + Math.floor(Math.random() * 9999);
+        localStorage.setItem('pokerun_name', myName);
+      }
+      state.nickname = myName;
+      persistLocalName();
+      app.init();
+    };
+  </script>
 </body>
 </html>
