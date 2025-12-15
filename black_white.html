@@ -2,6 +2,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="layout.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,11 +12,36 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="layout.css">
 
     <style>
+        body { padding-top: 0; } 
+
+        /* [추가 2] 만약 layout.js가 만드는 기존 헤더가 겹쳐 보이면 숨김 처리 */
+        .header-container, nav.header { display: none !important; }
+
+        /* [추가 3] 보내주신 로고 스타일을 여기에 붙여넣으세요 */
+        .pokerun-logo {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; user-select: none;
+            padding: 15px 20px; /* 로고 주변 여백 추가 */
+            background-color: var(--bg-main); /* 배경색 일치 */
+            z-index: 50; /* 다른 요소보다 위에 표시 */
+        }
+        .pokerun-logo .icon-box {
+            width: 34px; height: 34px;
+            background-color: #3586ff;
+            border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 2px 4px rgba(53, 134, 255, 0.25);
+        }
+        .pokerun-logo .material-icons { color: white; font-size: 22px; }
+        .pokerun-logo .logo-text {
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 700; font-style: italic;
+            font-size: 20px; color: #101213; letter-spacing: -0.5px;
+        }
         /* --- 1. 테마 설정 (White Mode Only) --- */
         :root {
             --volt: #2563eb;         /* 파랑 */
