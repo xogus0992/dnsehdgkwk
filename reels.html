@@ -1,38 +1,46 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POKE RUN: REELS</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+    
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
       
     <link rel="stylesheet" href="layout.css">
 
     <style>
+        /* --- 1. 테마 설정 (화이트 모드 고정) --- */
+        :root {
+            --volt: #2563eb;         /* 파랑 */
+            --bg-main: #f0f4f8;      /* 밝은 배경 */
+            --bg-card: #ffffff;      /* 흰색 카드 */
+            --bg-sub: #e5e7eb;       /* 서브 배경 */
+            --text-main: #1a1a1a;    /* 검정 텍스트 */
+            --text-sub: #4b5563;     /* 회색 텍스트 */
+            --border-color: #cccccc; /* 경계선 */
+        }
+
+        /* 화면 전체 고정 */
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
             overflow: hidden; 
-            background-color: #000;
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
             font-family: 'Inter', 'Noto Sans KR', sans-serif;
         }
-
-        /* layout.js가 배치할 상단/하단바 사이 공간 */
-        #app-content {
-            position: relative;
-            width: 100%;
-            height: 100%; 
-            overflow: hidden;
-        }
-
+        
+        /* 릴스 피드 컨테이너 (배경은 검정 유지) */
         #reels-container {
             width: 100%; height: 100%;
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
+            background: black; 
         }
 
         .reel-item {
@@ -40,72 +48,97 @@
             width: 100%; height: 100%;
             position: relative;
             background: black;
-            display: flex; justify-content: center; align-items: center;
         }
 
         .reel-item video {
             width: 100%; height: 100%;
             object-fit: cover;
         }
-
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
         .play-btn-overlay {
-            position: absolute; inset: 0; z-index: 10;
+            position: absolute; inset: 0; z-index: 15;
             display: flex; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            opacity: 0; transition: opacity 0.3s;
+            pointer-events: none;
         }
+        
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-        /* 댓글 시트 */
+        /* [수정] 댓글창 (바텀 시트) - Z-Index 높임 */
         .bottom-sheet-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); 
-            z-index: 9999;
+            z-index: 10000; /* 하단바(9000)보다 높게 설정 */
             visibility: hidden; opacity: 0; transition: all 0.3s ease;
             display: flex; align-items: flex-end; justify-content: center;
         }
         .bottom-sheet-overlay.open { visibility: visible; opacity: 1; }
+        
         .bottom-sheet {
-            background: #fff;
+            background: var(--bg-card);
             width: 100%; max-width: 450px; height: 60vh;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
             display: flex; flex-direction: column;
-            z-index: 10000;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            border-top: 1px solid var(--border-color);
         }
         .bottom-sheet-overlay.open .bottom-sheet { transform: translateY(0); }
+        
+        .sheet-handle { width: 40px; height: 4px; background: var(--bg-sub); border-radius: 2px; margin: 12px auto; cursor: grab; }
+        
+        .input-dark { 
+            width: 100%; 
+            background: var(--bg-sub); 
+            border: none; 
+            color: var(--text-main); 
+            padding: 12px 16px; 
+            border-radius: 20px; 
+            outline: none; 
+            font-size: 14px; 
+        }
     </style>
 </head>
 <body>
 
-    <div id="app-content">
-        <div id="reels-container" class="scrollbar-hide">
-            </div>
-    </div>
+    <main id="reels-container" class="scrollbar-hide">
+        </main>
 
     <div id="sheet-comment" class="bottom-sheet-overlay" onclick="closeComments(event)">
-        <div id="sheet-modal" class="bottom-sheet shadow-2xl" onclick="event.stopPropagation()">
-            <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-2"></div>
-            <div class="px-5 pb-3 border-b text-center font-bold text-sm text-black">
-                댓글 <span id="comment-count-header" class="text-blue-600">0</span>
+        <div id="sheet-modal" class="bottom-sheet shadow-2xl">
+            <div class="sheet-handle"></div>
+            <div class="px-5 pb-3 border-b border-[var(--border-color)] text-center font-bold text-sm">
+                댓글 <span id="comment-count-header" class="text-[var(--volt)]">0</span>
             </div>
-            <div id="comment-list" class="flex-1 overflow-y-auto p-4 space-y-4 text-black"></div>
-            <div class="p-4 border-t bg-white pb-8">
+            
+            <div id="comment-list" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[var(--bg-sub)] flex-shrink-0"></div>
+                    <div><p class="text-xs font-bold text-[var(--text-sub)]">gym_rat_99</p><p class="text-sm text-[var(--text-main)]">와 자세 진짜 좋으시네요! 🔥</p></div>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[var(--bg-sub)] flex-shrink-0"></div>
+                    <div><p class="text-xs font-bold text-[var(--text-sub)]">running_high</p><p class="text-sm text-[var(--text-main)]">저도 오늘 달리러 갑니다 ㅎㅎ</p></div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-[var(--border-color)] bg-[var(--bg-card)] pb-8">
                 <div class="flex items-center gap-3">
-                    <img id="my-avatar-comment" class="w-8 h-8 rounded-full bg-gray-100 object-cover" src="">
+                    <img id="my-avatar-comment" class="w-8 h-8 rounded-full bg-[var(--bg-sub)] object-cover" src="https://api.dicebear.com/7.x/avataaars/svg?seed=user">
                     <div class="flex-1 relative">
-                        <input type="text" id="comment-input" class="w-full bg-gray-100 px-4 py-2 rounded-full text-sm outline-none" placeholder="댓글 달기...">
-                        <button onclick="postComment()" class="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 font-bold text-sm">게시</button>
+                        <input type="text" id="comment-input" class="input-dark pr-12" placeholder="댓글 달기...">
+                        <button onclick="postComment()" class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--volt)] font-bold text-sm px-2 py-1">게시</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="layout.js"></script>
+    <script src="layout.js"></script>
 
     <script type="module">
-        // ★ 핵심 수정: getApps, getApp 추가
-        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, update, get, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -116,15 +149,12 @@
             projectId: "pokbattle" 
         };
 
-        // ★ 오류 해결 코드: 이미 앱이 있으면(layout.js에서 켰으면) 가져오고(getApp), 없으면 새로 켭니다(initializeApp).
-        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
-        
         let currentUser = null;
 
-        // --- 이하 로직 동일 ---
-
+        // --- 전역 함수 설정 ---
         window.handleFollow = async (targetUid, targetName, targetAvatar) => {
             if(!currentUser) return alert("로그인이 필요합니다.");
             const btn = document.getElementById(`btn-follow-${targetUid}`);
@@ -137,39 +167,44 @@
                     updates[`users/${myUid}/following/${targetUid}`] = null;
                     updates[`users/${targetUid}/followers/${myUid}`] = null;
                     btn.innerText = "팔로우";
-                    btn.className = "bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md shadow-lg"; 
+                    btn.className = "bg-[var(--volt)] text-white text-[10px] font-bold px-3 py-1.5 rounded-md transition-colors shadow-lg"; 
                 } else {
                     updates[`users/${myUid}/following/${targetUid}`] = true;
                     updates[`users/${targetUid}/nickname`] = targetName;
                     updates[`users/${targetUid}/avatar`] = targetAvatar;
                     updates[`users/${targetUid}/followers/${myUid}`] = true;
                     btn.innerText = "팔로잉";
-                    btn.className = "bg-gray-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md shadow-lg";
+                    btn.className = "bg-gray-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md transition-colors shadow-lg";
                 }
                 await update(ref(db), updates);
-            } catch(e) {}
+            } catch(e) { console.error(e); }
         };
 
         window.toggleLike = (el) => {
             event.stopPropagation();
             const countSpan = el.querySelector('span');
             let count = parseInt(countSpan.innerText.replace(/,/g, ''));
+            
             if (el.classList.contains('liked')) {
-                el.classList.remove('liked'); countSpan.innerText = count - 1;
+                el.classList.remove('liked');
+                countSpan.innerText = count - 1;
                 el.querySelector('svg').classList.remove('text-red-500', 'fill-red-500');
                 el.querySelector('svg').classList.add('text-white');
             } else {
-                el.classList.add('liked'); countSpan.innerText = count + 1;
+                el.classList.add('liked');
+                countSpan.innerText = count + 1;
                 el.querySelector('svg').classList.remove('text-white');
                 el.querySelector('svg').classList.add('text-red-500', 'fill-red-500');
             }
         };
 
+        // [수정] 댓글 열기 함수: event 명시적 전달
         window.openComments = (e) => {
             if(e) e.stopPropagation();
+            const sheet = document.getElementById('sheet-comment');
             const list = document.getElementById('comment-list');
             document.getElementById('comment-count-header').innerText = list.children.length;
-            document.getElementById('sheet-comment').classList.add('open');
+            sheet.classList.add('open');
         };
 
         window.closeComments = (e) => {
@@ -182,15 +217,27 @@
             const input = document.getElementById('comment-input');
             const text = input.value.trim();
             if (!text) return;
+            if(!currentUser) return alert("로그인 후 이용 가능합니다.");
+
+            const list = document.getElementById('comment-list');
             const userAvatar = document.getElementById('my-avatar-comment').src;
+            const userName = currentUser.displayName || "익명";
+
             const newComment = document.createElement('div');
             newComment.className = "flex gap-3 animate-pulse";
             newComment.innerHTML = `
-                <img src="${userAvatar}" class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 object-cover">
-                <div><p class="text-xs font-bold text-gray-500">Me</p><p class="text-sm">${text}</p></div>
+                <img src="${userAvatar}" class="w-8 h-8 rounded-full bg-[var(--bg-sub)] flex-shrink-0 object-cover">
+                <div>
+                    <p class="text-xs font-bold text-[var(--text-sub)]">${userName}</p>
+                    <p class="text-sm text-[var(--text-main)]">${text}</p>
+                </div>
             `;
-            document.getElementById('comment-list').appendChild(newComment);
+            list.appendChild(newComment);
             input.value = "";
+            list.scrollTop = list.scrollHeight;
+            const countHeader = document.getElementById('comment-count-header');
+            countHeader.innerText = parseInt(countHeader.innerText) + 1;
+            setTimeout(() => newComment.classList.remove('animate-pulse'), 500);
         };
 
         onAuthStateChanged(auth, (user) => {
@@ -198,66 +245,112 @@
                 currentUser = user;
                 onValue(ref(db, `users/${user.uid}/avatar`), (snap) => {
                     const avatar = snap.val() || user.photoURL;
-                    document.getElementById('my-avatar-comment').src = avatar || 'https://cdn-icons-png.flaticon.com/512/287/287221.png';
+                    if(avatar) document.getElementById('my-avatar-comment').src = avatar;
+                    else document.getElementById('my-avatar-comment').classList.add('bg-[var(--bg-sub)]');
                 });
-            } else {
-                document.getElementById('my-avatar-comment').src = 'https://cdn-icons-png.flaticon.com/512/287/287221.png';
             }
-            initReels();
+            initReels(); 
         });
 
         const reelsData = [
-            { uid: "u1", user: "run_yuna", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuna", desc: "한강 러닝 10km! 🏃‍♀️", video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", likes: 1204 },
-            { uid: "u2", user: "health_boy", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=health", desc: "하체 털리는 날 🏋️‍♂️", video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", likes: 856 },
-            { uid: "u3", user: "yoga_m", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yoga", desc: "모닝 요가 🧘‍♀️", video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", likes: 2300 }
+            {
+                uid: "user_1", user: "run_yuna", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuna",
+                desc: "오늘 날씨 폼 미쳤다.. 한강 러닝 10km 완주! 🏃‍♀️✨",
+                video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+                likes: 1204
+            },
+            {
+                uid: "user_2", user: "health_boy", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=health",
+                desc: "하체 하는 날은 계단 내려갈 때가 제일 무섭다.. 🏋️‍♂️",
+                video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                likes: 856
+            },
+            {
+                uid: "user_3", user: "yoga_master", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yoga",
+                desc: "아침 요가로 하루 시작하기 🧘‍♀️ 다들 좋은 하루 보내세요!",
+                video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                likes: 2300
+            },
+            {
+        uid: "user_5", 
+        user: "me", 
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=me",
+        desc: "이런날씨면 맨날 산책 나갈텐데! 😎",
+        // 👇 이 주소는 구글에서 제공하는 테스트용이라 무조건 나옵니다!
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", 
+        likes: 0
+    }
         ];
 
         async function initReels() {
             const container = document.getElementById('reels-container');
             container.innerHTML = "";
+
             for (const item of reelsData) {
                 let isFollowing = false;
                 if(currentUser) {
-                    try { const s = await get(ref(db, `users/${currentUser.uid}/following/${item.uid}`)); isFollowing = s.exists(); } catch(e) {}
+                    const followSnap = await get(ref(db, `users/${currentUser.uid}/following/${item.uid}`));
+                    isFollowing = followSnap.exists();
                 }
                 const btnText = isFollowing ? "팔로잉" : "팔로우";
-                const btnClass = isFollowing ? "bg-gray-600 text-white" : "bg-blue-600 text-white";
+                const btnClass = isFollowing ? "bg-gray-600 text-white" : "bg-[var(--volt)] text-white";
 
                 const reel = document.createElement('div');
                 reel.className = 'reel-item';
                 reel.innerHTML = `
                     <video src="${item.video}" loop muted playsinline preload="auto"></video>
-                    <div class="play-btn-overlay"><i data-lucide="play" class="w-16 h-16 text-white/80 fill-white"></i></div>
                     
+                    <div class="mute-overlay absolute inset-0 flex items-center justify-center z-10 pointer-events-none transition-opacity duration-300">
+                        <div class="bg-black/50 p-3 rounded-full backdrop-blur-sm animate-pulse">
+                            <i data-lucide="volume-x" class="w-8 h-8 text-white"></i>
+                        </div>
+                    </div>
+                    <div class="play-btn-overlay">
+                        <i data-lucide="play" class="w-16 h-16 text-white/80 fill-white"></i>
+                    </div>
+
                     <div class="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-6">
-                        <div class="flex flex-col items-center gap-1 cursor-pointer" onclick="toggleLike(this)">
-                            <i data-lucide="heart" class="w-8 h-8 text-white drop-shadow-md"></i>
+                        <div class="flex flex-col items-center gap-1 group cursor-pointer p-2" onclick="toggleLike(this)">
+                            <i data-lucide="heart" class="w-8 h-8 text-white drop-shadow-md transition-transform group-active:scale-75"></i>
                             <span class="text-white text-xs font-bold drop-shadow-md">${item.likes}</span>
                         </div>
-                        <div class="flex flex-col items-center gap-1 cursor-pointer" onclick="openComments(event)">
+                        <div class="flex flex-col items-center gap-1 cursor-pointer p-2" onclick="openComments(event)">
                             <i data-lucide="message-circle" class="w-8 h-8 text-white drop-shadow-md"></i>
                             <span class="text-white text-xs font-bold drop-shadow-md">2</span>
                         </div>
                     </div>
 
                     <div class="absolute bottom-24 left-4 z-20 max-w-[75%] pointer-events-none">
-                        <div class="flex items-center gap-3 mb-2 pointer-events-auto">
-                            <img src="${item.avatar}" class="w-9 h-9 rounded-full border border-white bg-gray-600">
-                            <span class="text-white font-bold drop-shadow-md">${item.user}</span>
-                            <button id="btn-follow-${item.uid}" onclick="handleFollow('${item.uid}', '${item.user}', '${item.avatar}')" class="${btnClass} text-[10px] font-bold px-3 py-1.5 rounded-md shadow-lg">${btnText}</button>
+                        <div class="flex items-center gap-3 mb-3 pointer-events-auto">
+                            <img src="${item.avatar}" class="w-9 h-9 rounded-full border border-white bg-[var(--bg-sub)]">
+                            <span class="text-white font-bold drop-shadow-md shadow-black">${item.user}</span>
+                            <button id="btn-follow-${item.uid}" onclick="handleFollow('${item.uid}', '${item.user}', '${item.avatar}')" class="${btnClass} text-[10px] font-bold px-3 py-1.5 rounded-md transition-colors shadow-lg">
+                                ${btnText}
+                            </button>
                         </div>
                         <p class="text-white text-sm drop-shadow-md line-clamp-2">${item.desc}</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <i data-lucide="music" class="w-3 h-3 text-white"></i>
+                            <span class="text-white text-xs animate-pulse">Original Sound - ${item.user}</span>
+                        </div>
                     </div>
-                    <div class="absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/80 to-transparent pointer-events-none"></div>
                 `;
                 
                 const video = reel.querySelector('video');
+                const muteOverlay = reel.querySelector('.mute-overlay');
                 const playOverlay = reel.querySelector('.play-btn-overlay');
                 
                 reel.addEventListener('click', (e) => {
                     if(e.target.closest('button') || e.target.closest('.cursor-pointer')) return;
-                    if (video.paused) { video.play(); playOverlay.style.opacity = '0'; }
-                    else { video.pause(); playOverlay.style.opacity = '1'; }
+                    if (video.paused) {
+                        video.play();
+                        playOverlay.style.opacity = '0';
+                    } else {
+                        video.muted = !video.muted;
+                        if(video.muted) muteOverlay.style.opacity = '1';
+                        else muteOverlay.style.opacity = '0';
+                    }
                 });
                 container.appendChild(reel);
             }
@@ -271,20 +364,37 @@
                     const video = entry.target.querySelector('video');
                     const playOverlay = entry.target.querySelector('.play-btn-overlay');
                     if (entry.isIntersecting) {
-                        video.play().then(() => playOverlay.style.opacity = '0').catch(() => playOverlay.style.opacity = '1');
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => { playOverlay.style.opacity = '0'; }).catch(() => { playOverlay.style.opacity = '1'; });
+                        }
                     } else {
-                        video.pause(); video.currentTime = 0; playOverlay.style.opacity = '0';
+                        video.pause();
+                        video.currentTime = 0;
+                        playOverlay.style.opacity = '0';
                     }
                 });
             }, { threshold: 0.6 });
             document.querySelectorAll('.reel-item').forEach(item => observer.observe(item));
         }
 
-        const sheet = document.getElementById('sheet-modal');
-        let ts = 0, isD = false;
-        sheet.addEventListener('touchstart', (e)=>{ if(document.getElementById('comment-list').scrollTop <= 0) { ts=e.touches[0].clientY; isD=true; } });
-        sheet.addEventListener('touchmove', (e)=>{ if(isD && e.touches[0].clientY - ts > 0) { e.preventDefault(); sheet.style.transform=`translateY(${e.touches[0].clientY - ts}px)`; } });
-        sheet.addEventListener('touchend', (e)=>{ isD=false; if(e.changedTouches[0].clientY - ts > 100) document.getElementById('sheet-comment').classList.remove('open'); sheet.style.transform=''; });
+        setupDragToClose('sheet-modal', 'comment-list', 'sheet-comment');
+        function setupDragToClose(sheetId, listId, overlayId) {
+            const sheet = document.getElementById(sheetId);
+            const list = document.getElementById(listId);
+            const overlay = document.getElementById(overlayId);
+            let touchStart = 0, touchCurrent = 0, isDragging = false;
+            sheet.addEventListener('touchstart', (e) => { if (list.contains(e.target) && list.scrollTop > 0) return; touchStart = e.touches[0].clientY; isDragging = true; sheet.style.transition = 'none'; });
+            sheet.addEventListener('touchmove', (e) => { if (!isDragging) return; touchCurrent = e.touches[0].clientY; const delta = touchCurrent - touchStart; if (delta > 0) { if(e.cancelable) e.preventDefault(); sheet.style.transform = `translateY(${delta}px)`; } });
+            sheet.addEventListener('touchend', () => handleDragEnd());
+            sheet.addEventListener('mousedown', (e) => { if (list.contains(e.target) && list.scrollTop > 0) return; touchStart = e.clientY; isDragging = true; sheet.style.transition = 'none'; });
+            window.addEventListener('mousemove', (e) => { if (!isDragging) return; touchCurrent = e.clientY; const delta = touchCurrent - touchStart; if (delta > 0) sheet.style.transform = `translateY(${delta}px)`; });
+            window.addEventListener('mouseup', () => { if(isDragging) handleDragEnd(); });
+            function handleDragEnd() { isDragging = false; sheet.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'; const delta = touchCurrent - touchStart; if (delta > 120) { overlay.classList.remove('open'); setTimeout(() => { sheet.style.transform = ''; }, 300); } else { sheet.style.transform = ''; } touchStart = 0; touchCurrent = 0; }
+        }
+
+        // ⭐️ 페이지 로드 시 테마 적용 (White 고정)
+        // document.addEventListener('DOMContentLoaded', loadTheme); // 더 이상 필요 없음
     </script>
 </body>
 </html>
