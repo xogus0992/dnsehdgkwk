@@ -4,397 +4,303 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POKE RUN: PROFILE</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons" rel="stylesheet">
+
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,900&family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="layout.css">
 
     <style>
-        /* [스타일] 탭 버튼 디자인 */
-        .pokerun-icon-box {
-            width: 34px; 
-            height: 34px;
-            border-radius: 10px;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            transition: transform 0.1s, opacity 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .pokerun-icon-box:active { transform: scale(0.95); }
-
-        /* 아이콘 색상은 무조건 흰색 */
-        .pokerun-icon-box .material-icons {
-            color: white !important;
-            font-size: 24px !important;
+        :root { 
+            --volt: #2563eb; 
+            --bg-main: #f0f4f8; 
+            --bg-card: #ffffff; 
+            --bg-sub: #e5e7eb; 
+            --text-main: #1a1a1a; 
+            --text-sub: #4b5563; 
+            --border-color: #d1d5db; 
         }
 
-        /* ⚡️ 1번 버튼: 파란색 */
-        .box-blue { background-color: #3586ff; box-shadow: 0 2px 4px rgba(53, 134, 255, 0.25); }
-        
-        /* 👤 2번 버튼: 보라색 */
-        .box-purple { background-color: #8b5cf6; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.25); }
+        html, body { 
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            touch-action: pan-y;
+        }
 
-        /* 모달 애니메이션 */
-        .modal-enter { animation: modalFadeIn 0.2s ease-out forwards; }
-        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* 모달 스타일 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 9999; display: flex;
+            align-items: center; justify-content: center; opacity: 0;
+            pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; width: 90%; max-width: 340px;
+            border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateY(20px); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
     </style>
 </head>
-<body class="bg-[var(--bg-main)]">
 
-    <main class="w-full h-full flex flex-col pb-20 overflow-y-auto scrollbar-hide">
-        
-        <div class="px-4 pt-6 pb-2">
+<body class="flex justify-center h-screen bg-[var(--bg-main)]">
+
+<div class="w-full max-w-md h-full relative bg-[var(--bg-main)] flex flex-col border-x border-[var(--border-color)] sm:border-x-0">
+
+    <main class="app-content overflow-y-auto scrollbar-hide">
+
+        <div class="px-4 pt-14 pb-6 bg-white border-b border-[var(--border-color)]">
             <div class="flex items-center justify-between mb-4">
                 <div class="relative group cursor-pointer" onclick="openEditProfileModal()">
-                    <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 to-purple-500">
+                    <div class="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-[var(--volt)] to-purple-500">
                         <img id="my-profile-img" class="w-full h-full rounded-full border-2 border-white object-cover bg-gray-100">
                     </div>
-                    <div class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 border-2 border-white">
+                    <div class="absolute bottom-0 right-0 bg-[var(--volt)] text-white rounded-full p-1 border-2 border-white">
                         <i data-lucide="pencil" class="w-3 h-3"></i>
                     </div>
                 </div>
-                
-                <div class="flex-1 flex justify-around text-black ml-4">
+
+                <div class="flex-1 flex justify-around ml-4">
                     <div class="flex flex-col items-center">
                         <span id="post-count" class="font-bold text-lg">0</span>
-                        <span class="text-xs text-gray-500">게시물</span>
+                        <span class="text-xs text-[var(--text-sub)]">게시물</span>
                     </div>
-                    <button onclick="openUserListModal('followers')" class="flex flex-col items-center hover:bg-gray-100 rounded-lg p-1 transition">
+                    <button onclick="openUserListModal('followers')" class="flex flex-col items-center">
                         <span id="follower-count" class="font-bold text-lg">0</span>
-                        <span class="text-xs text-gray-500">팔로워</span>
+                        <span class="text-xs text-[var(--text-sub)]">팔로워</span>
                     </button>
-                    <button onclick="openUserListModal('following')" class="flex flex-col items-center hover:bg-gray-100 rounded-lg p-1 transition">
+                    <button onclick="openUserListModal('following')" class="flex flex-col items-center">
                         <span id="following-count" class="font-bold text-lg">0</span>
-                        <span class="text-xs text-gray-500">팔로잉</span>
+                        <span class="text-xs text-[var(--text-sub)]">팔로잉</span>
                     </button>
                 </div>
             </div>
-            
+
             <div class="mb-5">
-                <h3 id="my-profile-name" class="font-bold text-sm text-black">Loading...</h3>
-                <p id="my-profile-bio" class="text-xs text-gray-500 mt-1">상태 메시지를 입력해주세요.</p>
+                <h3 id="my-profile-name" class="font-bold text-lg">Loading...</h3>
+                <p id="my-profile-bio" class="text-sm text-[var(--text-sub)] mt-1 whitespace-pre-wrap">상태 메시지를 입력해주세요.</p>
             </div>
-            
+
             <div class="flex gap-2 text-sm font-bold">
-                <button onclick="openEditProfileModal()" class="flex-1 bg-gray-100 py-1.5 rounded-lg border border-gray-300 active:scale-95 transition text-black">프로필 편집</button>
-                <button class="flex-1 bg-gray-100 py-1.5 rounded-lg border border-gray-300 active:scale-95 transition text-black">프로필 공유</button>
+                <button onclick="openEditProfileModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 py-1.5 rounded-lg border border-[var(--border-color)] transition">프로필 편집</button>
+                <button onclick="shareProfile()" class="flex-1 bg-gray-100 hover:bg-gray-200 py-1.5 rounded-lg border border-[var(--border-color)] transition">프로필 공유</button>
             </div>
         </div>
 
-        <div class="flex border-t border-gray-200 items-center h-14 mt-2">
-            <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 h-full border-b-2 border-black flex justify-center items-center text-black transition-all">
-                <i data-lucide="grid-3x3" class="w-6 h-6"></i>
+        <div class="flex border-b border-[var(--border-color)] bg-white sticky top-0 z-10">
+            <button id="tab-btn-posts" onclick="switchTab('posts')" class="flex-1 py-3 border-b-2 border-black flex justify-center transition-colors">
+                <i data-lucide="grid-3x3"></i>
             </button>
-            
-            <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 h-full flex justify-center items-center transition-all opacity-50">
-                <div class="pokerun-icon-box box-blue">
-                    <span class="material-icons">bolt</span>
-                </div>
+            <button id="tab-btn-reels" onclick="switchTab('reels')" class="flex-1 py-3 flex justify-center text-gray-400 transition-colors">
+                <i data-lucide="clapperboard"></i>
             </button>
-            
-            <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 h-full flex justify-center items-center transition-all opacity-50">
-                <div class="pokerun-icon-box box-purple">
-                    <span class="material-icons">bolt</span>
-                </div>
+            <button id="tab-btn-tags" onclick="switchTab('tags')" class="flex-1 py-3 flex justify-center text-gray-400 transition-colors">
+                <i data-lucide="user-check"></i>
             </button>
         </div>
 
-        <div id="tab-content-posts" class="w-full">
+        <div id="tab-content-posts" class="bg-white min-h-[50vh]">
             <div id="my-post-grid" class="grid grid-cols-3 gap-0.5">
-                <div class="bg-gray-100 aspect-square animate-pulse"></div>
-                <div class="bg-gray-100 aspect-square animate-pulse"></div>
-                <div class="bg-gray-100 aspect-square animate-pulse"></div>
-            </div>
+                </div>
             <div id="no-posts-msg" class="hidden py-20 text-center text-gray-400">
-                <div class="flex justify-center mb-2"><i data-lucide="camera" class="w-10 h-10 opacity-50"></i></div>
-                <p class="text-sm">아직 게시물이 없습니다.</p>
+                <div class="w-16 h-16 rounded-full border-2 border-gray-300 flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="camera" class="w-8 h-8"></i>
+                </div>
+                <p class="text-lg font-bold text-black">사진 공유</p>
+                <p class="text-sm mt-1">사진을 공유하면 프로필에 표시됩니다.</p>
             </div>
         </div>
 
-        <div id="tab-content-reels" class="hidden w-full h-64 flex items-center justify-center text-gray-400">
-            <p>저장된 릴스가 없습니다.</p>
+        <div id="tab-content-reels" class="hidden h-full">
+            <iframe src="h_profile.html" style="width:100%;height:100%;min-height:80vh;border:none"></iframe>
         </div>
 
-        <div id="tab-content-tags" class="hidden w-full h-64 flex items-center justify-center text-gray-400">
-            <p>태그된 게시물이 없습니다.</p>
+        <div id="tab-content-tags" class="hidden h-full">
+            <iframe src="pk_profile.html" style="width:100%;height:100%;min-height:80vh;border:none"></iframe>
         </div>
+
     </main>
 
-    <div id="post-modal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closePostModal()">
-        <div class="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200 modal-enter" onclick="event.stopPropagation()">
-            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-200">
-                <div class="flex items-center gap-2">
-                    <img id="modal-avatar" class="w-6 h-6 rounded-full bg-gray-200 object-cover">
-                    <span id="modal-username" class="font-bold text-sm text-black">Username</span>
-                </div>
-                <button id="delete-post-btn" class="text-red-500 hidden hover:bg-gray-100 p-1 rounded transition" onclick="deleteCurrentPost()">
-                    <i data-lucide="trash-2" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="w-full h-auto bg-black flex items-center justify-center relative min-h-[300px]">
-                <img id="modal-image" class="w-full h-auto object-contain max-h-[70vh]">
-            </div>
-            <div class="p-4 bg-white">
-                <div class="flex gap-4 mb-3">
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="heart" class="w-6 h-6 text-blue-600 fill-blue-600"></i>
-                        <span id="modal-likes" class="font-bold text-sm text-black">0</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="message-circle" class="w-6 h-6 text-black"></i>
-                        <span id="modal-comments" class="font-bold text-sm text-black">0</span>
-                    </div>
-                </div>
-                <div id="modal-content" class="text-sm mt-2 text-black"></div>
-                <div id="modal-date" class="text-[10px] text-gray-500 mt-2 uppercase"></div>
-            </div>
-        </div>
-    </div>
+</div>
 
-    <div id="modal-user-list" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200 flex flex-col max-h-[70vh]">
-            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-200">
-                <span id="user-list-title" class="font-bold text-sm">목록</span>
-                <button onclick="closeUserListModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div id="user-list-content" class="flex-1 overflow-y-auto p-2 scrollbar-hide"></div>
-        </div>
-    </div>
-
-    <div id="edit-profile-modal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200">
-            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-200">
-                <span class="font-bold text-sm">프로필 편집</span>
-                <button onclick="closeEditProfileModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="p-6 flex flex-col items-center">
-                <div class="relative group cursor-pointer mb-6" onclick="document.getElementById('edit-profile-img-input').click()">
-                     <div class="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 to-purple-500">
-                        <img id="edit-profile-preview" class="w-full h-full rounded-full border-2 border-white object-cover bg-gray-100">
-                    </div>
-                    <div class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1.5 border-2 border-white">
-                        <i data-lucide="camera" class="w-4 h-4"></i>
-                    </div>
-                    <input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="previewProfileImage(this)">
-                </div>
-                <div class="w-full space-y-4">
-                    <div>
-                        <label class="text-xs text-gray-500 mb-1 block">닉네임</label>
-                        <input type="text" id="edit-nickname" class="w-full bg-gray-100 text-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="닉네임 입력">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500 mb-1 block">상태 메시지</label>
-                        <textarea id="edit-bio" rows="3" class="w-full bg-gray-100 text-black rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none" placeholder="자신을 소개해보세요."></textarea>
-                    </div>
-                </div>
-                <button id="btn-save-profile" onclick="saveProfile()" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition active:scale-95">완료</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="layout.js"></script>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, onValue, query, orderByChild, equalTo, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 class="text-lg font-bold mb-4 text-center">프로필 편집</h2>
         
-        const firebaseConfig = { 
-            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
-            authDomain: "pokbattle.firebaseapp.com", 
-            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
-            projectId: "pokbattle" 
-        };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        <div class="mb-4 text-center">
+            <img id="edit-preview-img" class="w-20 h-20 rounded-full mx-auto mb-2 object-cover border">
+            <button class="text-blue-500 text-sm font-bold" onclick="changeRandomAvatar()">랜덤 아바타 변경</button>
+        </div>
 
-        let currentUser = null;
-        let currentOpenPostId = null;
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">닉네임</label>
+                <input type="text" id="edit-nickname" class="w-full border rounded p-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">상태 메시지</label>
+                <textarea id="edit-bio" rows="3" class="w-full border rounded p-2 text-sm resize-none"></textarea>
+            </div>
+        </div>
 
-        onAuthStateChanged(auth, (user) => {
-            if(user) {
-                currentUser = user;
-                updateProfileUI(user);
-                loadMyPosts(user.uid);
-                loadFollowStats(user.uid);
+        <div class="flex gap-2 mt-6">
+            <button onclick="closeModal('edit-modal')" class="flex-1 py-2 border rounded text-sm font-bold">취소</button>
+            <button onclick="saveProfileChanges()" class="flex-1 py-2 bg-blue-600 text-white rounded text-sm font-bold">완료</button>
+        </div>
+    </div>
+</div>
+
+<div id="user-list-modal" class="modal-overlay">
+    <div class="modal-content" style="height: 50vh; display: flex; flex-direction: column;">
+        <h2 id="user-list-title" class="text-lg font-bold mb-4 text-center border-b pb-2">목록</h2>
+        <div id="user-list-container" class="flex-1 overflow-y-auto">
+            <p class="text-center text-gray-400 mt-10">목록이 비어있습니다.</p>
+        </div>
+        <button onclick="closeModal('user-list-modal')" class="mt-4 py-2 w-full border rounded text-sm font-bold">닫기</button>
+    </div>
+</div>
+
+<script type="module" src="layout.js"></script>
+
+<script type="module">
+    // 1. 설정 및 서비스 가져오기
+    import { auth, db } from './config.js'; 
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    let currentUser = null;
+    let tempAvatarUrl = ""; // 아바타 변경 시 임시 저장용
+
+    // 초기화
+    onAuthStateChanged(auth, (user) => {
+        if(user) {
+            currentUser = user;
+            loadUserProfile(user.uid);
+            // loadMyPosts(user.uid); // 게시물 로드 기능은 아직 DB구조가 없어서 주석처리 (추후 구현)
+            document.getElementById('no-posts-msg').classList.remove('hidden'); // 일단 게시물 없음 표시
+        } else {
+            location.href = 'log.html'; // 로그인 안 했으면 로그인 페이지로
+        }
+    });
+
+    // 프로필 정보 실시간 로드
+    function loadUserProfile(uid) {
+        onValue(ref(db, `users/${uid}`), (snap) => {
+            const data = snap.val();
+            if(!data) return;
+
+            // 화면 업데이트
+            document.getElementById('my-profile-name').innerText = data.nickname || "러너";
+            document.getElementById('my-profile-bio').innerText = data.bio || "상태 메시지가 없습니다.";
+            
+            const avatarUrl = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`;
+            document.getElementById('my-profile-img').src = avatarUrl;
+            tempAvatarUrl = avatarUrl; // 편집용 변수 초기화
+
+            // 숫자 업데이트 (데이터 없으면 0)
+            const followers = data.followers ? Object.keys(data.followers).length : 0;
+            const following = data.following ? Object.keys(data.following).length : 0;
+            const posts = data.posts ? Object.keys(data.posts).length : 0;
+
+            document.getElementById('follower-count').innerText = followers;
+            document.getElementById('following-count').innerText = following;
+            document.getElementById('post-count').innerText = posts;
+        });
+    }
+
+    // -------------------------
+    // 전역 함수 (버튼 클릭용)
+    // -------------------------
+
+    // 1. 탭 전환
+    window.switchTab = (tab) => {
+        const tabs = ['posts', 'reels', 'tags'];
+        tabs.forEach(t => {
+            const content = document.getElementById(`tab-content-${t}`);
+            const btn = document.getElementById(`tab-btn-${t}`);
+            
+            if (t === tab) {
+                content.classList.remove('hidden');
+                btn.className = "flex-1 py-3 border-b-2 border-black flex justify-center transition-colors text-black";
             } else {
-                location.href = 'home.html';
+                content.classList.add('hidden');
+                btn.className = "flex-1 py-3 flex justify-center text-gray-400 transition-colors";
             }
         });
+    };
 
-        async function updateProfileUI(user) {
-            document.getElementById('my-profile-name').innerText = user.displayName || "러너";
-            const userRef = ref(db, `users/${user.uid}`);
-            const snapshot = await get(userRef);
-            let bio = "상태 메시지를 입력해주세요.";
-            let profileImg = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
-            if(snapshot.exists()) {
-                const val = snapshot.val();
-                if(val.bio) bio = val.bio;
-                if(val.avatar) profileImg = val.avatar;
-            }
-            document.getElementById('my-profile-bio').innerText = bio;
-            document.getElementById('my-profile-img').src = profileImg;
-            document.getElementById('edit-profile-preview').src = profileImg;
-        }
-
-        function loadFollowStats(uid) {
-            onValue(ref(db, `users/${uid}/followers`), (s) => document.getElementById('follower-count').innerText = s.exists() ? Object.keys(s.val()).length : 0);
-            onValue(ref(db, `users/${uid}/following`), (s) => document.getElementById('following-count').innerText = s.exists() ? Object.keys(s.val()).length : 0);
-        }
-
-        // [핵심] 게시물 로드 함수 (프로필 본 기능)
-        function loadMyPosts(userId) {
-            const grid = document.getElementById('my-post-grid');
-            onValue(ref(db, 'posts'), (snapshot) => {
-                grid.innerHTML = "";
-                const data = snapshot.val();
-                if (!data) { showNoPosts(); return; }
-
-                const myPosts = Object.entries(data)
-                    .filter(([key, post]) => post.author === userId)
-                    .sort((a, b) => b[1].timestamp - a[1].timestamp);
-                
-                document.getElementById('post-count').innerText = myPosts.length;
-                if (myPosts.length === 0) { showNoPosts(); return; }
-
-                document.getElementById('no-posts-msg').classList.add('hidden');
-                myPosts.forEach(([key, post]) => {
-                    const div = document.createElement('div');
-                    div.className = "relative bg-black cursor-pointer group overflow-hidden aspect-square"; 
-                    div.onclick = () => openPostModal(post, key);
-                    const likesCount = post.likes ? Object.keys(post.likes).length : 0;
-                    div.innerHTML = `<img src="${post.image}" class="w-full h-full object-cover">`;
-                    grid.appendChild(div);
-                });
-            });
-        }
-        function showNoPosts() {
-            document.getElementById('my-post-grid').innerHTML = "";
-            document.getElementById('no-posts-msg').classList.remove('hidden');
-            document.getElementById('post-count').innerText = "0";
-        }
-
-        // 게시물 모달 열기
-        window.openPostModal = (post, postId) => {
-            currentOpenPostId = postId;
-            const modal = document.getElementById('post-modal');
-            document.getElementById('modal-image').src = post.image;
-            document.getElementById('modal-avatar').src = post.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author}`;
-            document.getElementById('modal-username').innerText = post.authorName;
-            document.getElementById('modal-content').innerText = post.content;
-            document.getElementById('modal-date').innerText = new Date(post.timestamp).toLocaleDateString();
-            
-            const deleteBtn = document.getElementById('delete-post-btn');
-            if(currentUser && post.author === currentUser.uid) deleteBtn.classList.remove('hidden');
-            else deleteBtn.classList.add('hidden');
-            
-            modal.classList.remove('hidden');
-            lucide.createIcons();
-        };
-        window.closePostModal = () => document.getElementById('post-modal').classList.add('hidden');
-
-        // 게시물 삭제
-        window.deleteCurrentPost = async () => {
-            if(!currentOpenPostId) return;
-            if(confirm("삭제하시겠습니까?")) {
-                await remove(ref(db, `posts/${currentOpenPostId}`));
-                closePostModal();
-            }
-        };
-
-        // 프로필 편집 및 유저 리스트 관련 함수들
-        window.openEditProfileModal = () => {
-            document.getElementById('edit-nickname').value = document.getElementById('my-profile-name').innerText;
-            document.getElementById('edit-bio').value = document.getElementById('my-profile-bio').innerText === "상태 메시지를 입력해주세요." ? "" : document.getElementById('my-profile-bio').innerText;
-            document.getElementById('edit-profile-modal').classList.remove('hidden');
-        };
-        window.closeEditProfileModal = () => document.getElementById('edit-profile-modal').classList.add('hidden');
-        window.previewProfileImage = (input) => {
-            if(input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('edit-profile-preview').src = e.target.result;
-                reader.readAsDataURL(input.files[0]);
-            }
-        };
-        window.saveProfile = async () => {
-            if (!currentUser) return;
-            const newNick = document.getElementById('edit-nickname').value.trim();
-            const newBio = document.getElementById('edit-bio').value.trim();
-            const newPhoto = document.getElementById('edit-profile-preview').src;
-            
-            if(!newNick) return alert("닉네임을 입력하세요.");
-            
-            const updates = {};
-            updates[`users/${currentUser.uid}/nickname`] = newNick;
-            updates[`users/${currentUser.uid}/bio`] = newBio;
-            if(!newPhoto.startsWith("http")) updates[`users/${currentUser.uid}/avatar`] = newPhoto;
-
-            await updateProfile(currentUser, { displayName: newNick });
-            await update(ref(db), updates);
-            
-            updateProfileUI(currentUser);
-            closeEditProfileModal();
-        };
-
-        window.openUserListModal = async (type) => {
-            const modal = document.getElementById('modal-user-list');
-            const title = document.getElementById('user-list-title');
-            const content = document.getElementById('user-list-content');
-            modal.classList.remove('hidden');
-            content.innerHTML = "Loading...";
-            title.innerText = type === 'followers' ? "팔로워" : "팔로잉";
-            
-            const refPath = `users/${currentUser.uid}/${type}`;
-            const snapshot = await get(ref(db, refPath));
-            content.innerHTML = "";
-            if(!snapshot.exists()) { content.innerHTML = "<div class='p-4 text-center text-gray-400'>없음</div>"; return; }
-            
-            Object.keys(snapshot.val()).forEach(async (uid) => {
-                const uSnap = await get(ref(db, `users/${uid}`));
-                if(uSnap.exists()) {
-                    const u = uSnap.val();
-                    content.innerHTML += `<div class="p-3 border-b border-gray-100 flex items-center gap-3">
-                        <img src="${u.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed='+uid}" class="w-10 h-10 rounded-full bg-gray-100">
-                        <span class="font-bold text-sm">${u.nickname || '유저'}</span>
-                    </div>`;
-                }
-            });
-        };
-        window.closeUserListModal = () => document.getElementById('modal-user-list').classList.add('hidden');
+    // 2. 모달 열기/닫기
+    window.openEditProfileModal = () => {
+        if(!currentUser) return;
+        // 현재 값 채워넣기
+        document.getElementById('edit-nickname').value = document.getElementById('my-profile-name').innerText;
+        document.getElementById('edit-bio').value = document.getElementById('my-profile-bio').innerText === "상태 메시지가 없습니다." ? "" : document.getElementById('my-profile-bio').innerText;
+        document.getElementById('edit-preview-img').src = document.getElementById('my-profile-img').src;
         
-        // [수정된 핵심 함수] 탭 전환 시 디자인이 깨지지 않도록 처리
-        window.switchTab = (tab) => {
-            const tabs = ['posts', 'reels', 'tags'];
-            tabs.forEach(t => {
-                const content = document.getElementById(`tab-content-${t}`);
-                const btn = document.getElementById(`tab-btn-${t}`);
-                
-                // 내용 보이기/숨기기
-                if (t === tab) content.classList.remove('hidden');
-                else content.classList.add('hidden');
+        document.getElementById('edit-modal').classList.add('show');
+    };
 
-                // 버튼 스타일 제어 (클래스를 덮어쓰지 않고 개별 제어)
-                if (t === 'posts') {
-                    if (t === tab) btn.className = "flex-1 h-full border-b-2 border-black flex justify-center items-center text-black transition-all";
-                    else btn.className = "flex-1 h-full flex justify-center items-center text-gray-400 transition-all";
-                } else {
-                    // 릴스, 태그 버튼은 투명도(opacity)로 활성 상태 표시
-                    if (t === tab) btn.style.opacity = "1";
-                    else btn.style.opacity = "0.5";
-                }
+    window.closeModal = (id) => {
+        document.getElementById(id).classList.remove('show');
+    };
+
+    // 3. 랜덤 아바타 변경
+    window.changeRandomAvatar = () => {
+        const randomSeed = Math.random().toString(36).substring(7);
+        tempAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+        document.getElementById('edit-preview-img').src = tempAvatarUrl;
+    };
+
+    // 4. 프로필 저장 (서버 전송)
+    window.saveProfileChanges = async () => {
+        const newNick = document.getElementById('edit-nickname').value;
+        const newBio = document.getElementById('edit-bio').value;
+
+        if(!newNick) return alert("닉네임을 입력해주세요.");
+
+        try {
+            await update(ref(db, `users/${currentUser.uid}`), {
+                nickname: newNick,
+                bio: newBio,
+                avatar: tempAvatarUrl
             });
-            lucide.createIcons();
-        };
+            closeModal('edit-modal');
+            // alert("프로필이 수정되었습니다."); // 너무 잦은 알림 방지 위해 생략 가능
+        } catch (e) {
+            alert("저장 실패: " + e.message);
+        }
+    };
 
-        lucide.createIcons();
-    </script>
+    // 5. 유저 리스트 모달 (껍데기만 구현, 실제 데이터는 추후 연결)
+    window.openUserListModal = (type) => {
+        const title = type === 'followers' ? "팔로워" : "팔로잉";
+        document.getElementById('user-list-title').innerText = title;
+        document.getElementById('user-list-modal').classList.add('show');
+    };
+
+    // 6. 공유 기능
+    window.shareProfile = () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            alert("프로필 주소가 복사되었습니다!");
+        });
+    };
+
+    lucide.createIcons();
+</script>
+
 </body>
 </html>
