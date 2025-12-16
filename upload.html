@@ -210,366 +210,367 @@
 
     <script type="module" src="layout.js"></script>
     <script type="module">
-    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    // 🟢 [수정 1] 여기에 'get'을 추가했습니다. (데이터 가져오는 도구)
-    import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
-        authDomain: "pokbattle.firebaseapp.com", 
-        databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
-        projectId: "pokbattle", 
-        storageBucket: "pokbattle.firebasestorage.app", 
-        messagingSenderId: "445300582484", 
-        appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
-    };
-
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    let currentDesign = 'style-a';
-    let currentAccent = '#FFB3BA';
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            console.log("로그인 상태 확인됨:", user.email);
-        } else {
-            console.log("현재 로그아웃 상태입니다.");
-        }
-    });
-    
-    // --- ⚙️ 디자인/기능 함수 (건드리지 않음) ---
-    window.setDesign = (styleId) => {
-        currentDesign = styleId;
-        document.querySelectorAll('.overlay-style').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.design-btn').forEach(btn => btn.classList.remove('active'));
-        
-        const imgPreview = document.getElementById('upload-preview');
-        if (!imgPreview.classList.contains('hidden')) {
-            document.getElementById(styleId).classList.remove('hidden');
-        }
-        document.getElementById('btn-' + styleId).classList.add('active');
-    };
-
-    window.setAccent = (color) => {
-        currentAccent = color;
-        document.documentElement.style.setProperty('--accent', color);
-        document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-    };
-
-    window.updateOverlay = () => {
-        const dist = document.getElementById('upload-dist').value || "0.0";
-        const time = document.getElementById('upload-time').value || "00:00";
-        const cal = document.getElementById('upload-cal').value || "0";
-        const customText = document.getElementById('custom-text-input').value;
-
-        document.querySelectorAll('.val-dist').forEach(el => el.innerText = dist);
-        document.querySelectorAll('.val-time').forEach(el => el.innerText = time);
-        document.querySelectorAll('.val-cal').forEach(el => el.innerText = cal);
-        document.querySelectorAll('.custom-text-display').forEach(el => el.innerText = customText);
-    };
-
-    window.previewImage = (input) => {
-        if(input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.getElementById('upload-preview');
-                img.src = e.target.result;
-                img.classList.remove('hidden');
-                document.getElementById('upload-placeholder').classList.add('hidden');
-                
-                const container = document.getElementById('image-container');
-                container.style.height = 'auto'; 
-                container.style.minHeight = '0';
-                
-                document.getElementById(currentDesign).classList.remove('hidden');
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    };
-
-    const generateCompositeImage = (imageSrc, stats, style, accentColor, customText) => {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.crossOrigin = "anonymous";
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, img.width, img.height);
-                
-                const s = canvas.width / 1000;
-                
-                const distTxt = stats.dist || "0.0";
-                const timeTxt = stats.time || "00:00";
-                const calTxt = stats.cal || "0";
-                const msgTxt = customText || "";
-                
-                ctx.fillStyle = "#ffffff";
-                ctx.shadowColor="rgba(0,0,0,0)"; ctx.shadowBlur=0; 
-
-                if (style === 'style-a') {
-                    const grad = ctx.createLinearGradient(0, canvas.height - (500*s), 0, canvas.height);
-                    grad.addColorStop(0, "rgba(0,0,0,0)");
-                    grad.addColorStop(1, "rgba(0,0,0,0.8)");
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, canvas.height - (500*s), canvas.width, 500*s);
-
-                    const bottomY = canvas.height - 80*s;
-
-                    if(msgTxt) {
-                        ctx.textAlign = "center";
-                        ctx.font = `bold ${50*s}px sans-serif`;
-                        ctx.fillStyle = "rgba(255,255,255,0.9)";
-                        ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=5;
-                        ctx.fillText(msgTxt, canvas.width/2, bottomY - 200*s);
-                        ctx.shadowBlur=0;
-                    }
-
-                    ctx.textAlign = "left";
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${30*s}px sans-serif`;
-                    ctx.fillText("DISTANCE", 50*s, bottomY - 140*s);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `italic 900 ${150*s}px sans-serif`;
-                    ctx.fillText(distTxt, 50*s, bottomY - 20*s);
-                    const dw = ctx.measureText(distTxt).width;
-                    ctx.font = `italic 700 ${50*s}px sans-serif`;
-                    ctx.fillText("KM", 50*s + dw + 15*s, bottomY - 20*s);
-
-                    ctx.textAlign = "right";
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${25*s}px sans-serif`;
-                    ctx.fillText("TIME", canvas.width - 200*s, bottomY - 90*s);
-                    ctx.fillText("CAL", canvas.width - 50*s, bottomY - 90*s);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `italic bold ${45*s}px sans-serif`;
-                    ctx.fillText(timeTxt, canvas.width - 200*s, bottomY - 40*s);
-                    ctx.fillText(calTxt, canvas.width - 50*s, bottomY - 40*s);
-
-                    ctx.fillStyle = accentColor;
-                    ctx.shadowColor = accentColor; ctx.shadowBlur = 10;
-                    ctx.beginPath();
-                    ctx.roundRect(50*s, bottomY + 20*s, canvas.width - 100*s, 15*s, 10*s);
-                    ctx.fill();
-
-                } else if (style === 'style-b') {
-                    ctx.fillStyle = "rgba(0,0,0,0.2)";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    const cx = canvas.width / 2;
-                    const cy = canvas.height / 2;
-                    const radius = 350*s; 
-                    const safeRadius = Math.min(radius, Math.min(canvas.width, canvas.height) / 2 - 20*s);
-
-                    if(msgTxt) {
-                        ctx.textAlign = "center";
-                        ctx.font = `bold ${60*s}px sans-serif`;
-                        ctx.fillStyle = "#ffffff";
-                        ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=10;
-                        ctx.fillText(msgTxt, cx, cy - safeRadius - 50*s);
-                        ctx.shadowBlur=0;
-                    }
-
-                    ctx.fillStyle = "rgba(0,0,0,0.4)";
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.strokeStyle = accentColor;
-                    ctx.lineWidth = 10*s;
-                    ctx.stroke();
-
-                    ctx.textAlign = "center";
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${35*s}px sans-serif`;
-                    ctx.letterSpacing = "5px";
-                    ctx.fillText("RUNNING", cx, cy - 150*s);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `italic 900 ${220*s}px sans-serif`;
-                    ctx.fillText(distTxt, cx, cy + 20*s);
-
-                    ctx.font = `italic bold ${50*s}px sans-serif`;
-                    ctx.fillText("KM", cx, cy + 90*s);
-
-                    ctx.fillStyle = "rgba(255,255,255,0.5)";
-                    ctx.fillRect(cx - 50*s, cy + 130*s, 100*s, 4*s);
-
-                    ctx.font = `bold ${25*s}px sans-serif`;
-                    ctx.fillStyle = "#cccccc";
-                    ctx.fillText("TIME", cx - 120*s, cy + 180*s);
-                    ctx.fillText("CAL", cx + 120*s, cy + 180*s);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `bold ${50*s}px sans-serif`;
-                    ctx.fillText(timeTxt, cx - 120*s, cy + 230*s);
-                    ctx.fillText(calTxt, cx + 120*s, cy + 230*s);
-
-                } else if (style === 'style-c') {
-                    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                    grad.addColorStop(0, "rgba(0,0,0,0.4)");
-                    grad.addColorStop(0.5, "rgba(0,0,0,0)");
-                    grad.addColorStop(1, "rgba(0,0,0,0.6)");
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    const topY = 100*s;
-                    ctx.fillStyle = accentColor;
-                    ctx.fillRect(50*s, topY, 10*s, 150*s);
-                    
-                    ctx.textAlign = "left";
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${30*s}px sans-serif`;
-                    ctx.fillText("TODAY'S RUN", 80*s, topY + 40*s);
-                    
-                    if(msgTxt) {
-                        ctx.fillStyle = "#ffffff";
-                        ctx.font = `italic bold ${60*s}px sans-serif`;
-                        ctx.fillText(msgTxt, 80*s, topY + 110*s);
-                    }
-
-                    const bottomY = canvas.height - 100*s;
-                    
-                    ctx.fillStyle = "#ffffff";
-                    ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=10;
-                    ctx.font = `italic 900 ${250*s}px sans-serif`;
-                    ctx.fillText(distTxt, 50*s, bottomY);
-                    ctx.shadowBlur=0;
-                    
-                    const dw = ctx.measureText(distTxt).width;
-                    ctx.font = `normal ${60*s}px sans-serif`;
-                    ctx.fillStyle = accentColor;
-                    ctx.fillText("KM", 50*s + dw + 20*s, bottomY);
-
-                    const infoY = bottomY + 50*s;
-                    const capsuleH = 60*s;
-                    const capsuleW = 220*s;
-                    
-                    ctx.fillStyle = "rgba(0,0,0,0.5)";
-                    ctx.strokeStyle = "rgba(255,255,255,0.3)";
-                    ctx.lineWidth = 2*s;
-                    ctx.beginPath();
-                    ctx.roundRect(50*s, infoY, capsuleW, capsuleH, 30*s);
-                    ctx.fill(); ctx.stroke();
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `bold ${35*s}px sans-serif`;
-                    ctx.fillText(timeTxt, 110*s, infoY + 42*s);
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${25*s}px sans-serif`;
-                    ctx.fillText("T", 70*s, infoY + 40*s);
-
-                    const calX = 50*s + capsuleW + 30*s;
-                    ctx.fillStyle = "rgba(0,0,0,0.5)";
-                    ctx.beginPath();
-                    ctx.roundRect(calX, infoY, capsuleW, capsuleH, 30*s);
-                    ctx.fill(); ctx.stroke();
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = `bold ${35*s}px sans-serif`;
-                    ctx.fillText(calTxt, calX + 60*s, infoY + 42*s);
-                    ctx.fillStyle = accentColor;
-                    ctx.font = `bold ${25*s}px sans-serif`;
-                    ctx.fillText("C", calX + 20*s, infoY + 40*s);
-                }
-
-                resolve(canvas.toDataURL('image/png'));
-            };
-            img.src = imageSrc;
-        });
-    };
-
-    window.handleUpload = async () => {
-        const user = auth.currentUser;
-        if(!user) {
-            alert("로그인 정보를 확인 중입니다. 잠시 후 다시 시도해주세요.");
-            return;
-        }
-        
-        const fileInput = document.getElementById('upload-file-input');
-        const content = document.getElementById('upload-content').value;
-        const customText = document.getElementById('custom-text-input').value;
-        
-        const stats = {
-            time: document.getElementById('upload-time').value,
-            dist: document.getElementById('upload-dist').value,
-            cal: document.getElementById('upload-cal').value
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0", 
+            authDomain: "pokbattle.firebaseapp.com", 
+            databaseURL: "https://pokbattle-default-rtdb.firebaseio.com", 
+            projectId: "pokbattle", 
+            storageBucket: "pokbattle.firebasestorage.app", 
+            messagingSenderId: "445300582484", 
+            appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
         };
+
+        // [수정됨] 앱이 이미 초기화되었는지 확인 후 실행 (에러 방지)
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let currentDesign = 'style-a';
+        let currentAccent = '#FFB3BA';
+
+        // 로그인 상태 모니터링 (디버깅용)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("로그인 상태 확인됨:", user.email);
+            } else {
+                console.log("현재 로그아웃 상태입니다.");
+            }
+        });
         
-        if(!fileInput.files[0]) {
-            alert("사진을 선택해주세요.");
-            return;
-        }
+        // --- ⚙️ 디자인/기능 함수 ---
+        window.setDesign = (styleId) => {
+            currentDesign = styleId;
+            document.querySelectorAll('.overlay-style').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.design-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const imgPreview = document.getElementById('upload-preview');
+            if (!imgPreview.classList.contains('hidden')) {
+                document.getElementById(styleId).classList.remove('hidden');
+            }
+            document.getElementById('btn-' + styleId).classList.add('active');
+        };
 
-        const btn = document.querySelector('button[onclick="handleUpload()"]');
-        const originalText = btn.innerText;
-        btn.innerText = "이미지 처리중...";
-        btn.disabled = true;
+        window.setAccent = (color) => {
+            currentAccent = color;
+            document.documentElement.style.setProperty('--accent', color);
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        };
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const originalImage = e.target.result;
-                const finalImage = await generateCompositeImage(originalImage, stats, currentDesign, currentAccent, customText);
+        window.updateOverlay = () => {
+            const dist = document.getElementById('upload-dist').value || "0.0";
+            const time = document.getElementById('upload-time').value || "00:00";
+            const cal = document.getElementById('upload-cal').value || "0";
+            const customText = document.getElementById('custom-text-input').value;
 
-                // 🟢 [수정 2] 진짜 닉네임 가져오기 로직 추가
-                // 일단 구글 닉네임이나 '익명'으로 기본값 설정
-                let realNickname = user.displayName || "익명 트레이너";
-                
-                // DB에서 닉네임 조회 시도
-                try {
-                    const userSnapshot = await get(ref(db, `users/${user.uid}`));
-                    if (userSnapshot.exists() && userSnapshot.val().nickname) {
-                        realNickname = userSnapshot.val().nickname; // DB에 있으면 그걸로 덮어쓰기
-                    }
-                } catch (dbErr) {
-                    console.error("닉네임 불러오기 실패 (기본값 사용):", dbErr);
-                }
+            document.querySelectorAll('.val-dist').forEach(el => el.innerText = dist);
+            document.querySelectorAll('.val-time').forEach(el => el.innerText = time);
+            document.querySelectorAll('.val-cal').forEach(el => el.innerText = cal);
+            document.querySelectorAll('.custom-text-display').forEach(el => el.innerText = customText);
+        };
 
-                // 프로필 사진 로직 (기본)
-                let finalAvatar = user.photoURL;
-                if (!finalAvatar) {
-                    finalAvatar = "https://cdn-icons-png.flaticon.com/512/287/287221.png";
-                }
-
-                const newPostRef = push(ref(db, 'posts'));
-                await set(newPostRef, {
-                    author: user.uid,
-                    authorName: realNickname, // ✅ 조회한 진짜 닉네임 사용
-                    authorAvatar: finalAvatar,
-                    content: content,
-                    stats: stats,
-                    image: finalImage,
-                    timestamp: Date.now()
-                });
-
-                alert("업로드 완료!");
-                location.href = "index.html";
-            } catch (err) {
-                console.error(err);
-                alert("오류 발생: " + err.message);
-                btn.innerText = originalText;
-                btn.disabled = false;
+        window.previewImage = (input) => {
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.getElementById('upload-preview');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                    
+                    // 컨테이너 스타일 리셋
+                    const container = document.getElementById('image-container');
+                    container.style.height = 'auto'; 
+                    container.style.minHeight = '0';
+                    
+                    document.getElementById(currentDesign).classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
             }
         };
-        reader.readAsDataURL(fileInput.files[0]);
-    };
-    
-    if(typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-</script>
+
+        // [통합] 캔버스 이미지 합성 함수
+        const generateCompositeImage = (imageSrc, stats, style, accentColor, customText) => {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    // 스케일 계산
+                    const s = canvas.width / 1000;
+                    
+                    const distTxt = stats.dist || "0.0";
+                    const timeTxt = stats.time || "00:00";
+                    const calTxt = stats.cal || "0";
+                    const msgTxt = customText || "";
+                    
+                    ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor="rgba(0,0,0,0)"; ctx.shadowBlur=0; 
+
+                    if (style === 'style-a') {
+                        // TYPE A
+                        const grad = ctx.createLinearGradient(0, canvas.height - (500*s), 0, canvas.height);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,0.8)");
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, canvas.height - (500*s), canvas.width, 500*s);
+
+                        const bottomY = canvas.height - 80*s;
+
+                        if(msgTxt) {
+                            ctx.textAlign = "center";
+                            ctx.font = `bold ${50*s}px sans-serif`;
+                            ctx.fillStyle = "rgba(255,255,255,0.9)";
+                            ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=5;
+                            ctx.fillText(msgTxt, canvas.width/2, bottomY - 200*s);
+                            ctx.shadowBlur=0;
+                        }
+
+                        ctx.textAlign = "left";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${30*s}px sans-serif`;
+                        ctx.fillText("DISTANCE", 50*s, bottomY - 140*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic 900 ${150*s}px sans-serif`;
+                        ctx.fillText(distTxt, 50*s, bottomY - 20*s);
+                        const dw = ctx.measureText(distTxt).width;
+                        ctx.font = `italic 700 ${50*s}px sans-serif`;
+                        ctx.fillText("KM", 50*s + dw + 15*s, bottomY - 20*s);
+
+                        ctx.textAlign = "right";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("TIME", canvas.width - 200*s, bottomY - 90*s);
+                        ctx.fillText("CAL", canvas.width - 50*s, bottomY - 90*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic bold ${45*s}px sans-serif`;
+                        ctx.fillText(timeTxt, canvas.width - 200*s, bottomY - 40*s);
+                        ctx.fillText(calTxt, canvas.width - 50*s, bottomY - 40*s);
+
+                        ctx.fillStyle = accentColor;
+                        ctx.shadowColor = accentColor; ctx.shadowBlur = 10;
+                        ctx.beginPath();
+                        ctx.roundRect(50*s, bottomY + 20*s, canvas.width - 100*s, 15*s, 10*s);
+                        ctx.fill();
+
+                    } else if (style === 'style-b') {
+                        // TYPE B
+                        ctx.fillStyle = "rgba(0,0,0,0.2)";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        const cx = canvas.width / 2;
+                        const cy = canvas.height / 2;
+                        const radius = 350*s; 
+                        const safeRadius = Math.min(radius, Math.min(canvas.width, canvas.height) / 2 - 20*s);
+
+                        if(msgTxt) {
+                            ctx.textAlign = "center";
+                            ctx.font = `bold ${60*s}px sans-serif`;
+                            ctx.fillStyle = "#ffffff";
+                            ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=10;
+                            ctx.fillText(msgTxt, cx, cy - safeRadius - 50*s);
+                            ctx.shadowBlur=0;
+                        }
+
+                        ctx.fillStyle = "rgba(0,0,0,0.4)";
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = accentColor;
+                        ctx.lineWidth = 10*s;
+                        ctx.stroke();
+
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.letterSpacing = "5px";
+                        ctx.fillText("RUNNING", cx, cy - 150*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `italic 900 ${220*s}px sans-serif`;
+                        ctx.fillText(distTxt, cx, cy + 20*s);
+
+                        ctx.font = `italic bold ${50*s}px sans-serif`;
+                        ctx.fillText("KM", cx, cy + 90*s);
+
+                        ctx.fillStyle = "rgba(255,255,255,0.5)";
+                        ctx.fillRect(cx - 50*s, cy + 130*s, 100*s, 4*s);
+
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillStyle = "#cccccc";
+                        ctx.fillText("TIME", cx - 120*s, cy + 180*s);
+                        ctx.fillText("CAL", cx + 120*s, cy + 180*s);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${50*s}px sans-serif`;
+                        ctx.fillText(timeTxt, cx - 120*s, cy + 230*s);
+                        ctx.fillText(calTxt, cx + 120*s, cy + 230*s);
+
+                    } else if (style === 'style-c') {
+                        // TYPE C
+                        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                        grad.addColorStop(0, "rgba(0,0,0,0.4)");
+                        grad.addColorStop(0.5, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,0.6)");
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        const topY = 100*s;
+                        ctx.fillStyle = accentColor;
+                        ctx.fillRect(50*s, topY, 10*s, 150*s);
+                        
+                        ctx.textAlign = "left";
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${30*s}px sans-serif`;
+                        ctx.fillText("TODAY'S RUN", 80*s, topY + 40*s);
+                        
+                        if(msgTxt) {
+                            ctx.fillStyle = "#ffffff";
+                            ctx.font = `italic bold ${60*s}px sans-serif`;
+                            ctx.fillText(msgTxt, 80*s, topY + 110*s);
+                        }
+
+                        const bottomY = canvas.height - 100*s;
+                        
+                        ctx.fillStyle = "#ffffff";
+                        ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=10;
+                        ctx.font = `italic 900 ${250*s}px sans-serif`;
+                        ctx.fillText(distTxt, 50*s, bottomY);
+                        ctx.shadowBlur=0;
+                        
+                        const dw = ctx.measureText(distTxt).width;
+                        ctx.font = `normal ${60*s}px sans-serif`;
+                        ctx.fillStyle = accentColor;
+                        ctx.fillText("KM", 50*s + dw + 20*s, bottomY);
+
+                        const infoY = bottomY + 50*s;
+                        const capsuleH = 60*s;
+                        const capsuleW = 220*s;
+                        
+                        ctx.fillStyle = "rgba(0,0,0,0.5)";
+                        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                        ctx.lineWidth = 2*s;
+                        ctx.beginPath();
+                        ctx.roundRect(50*s, infoY, capsuleW, capsuleH, 30*s);
+                        ctx.fill(); ctx.stroke();
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.fillText(timeTxt, 110*s, infoY + 42*s);
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("T", 70*s, infoY + 40*s);
+
+                        const calX = 50*s + capsuleW + 30*s;
+                        ctx.fillStyle = "rgba(0,0,0,0.5)";
+                        ctx.beginPath();
+                        ctx.roundRect(calX, infoY, capsuleW, capsuleH, 30*s);
+                        ctx.fill(); ctx.stroke();
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${35*s}px sans-serif`;
+                        ctx.fillText(calTxt, calX + 60*s, infoY + 42*s);
+                        ctx.fillStyle = accentColor;
+                        ctx.font = `bold ${25*s}px sans-serif`;
+                        ctx.fillText("C", calX + 20*s, infoY + 40*s);
+                    }
+
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.src = imageSrc;
+            });
+        };
+
+        window.handleUpload = async () => {
+            const user = auth.currentUser;
+            if(!user) {
+                alert("로그인 정보를 확인 중입니다. 잠시 후 다시 시도해주세요.");
+                return;
+            }
+            
+            const fileInput = document.getElementById('upload-file-input');
+            const content = document.getElementById('upload-content').value;
+            const customText = document.getElementById('custom-text-input').value;
+            
+            const stats = {
+                time: document.getElementById('upload-time').value,
+                dist: document.getElementById('upload-dist').value,
+                cal: document.getElementById('upload-cal').value
+            };
+            
+            if(!fileInput.files[0]) {
+                alert("사진을 선택해주세요.");
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="handleUpload()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "이미지 처리중...";
+            btn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const originalImage = e.target.result;
+                    const finalImage = await generateCompositeImage(originalImage, stats, currentDesign, currentAccent, customText);
+
+    // ▼▼▼ 이 부분을 찾아서 교체하세요 ▼▼▼
+
+                    // 1. 프로필 사진 결정 로직
+                    let finalAvatar = user.photoURL; // 1순위: 구글 프로필 사진
+
+                    // 2. 구글 프사가 없으면? (기본 이미지 사용)
+                    if (!finalAvatar) {
+                        // 지금은 '포켓몬볼 아이콘'을 기본으로 설정 (나중에 보내주실 파일로 연동 가능)
+                        finalAvatar = "https://cdn-icons-png.flaticon.com/512/287/287221.png";
+                    }
+
+                    const newPostRef = push(ref(db, 'posts'));
+                    await set(newPostRef, {
+                        author: user.uid,
+                        authorName: user.displayName || "익명 트레이너",
+                        authorAvatar: finalAvatar, // 수정된 이미지 주소 저장
+                        content: content,
+                        stats: stats,
+                        image: finalImage,
+                        timestamp: Date.now()
+                    });
+
+                    // ▲▲▲ 여기까지 교체 ▲▲▲
+
+                    alert("업로드 완료!");
+                    location.href = "index.html";
+                } catch (err) {
+                    console.error(err);
+                    alert("오류 발생: " + err.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        };
+        
+        // 아이콘 생성
+        if(typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </body>
 </html>

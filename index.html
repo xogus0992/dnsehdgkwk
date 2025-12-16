@@ -221,9 +221,9 @@
     <script type="module" src="layout.js"></script>
     <script type="module">
     // -----------------------------------------------------------
-    // 1. 파이어베이스 설정 (님 ID 적용됨)
+    // 1. 파이어베이스 설정 (충돌 방지 적용됨)
     // -----------------------------------------------------------
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, onValue, push, update, remove, get, child, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -239,7 +239,8 @@
         appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
     };
 
-    const app = initializeApp(firebaseConfig);
+    // 🟢 [핵심 수정] 앱이 이미 켜져있는지 확인하고 연결함 (에러 해결)
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getDatabase(app);
 
@@ -315,7 +316,7 @@
         document.body.appendChild(modal);
     };
 
-    // [6] 댓글 창 열기 (안전한 DOM 방식 유지)
+    // [6] 댓글 창 열기 (안전한 DOM 방식)
     window.openComments = (postId) => {
         currentPostId = postId;
         const sheet = document.getElementById('sheet-reply');
@@ -388,7 +389,7 @@
         if(id === 'sheet-reply') currentPostId = null;
     };
 
-    // [8] 댓글 추가 (⭐⭐ 여기가 수정됨: DB에서 진짜 닉네임 가져오기)
+    // [8] 댓글 추가 (진짜 닉네임 사용)
     window.addComment = () => {
         if(!currentPostId) return alert("오류: 게시물을 찾을 수 없습니다.");
         if(!currentUser) return alert("로그인 후 이용 가능합니다.");
@@ -398,23 +399,19 @@
         
         if(!text) return;
 
-        // 1. DB에서 내 정보(users/내ID) 먼저 조회
         const userRef = ref(db, `users/${currentUser.uid}`);
-        
         get(userRef).then((snapshot) => {
             const userData = snapshot.val();
-            // DB에 닉네임이 있으면 그거 쓰고, 없으면 기본값 사용
             const realNickname = (userData && userData.nickname) ? userData.nickname : (currentUser.displayName || '익명');
 
             const newComment = {
                 userId: currentUser.uid,
-                userName: realNickname, // ✅ 여기서 진짜 닉네임 사용
+                userName: realNickname,
                 userAvatar: currentUser.photoURL || DEFAULT_AVATAR,
                 text: text,
                 timestamp: Date.now()
             };
 
-            // 2. 댓글 저장
             push(ref(db, `posts/${currentPostId}/comments`), newComment)
                 .then(() => {
                     input.value = "";
@@ -505,9 +502,6 @@
         if(window.lucide) window.lucide.createIcons();
     });
 
-    // -----------------------------------------------------------
-    // 5. 로그인 상태 감지 및 드래그 설정
-    // -----------------------------------------------------------
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -519,17 +513,15 @@
         }
     });
 
-    // 바텀 시트 드래그 로직
+    // 드래그 기능 (충돌 없음)
     setupBottomSheet('sheet-reply', 'reply-list');
     setupBottomSheet('sheet-activity', 'activity-list');
     
     function setupBottomSheet(sheetId, listId) {
         const overlay = document.getElementById(sheetId);
         if(!overlay) return;
-        
         const sheet = overlay.querySelector('.bottom-sheet');
         const list = document.getElementById(listId);
-        
         let touchStart = 0;
         let touchCurrent = 0;
         let isDragging = false;
