@@ -220,40 +220,222 @@
 
     <script type="module" src="layout.js"></script>
     <script type="module">
-    // ⭐️ 중요: config.js에서 로그인(auth)과 데이터베이스(db)를 가져옵니다.
-    import { auth, db } from "./config.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { ref, onValue, push, update, remove, get, child, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    // -----------------------------------------------------------
+    // 1. 파이어베이스 설정 (님 ID 적용됨)
+    // -----------------------------------------------------------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, onValue, push, update, remove, get, child, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // 🟡 [설정] 기본 이미지
+    const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/847/847969.png"; 
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAbHwLLXIH8rBQ8gNMVqE5SE208aIbfFZ0",
+        authDomain: "pokbattle.firebaseapp.com",
+        databaseURL: "https://pokbattle-default-rtdb.firebaseio.com",
+        projectId: "pokbattle",
+        storageBucket: "pokbattle.firebasestorage.app",
+        appId: "1:445300582484:web:f8f1373a3bbf643face5c1" 
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // -----------------------------------------------------------
+    // 2. 전역 변수
+    // -----------------------------------------------------------
     let currentUser = null;
     let currentPostId = null;
 
-    // --- 플로팅 버튼 제어 ---
+    // -----------------------------------------------------------
+    // 3. 기능 함수 (window 등록)
+    // -----------------------------------------------------------
+
+    // [1] 플로팅 버튼 토글
     window.toggleFab = () => {
         const opts = document.getElementById('fabOptions');
         const mainBtn = document.getElementById('fabMainBtn');
         opts.classList.toggle('open');
         mainBtn.classList.toggle('active');
-        
-        const icon = mainBtn.querySelector('i');
-        // createIcons가 다시 실행되어야 아이콘이 바뀔 수 있음. 텍스트 변경 대신 처리 필요
-        // 여기서는 간단히 클래스 토글만 유지
     }
 
-    // --- 활동 시트 열기 (누락된 함수 추가) ---
+    // [2] 활동 시트 열기
     window.openActivitySheet = () => {
         const sheet = document.getElementById('sheet-activity');
         sheet.classList.add('open');
     }
 
-    // --- 게시물 로드 ---
+    // [3] 좋아요 기능
+    window.toggleLike = (postId) => {
+        if(!currentUser) return alert("로그인이 필요합니다.");
+        const icon = document.getElementById(`like-icon-${postId}`);
+        
+        if (icon) {
+            if (icon.classList.contains('fill-[var(--volt)]')) {
+                icon.classList.remove('fill-[var(--volt)]', 'text-[var(--volt)]');
+                icon.classList.add('text-[var(--text-main)]');
+            } else {
+                icon.classList.add('fill-[var(--volt)]', 'text-[var(--volt)]');
+                icon.classList.remove('text-[var(--text-main)]');
+            }
+        }
+
+        const postRef = ref(db, `posts/${postId}`);
+        get(postRef).then(snap => {
+            if(snap.exists()){
+                const p = snap.val();
+                let likes = p.likes || {};
+                let count = p.likeCount || 0;
+                
+                if(likes[currentUser.uid]){ 
+                    delete likes[currentUser.uid]; 
+                    count = Math.max(0, count - 1); 
+                } else { 
+                    likes[currentUser.uid] = true; 
+                    count++; 
+                }
+                update(postRef, { likes: likes, likeCount: count });
+            }
+        });
+    };
+
+    // [4] 게시물 삭제
+    window.deletePost = (id) => {
+        if(confirm("정말 삭제하시겠습니까?")) remove(ref(db, `posts/${id}`));
+    };
+
+    // [5] 이미지 확대
+    window.openImageModal = (src) => {
+        const modal = document.createElement('div');
+        modal.className = "fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 anim-pop";
+        modal.onclick = () => modal.remove();
+        modal.innerHTML = `<img src="${src}" class="max-w-full max-h-full rounded-lg shadow-2xl">`;
+        document.body.appendChild(modal);
+    };
+
+    // [6] 댓글 창 열기 (안전한 DOM 방식 유지)
+    window.openComments = (postId) => {
+        currentPostId = postId;
+        const sheet = document.getElementById('sheet-reply');
+        const list = document.getElementById('reply-list');
+        const countHeader = document.getElementById('reply-count-header');
+
+        if(!sheet || !list) return;
+
+        sheet.classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        onValue(ref(db, `posts/${postId}/comments`), (snap) => {
+            list.innerHTML = ""; 
+            const commentsData = snap.val();
+            
+            if (!commentsData) {
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">첫 번째 댓글을 남겨보세요!</div>`;
+                if(countHeader) countHeader.innerText = "0";
+                return;
+            }
+
+            const comments = Object.entries(commentsData).map(([key, val]) => ({id: key, ...val}));
+            if(countHeader) countHeader.innerText = comments.length;
+
+            comments.forEach((c, index) => {
+                const itemDiv = document.createElement('div');
+                const borderClass = index < comments.length - 1 ? "border-b border-[var(--border-color)] pb-3 mb-3" : "pb-1 mb-1";
+                itemDiv.className = `flex gap-3 ${borderClass}`;
+
+                const img = document.createElement('img');
+                img.src = c.userAvatar || DEFAULT_AVATAR;
+                img.className = "w-8 h-8 rounded-full bg-gray-100 object-cover flex-shrink-0 border border-gray-200";
+                
+                const textDiv = document.createElement('div');
+                textDiv.className = "flex-1";
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = "flex justify-between items-start mb-1";
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = "text-sm font-bold text-[var(--text-main)]";
+                nameSpan.textContent = c.userName || "익명";
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = "text-[10px] text-[var(--text-sub)]";
+                timeSpan.textContent = c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "";
+
+                infoDiv.appendChild(nameSpan);
+                infoDiv.appendChild(timeSpan);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = "text-sm text-[var(--text-main)] leading-relaxed";
+                contentDiv.textContent = c.text || "";
+
+                textDiv.appendChild(infoDiv);
+                textDiv.appendChild(contentDiv);
+                itemDiv.appendChild(img);
+                itemDiv.appendChild(textDiv);
+
+                list.appendChild(itemDiv);
+            });
+        });
+    };
+
+    // [7] 시트 닫기
+    window.closeSheet = (id) => {
+        const sheet = document.getElementById(id);
+        if(sheet) sheet.classList.remove('open');
+        document.body.style.overflow = '';
+        if(id === 'sheet-reply') currentPostId = null;
+    };
+
+    // [8] 댓글 추가 (⭐⭐ 여기가 수정됨: DB에서 진짜 닉네임 가져오기)
+    window.addComment = () => {
+        if(!currentPostId) return alert("오류: 게시물을 찾을 수 없습니다.");
+        if(!currentUser) return alert("로그인 후 이용 가능합니다.");
+        
+        const input = document.getElementById('reply-input');
+        const text = input.value.trim();
+        
+        if(!text) return;
+
+        // 1. DB에서 내 정보(users/내ID) 먼저 조회
+        const userRef = ref(db, `users/${currentUser.uid}`);
+        
+        get(userRef).then((snapshot) => {
+            const userData = snapshot.val();
+            // DB에 닉네임이 있으면 그거 쓰고, 없으면 기본값 사용
+            const realNickname = (userData && userData.nickname) ? userData.nickname : (currentUser.displayName || '익명');
+
+            const newComment = {
+                userId: currentUser.uid,
+                userName: realNickname, // ✅ 여기서 진짜 닉네임 사용
+                userAvatar: currentUser.photoURL || DEFAULT_AVATAR,
+                text: text,
+                timestamp: Date.now()
+            };
+
+            // 2. 댓글 저장
+            push(ref(db, `posts/${currentPostId}/comments`), newComment)
+                .then(() => {
+                    input.value = "";
+                })
+                .catch((err) => {
+                    alert("댓글 저장 실패: " + err.message);
+                });
+        });
+    };
+
+    // -----------------------------------------------------------
+    // 4. 메인: 게시물 목록 로드
+    // -----------------------------------------------------------
     const postsRef = ref(db, 'posts');
     const postsList = document.getElementById('posts-list');
     const loadingSpinner = document.getElementById('loading-spinner');
 
     onValue(postsRef, (snapshot) => {
-        if(loadingSpinner) loadingSpinner.style.display = 'none'; // 로딩 숨김
+        if(loadingSpinner) loadingSpinner.style.display = 'none';
         postsList.innerHTML = "";
+        
         const data = snapshot.val();
         if (!data) {
             postsList.innerHTML = "<div class='p-10 text-center text-gray-400'>게시물이 없습니다.</div>";
@@ -263,23 +445,21 @@
         const posts = Object.entries(data).reverse(); 
 
         posts.forEach(([id, post]) => {
-            // 좋아요 여부 체크 로직 (로그인 했을 때만)
             let likeClass = "text-[var(--text-main)]"; 
             if (currentUser && post.likes && post.likes[currentUser.uid]) {
                 likeClass = "fill-[var(--volt)] text-[var(--volt)]";
             }
-
-            // 댓글 개수
             const commentCount = post.comments ? Object.keys(post.comments).length : 0;
+            const authorImg = post.authorAvatar || DEFAULT_AVATAR;
 
             const html = `
             <div class="bg-[var(--bg-card)] rounded-2xl p-5 mb-4 shadow-sm border border-[var(--border-color)]">
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                        <img src="${post.authorAvatar || 'https://cdn-icons-png.flaticon.com/512/287/287221.png'}"}" class="w-full h-full object-cover">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
+                        <img src="${authorImg}" class="w-full h-full object-cover">
                     </div>
                     <div>
-                        <div class="font-bold text-[var(--text-main)]">${post.authorName || 'User'}</div>
+                        <div class="font-bold text-[var(--text-main)]">${post.authorName || '익명 트레이너'}</div>
                         <div class="text-xs text-[var(--text-sub)]">${new Date(post.timestamp).toLocaleString()}</div>
                     </div>
                     ${currentUser && currentUser.uid === post.author ? `<button onclick="deletePost('${id}')" class="ml-auto text-red-500 text-xs">삭제</button>` : ''}
@@ -322,159 +502,31 @@
             postsList.insertAdjacentHTML('beforeend', html);
         });
         
-        lucide.createIcons();
+        if(window.lucide) window.lucide.createIcons();
     });
 
-    // 3. 좋아요 & 알림 전송 기능
-    window.toggleLike = (postId) => {
-        if(!currentUser) return alert("로그인이 필요합니다.");
-        
-        const icon = document.getElementById(`like-icon-${postId}`);
-        const isLiked = icon.classList.contains('fill-[var(--volt)]');
-        
-        if (icon) {
-            if (isLiked) {
-                icon.classList.remove('fill-[var(--volt)]', 'text-[var(--volt)]');
-                icon.classList.add('text-[var(--text-main)]');
-            } else {
-                icon.classList.add('fill-[var(--volt)]', 'text-[var(--volt)]');
-                icon.classList.remove('text-[var(--text-main)]');
-            }
-        }
-
-        const postRef = ref(db, `posts/${postId}`);
-        get(postRef).then(snap => {
-            if(snap.exists()){
-                const p = snap.val();
-                let likes = p.likes || {};
-                let count = p.likeCount || 0;
-
-                if(likes[currentUser.uid]){
-                    delete likes[currentUser.uid];
-                    count--;
-                } else {
-                    likes[currentUser.uid] = true;
-                    count++;
-                }
-
-                update(postRef, { likes: likes, likeCount: count });
-            }
-        });
-    };
-
-    window.deletePost = (id) => {
-        if(confirm("정말 삭제하시겠습니까?")) {
-            remove(ref(db, `posts/${id}`));
-        }
-    };
-
-    // 이미지 모달
-    window.openImageModal = (src) => {
-        const modal = document.createElement('div');
-        modal.className = "fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 anim-pop";
-        modal.onclick = () => modal.remove();
-        modal.innerHTML = `<img src="${src}" class="max-w-full max-h-full rounded-lg shadow-2xl">`;
-        document.body.appendChild(modal);
-    };
-
-    // --- 댓글 (Bottom Sheet) ---
-    window.openComments = (postId) => {
-        currentPostId = postId;
-        const sheet = document.getElementById('sheet-reply');
-        
-        // [수정] visible 대신 open 클래스 사용 (CSS와 일치시킴)
-        sheet.classList.add('open');
-        document.body.style.overflow = 'hidden'; // 배경 스크롤 막기
-
-        // 댓글 로드
-        onValue(ref(db, `posts/${postId}/comments`), (snap) => {
-            const list = document.getElementById('reply-list');
-            list.innerHTML = "";
-            const comments = [];
-            snap.forEach(c => comments.push({id: c.key, ...c.val()}));
-            
-            // 댓글 수 업데이트
-            const countHeader = document.getElementById('reply-count-header');
-            if(countHeader) countHeader.innerText = comments.length;
-
-            if(comments.length === 0) {
-                list.innerHTML = `<div class="text-center py-10 text-gray-400">첫 번째 댓글을 남겨보세요!</div>`;
-            } else {
-                let allCommentsHtml = "";
-                comments.forEach((c, index) => {
-                    const borderClass = index < comments.length - 1 ? "border-b border-[var(--border-color)] pb-3 mb-3" : "pb-1 mb-1";
-                    
-                    allCommentsHtml += `
-                    <div class="flex gap-3 ${borderClass}">
-                        <img src="${c.userAvatar || 'https://cdn-icons-png.flaticon.com/512/287/287221.png'}"}" class="w-8 h-8 rounded-full bg-gray-200 object-cover flex-shrink-0">
-                        <div class="flex-1">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="text-sm font-bold text-[var(--text-main)]">${c.userName}</span>
-                                <span class="text-[10px] text-[var(--text-sub)]">${new Date(c.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                            </div>
-                            <div class="text-sm text-[var(--text-main)] leading-relaxed">${c.text}</div>
-                        </div>
-                    </div>`;
-                });
-                list.innerHTML = allCommentsHtml;
-            }
-        });
-    };
-
-    // [중요] 닫기 함수를 window 객체에 등록
-    window.closeSheet = (id) => {
-        const sheet = document.getElementById(id);
-        if(sheet) sheet.classList.remove('open');
-        document.body.style.overflow = '';
-        if(id === 'sheet-reply') currentPostId = null;
-    };
-
-    // [중요] 함수명 HTML과 일치시킴 (addReply -> addComment)
-    window.addComment = () => {
-        if(!currentPostId || !currentUser) return alert("로그인 후 이용 가능합니다.");
-        const input = document.getElementById('reply-input');
-        const text = input.value.trim();
-        if(!text) return;
-
-        push(ref(db, `posts/${currentPostId}/comments`), {
-            userId: currentUser.uid,
-            userName: currentUser.displayName,
-            userAvatar: currentUser.photoURL || "",
-            text: text,
-            timestamp: Date.now()
-        }).then(() => {
-            input.value = "";
-        });
-    };
-
-    // --- 로그인 상태 감지 ---
+    // -----------------------------------------------------------
+    // 5. 로그인 상태 감지 및 드래그 설정
+    // -----------------------------------------------------------
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            console.log("Logged in:", user.email);
-            // 내 아바타 설정
             const myAvatar = document.getElementById('my-avatar-input');
-            if(myAvatar) myAvatar.src = user.photoURL || 'https://cdn-icons-png.flaticon.com/512/287/287221.png';;
+            if(myAvatar) myAvatar.src = user.photoURL || DEFAULT_AVATAR;
         } else {
             currentUser = null;
             location.href = "log.html";
         }
     });
 
-    // --- Bottom Sheet 드래그 기능 (모바일 UX) ---
+    // 바텀 시트 드래그 로직
     setupBottomSheet('sheet-reply', 'reply-list');
-    setupBottomSheet('sheet-activity', 'activity-list'); // 활동 시트도 적용
+    setupBottomSheet('sheet-activity', 'activity-list');
     
     function setupBottomSheet(sheetId, listId) {
-        const sheetOverlay = document.getElementById(sheetId); // Overlay 자체를 시트로 간주하거나 구조에 따라 조정
-        // CSS 구조상: #sheet-reply(overlay) -> #sheet-modal(sheet)
-        // 여기서는 #sheet-modal을 드래그 대상으로 잡아야 함
-        
-        // 구조에 맞게 요소 찾기
         const overlay = document.getElementById(sheetId);
         if(!overlay) return;
         
-        // overlay 안에 있는 실제 하얀색 시트 찾기 (.bottom-sheet)
         const sheet = overlay.querySelector('.bottom-sheet');
         const list = document.getElementById(listId);
         
@@ -482,7 +534,6 @@
         let touchCurrent = 0;
         let isDragging = false;
 
-        // Touch
         sheet.addEventListener('touchstart', (e) => {
             if (list && list.contains(e.target) && list.scrollTop > 0) return; 
             touchStart = e.touches[0].clientY;
@@ -498,9 +549,7 @@
                 sheet.style.transform = `translateY(${delta}px)`;
             }
         });
-        sheet.addEventListener('touchend', () => handleDragEnd());
-
-        // Mouse
+        sheet.addEventListener('touchend', handleDragEnd);
         sheet.addEventListener('mousedown', (e) => {
             if (list && list.contains(e.target) && list.scrollTop > 0) return;
             touchStart = e.clientY;
@@ -513,8 +562,6 @@
             const delta = touchCurrent - touchStart;
             if (delta > 0) sheet.style.transform = `translateY(${delta}px)`;
         });
-        
-        // [중요] 🔴 문법 오류 수정 (괄호 제거)
         window.addEventListener('mouseup', () => {
             if(isDragging) handleDragEnd(); 
         });
@@ -524,22 +571,18 @@
             sheet.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'; 
             const delta = touchCurrent - touchStart;
             if (delta > 120) {
-                // 닫기 동작
                 overlay.classList.remove('open');
-                
-                // 애니메이션 후 초기화
                 setTimeout(() => { 
                     sheet.style.transform = ''; 
                     if(sheetId === 'sheet-reply') currentPostId = null;
                 }, 300);
             } else {
-                // 복귀 동작
                 sheet.style.transform = ''; 
             }
             touchStart = 0; touchCurrent = 0;
         }
     }
-    </script>
+</script>
 </body>
 
 </html>
