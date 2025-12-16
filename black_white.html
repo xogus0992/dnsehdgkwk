@@ -1615,13 +1615,6 @@
             <div class="relative z-10 flex justify-start gap-1 p-6 pb-36 pl-4 perspective-[1000px]">
               ${playerTeam.map((p,i)=>renderUnit(p,i,true)).join('')}
             </div>
-
-            <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-30">
-              <div class="glass px-4 py-2 rounded-full border border-gray-200 shadow-md flex items-center gap-2">
-                <i data-lucide="hourglass" class="w-4 h-4 text-[var(--volt)]"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest text-gray-600">Cooldown</span>
-              </div>
-            </div>
           </div>
         `;
         lucide.createIcons();
@@ -1776,13 +1769,6 @@
 
             <div class="relative z-10 flex justify-start gap-1 p-6 pb-36 pl-4 perspective-[1000px]">
               ${state.battle.myTeam.map((p,i)=>renderUnit(p,i,true)).join('')}
-            </div>
-
-            <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-30">
-              <div class="glass px-4 py-2 rounded-full border border-gray-200 shadow-md flex items-center gap-2">
-                <i data-lucide="hourglass" class="w-4 h-4 text-[var(--volt)]"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest text-gray-600">Cooldown</span>
-              </div>
             </div>
           </div>
         `;
