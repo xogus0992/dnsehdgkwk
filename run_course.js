@@ -3,10 +3,10 @@ import { ref, push, onValue, remove, get } from "https://www.gstatic.com/firebas
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN MAIN LOGIC (FINAL v16 - Firebase Integrated)
-   - Mobile Search Fix: Added 'click' listener to inputs
-   - Storage: LocalStorage (Temp) -> Firebase (Permanent)
-   ============================================================ */
+    POKERUN MAIN LOGIC (FINAL v16 - Firebase Integrated)
+    - Mobile Search Fix: Added 'click' listener to inputs
+    - Storage: LocalStorage (Temp) -> Firebase (Permanent)
+    ============================================================ */
 
 const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
 const KEY_ORS = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0=';
@@ -24,6 +24,7 @@ let endPoint = null;
 let routeCoords = [];
 let rotationCount = 0; // 모양 변경용 인덱스
 let currentUser = null; // Firebase User
+let ps; // 카카오 Places 객체 전역 선언
 
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadModal = document.getElementById('loadModal'); 
@@ -54,6 +55,13 @@ function initMap() {
     L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, {
         maxZoom: 19, attribution: 'V-WORLD'
     }).addTo(map);
+
+    // ★ autoload=false 대응을 위해 kakao.maps.load 내부에서 초기화 수행
+    kakao.maps.load(() => {
+        ps = new kakao.maps.services.Places();
+        setupAutocomplete('startInput', 'startSuggestions', true);
+        setupAutocomplete('endInput', 'endSuggestions', false);
+    });
 }
 
 function getUserLocation() {
@@ -97,10 +105,6 @@ function setMapMarker(type, lat, lng, name) {
 }
 
 // --- SEARCH LOGIC (Mobile Fix Included) ---
-const ps = new kakao.maps.services.Places();
-setupAutocomplete('startInput', 'startSuggestions', true);
-setupAutocomplete('endInput', 'endSuggestions', false);
-
 document.getElementById('myLocationBtn').addEventListener('click', () => {
     getUserLocation();
     document.getElementById('startInput').value = "내 위치 (GPS)";
