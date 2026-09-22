@@ -8,7 +8,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/f
     - Storage: LocalStorage (Temp) -> Firebase (Permanent)
     ============================================================ */
 
-const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
 const KEY_ORS = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0=';
 
 const ALL_LANDMARKS = [];
@@ -48,8 +47,10 @@ window.addEventListener('load', () => {
 
 function initMap() {
     map = L.map('map', { zoomControl: false }).setView([userLoc.lat, userLoc.lng], 14);
-    L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, {
-        maxZoom: 19, attribution: 'V-WORLD'
+    
+    // 오픈스트리트맵(OSM)으로 변경 (인증키 및 도메인 제약 없음)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
     kakao.maps.load(() => {
