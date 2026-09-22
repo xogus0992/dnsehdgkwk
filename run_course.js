@@ -31,7 +31,6 @@ const loadModal = document.getElementById('loadModal');
 const goalInput = document.getElementById('goalDistInput');
 
 // --- INITIALIZATION ---
-// window.onload 대신 addEventListener를 써야 layout.js와 충돌하지 않습니다.
 window.addEventListener('load', () => {
     initMap();
     getUserLocation();
@@ -41,22 +40,18 @@ window.addEventListener('load', () => {
         if (user) {
             currentUser = user;
             console.log("Logged in:", user.email);
-            // 로그인 확인 후 저장된 목록 한 번 불러오기 (선택사항)
         } else {
-             // 로그인 안 되어 있으면 처리
              console.log("No user logged in");
         }
     });
 });
 
 function initMap() {
-    // Zoom Control false로 깔끔하게
     map = L.map('map', { zoomControl: false }).setView([userLoc.lat, userLoc.lng], 14);
     L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, {
         maxZoom: 19, attribution: 'V-WORLD'
     }).addTo(map);
 
-    // ★ autoload=false 대응을 위해 kakao.maps.load 내부에서 초기화 수행
     kakao.maps.load(() => {
         ps = new kakao.maps.services.Places();
         setupAutocomplete('startInput', 'startSuggestions', true);
@@ -69,22 +64,29 @@ function getUserLocation() {
         navigator.geolocation.getCurrentPosition(pos => {
             userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             map.setView([userLoc.lat, userLoc.lng], 15);
-            // 내 위치가 잡히면 기본 시작점은 내 위치로 설정 안함 (사용자 선택 존중)
-            // 다만, UI 편의를 위해 버튼 누르면 이동
         }, err => console.log(err));
     }
 }
 
 // 리셋 버튼
-document.getElementById('resetBtn').addEventListener('click', () => {
+document.getElementById('resetBtn')?.addEventListener('click', () => {
     startPoint = null; endPoint = null; routeCoords = [];
-    document.getElementById('startInput').value = '';
-    document.getElementById('endInput').value = '';
-    goalInput.value = '3.00';
-    document.getElementById('startDistBadge').style.display = 'none';
-    document.getElementById('endDistBadge').style.display = 'none';
-    document.getElementById('searchDistDisplay').innerText = '0.00 km';
-    document.getElementById('actualDistDisplay').innerText = '0.00 km';
+    const startIn = document.getElementById('startInput');
+    const endIn = document.getElementById('endInput');
+    if(startIn) startIn.value = '';
+    if(endIn) endIn.value = '';
+    if(goalInput) goalInput.value = '3.00';
+    
+    const startBadge = document.getElementById('startDistBadge');
+    const endBadge = document.getElementById('endDistBadge');
+    if(startBadge) startBadge.style.display = 'none';
+    if(endBadge) endBadge.style.display = 'none';
+    
+    const searchDistDisp = document.getElementById('searchDistDisplay');
+    const actualDistDisp = document.getElementById('actualDistDisplay');
+    if(searchDistDisp) searchDistDisp.innerText = '0.00 km';
+    if(actualDistDisp) actualDistDisp.innerText = '0.00 km';
+
     if(polylineLayer) map.removeLayer(polylineLayer);
     if(startMarker) map.removeLayer(startMarker);
     if(endMarker) map.removeLayer(endMarker);
@@ -104,12 +106,14 @@ function setMapMarker(type, lat, lng, name) {
     }
 }
 
-// --- SEARCH LOGIC (Mobile Fix Included) ---
-document.getElementById('myLocationBtn').addEventListener('click', () => {
+// --- SEARCH LOGIC ---
+document.getElementById('myLocationBtn')?.addEventListener('click', () => {
     getUserLocation();
-    document.getElementById('startInput').value = "내 위치 (GPS)";
+    const startIn = document.getElementById('startInput');
+    if(startIn) startIn.value = "내 위치 (GPS)";
     startPoint = { lat: userLoc.lat, lng: userLoc.lng, name: "내 위치" };
-    document.getElementById('startDistBadge').style.display = 'none';
+    const startBadge = document.getElementById('startDistBadge');
+    if(startBadge) startBadge.style.display = 'none';
     setMapMarker('start', userLoc.lat, userLoc.lng, "내 위치");
 });
 
@@ -117,25 +121,23 @@ function setupAutocomplete(inputId, listId, isStart) {
     const input = document.getElementById(inputId);
     const list = document.getElementById(listId);
     
-    // [Mobile Fix] focus 뿐만 아니라 'click' 이벤트에도 반응하도록 추가
-    // 모바일에서는 이미 포커스된 상태에서 다시 누를 때 focus 이벤트가 발생하지 않을 수 있음
+    if (!input) return; // input이 없으면 실행 중단
+
     const openHandler = () => {
-        if(input.value.trim() === "") showLandmarkRecommendations(list, isStart);
+        if(input.value.trim() === "" && list) showLandmarkRecommendations(list, isStart);
     };
 
     input.addEventListener('focus', openHandler);
-    input.addEventListener('click', openHandler); // ★ 모바일 터치 대응 추가
+    input.addEventListener('click', openHandler);
 
     input.addEventListener('input', (e) => {
         const val = e.target.value.trim();
         if (val.length > 0) {
-            // 1. 로컬 데이터(랜드마크) 검색
             const localMatches = ALL_LANDMARKS.filter(lm => {
                 const dist = calcDist(userLoc.lat, userLoc.lng, lm.lat, lm.lng);
                 return lm.name.includes(val) && dist <= 30.0;
             }).map(lm => ({...lm, source: 'landmark', dist: calcDist(userLoc.lat, userLoc.lng, lm.lat, lm.lng)}));
 
-            // 2. 카카오 API 검색
             const searchOptions = { location: new kakao.maps.LatLng(userLoc.lat, userLoc.lng), radius: 20000, sort: kakao.maps.services.SortBy.DISTANCE };
             ps.keywordSearch(val, (data, status) => {
                 let kakaoMatches = [];
@@ -145,26 +147,26 @@ function setupAutocomplete(inputId, listId, isStart) {
                         source: 'kakao', dist: calcDist(userLoc.lat, userLoc.lng, parseFloat(item.y), parseFloat(item.x))
                     }));
                 }
-                mergeAndRenderList(list, localMatches, kakaoMatches, isStart);
+                if (list) mergeAndRenderList(list, localMatches, kakaoMatches, isStart);
             }, searchOptions);
         } else {
-            showLandmarkRecommendations(list, isStart);
+            if (list) showLandmarkRecommendations(list, isStart);
         }
     });
 
-    // 외부 클릭 시 닫기
+    // 외부 클릭 시 닫기 (안전하게 list 존재 여부 확인)
     document.addEventListener('click', (e) => {
-        if(e.target !== input && e.target !== list && !list.contains(e.target)) {
+        if (list && e.target !== input && e.target !== list && !list.contains(e.target)) {
             list.classList.remove('active');
         }
     });
 }
 
 function showLandmarkRecommendations(listEl, isStart) {
+    if (!listEl) return;
     const candidates = ALL_LANDMARKS.map(lm => ({ ...lm, source: 'landmark', dist: calcDist(userLoc.lat, userLoc.lng, lm.lat, lm.lng) }));
     const filtered = candidates.filter(lm => lm.dist <= 30.0);
     
-    // 거리순 정렬, 단 5km 이내는 우선
     filtered.sort((a, b) => {
         const aPri = a.dist <= 5.0 ? 0 : 1; const bPri = b.dist <= 5.0 ? 0 : 1;
         if(aPri !== bPri) return aPri - bPri; return a.dist - b.dist;
@@ -175,6 +177,7 @@ function showLandmarkRecommendations(listEl, isStart) {
 }
 
 function mergeAndRenderList(listEl, localItems, kakaoItems, isStart) {
+    if (!listEl) return;
     const combined = [...localItems, ...kakaoItems];
     combined.sort((a, b) => {
         const aPri = (a.source === 'landmark' && a.dist <= 5.0) ? 0 : 1;
@@ -185,8 +188,9 @@ function mergeAndRenderList(listEl, localItems, kakaoItems, isStart) {
 }
 
 function renderList(listEl, items, isStart) {
+    if (!listEl) return;
     listEl.innerHTML = ''; 
-    listEl.classList.add('active'); // CSS display:block
+    listEl.classList.add('active'); 
     
     if(items.length === 0) { 
         listEl.innerHTML = '<li class="suggestion-item" style="color:#999">검색 결과 없음</li>'; 
@@ -201,9 +205,8 @@ function renderList(listEl, items, isStart) {
         
         li.innerHTML = `<div><div class="sug-name">${tag}${item.name}</div><div class="sug-addr">${addr}</div></div><div class="sug-dist">${item.dist.toFixed(1)}km</div>`;
         
-        // 클릭 이벤트 (Touch Friendly)
         li.addEventListener('click', (e) => {
-             e.stopPropagation(); // 부모 이벤트 전파 방지
+             e.stopPropagation();
              selectPlace(item, isStart, listEl);
         });
         
@@ -215,11 +218,14 @@ function selectPlace(place, isStart, listEl) {
     const input = document.getElementById(isStart ? 'startInput' : 'endInput');
     const badge = document.getElementById(isStart ? 'startDistBadge' : 'endDistBadge');
     
-    input.value = place.name;
+    if (input) input.value = place.name;
     const dist = calcDist(userLoc.lat, userLoc.lng, place.lat, place.lng);
-    badge.innerText = dist.toFixed(1) + 'km'; badge.style.display = 'block';
+    if (badge) {
+        badge.innerText = dist.toFixed(1) + 'km'; 
+        badge.style.display = 'block';
+    }
     
-    listEl.classList.remove('active'); // 리스트 닫기
+    if (listEl) listEl.classList.remove('active');
 
     if (isStart) { 
         startPoint = place; 
@@ -231,20 +237,21 @@ function selectPlace(place, isStart, listEl) {
     
     if(startPoint && endPoint) {
         const d = calcDist(startPoint.lat, startPoint.lng, endPoint.lat, endPoint.lng);
-        document.getElementById('searchDistDisplay').innerText = d.toFixed(2) + ' km';
+        const searchDistDisp = document.getElementById('searchDistDisplay');
+        if (searchDistDisp) searchDistDisp.innerText = d.toFixed(2) + ' km';
     }
 }
 
-// --- COURSE GENERATION (Logic Preserved) ---
-document.getElementById('createCourseBtn').addEventListener('click', async () => {
+// --- COURSE GENERATION ---
+document.getElementById('createCourseBtn')?.addEventListener('click', async () => {
     if(!startPoint) {
         startPoint = { ...userLoc, name: "내 위치" };
         setMapMarker('start', userLoc.lat, userLoc.lng, "내 위치");
     }
-    let goalKm = parseFloat(goalInput.value) || 3.0;
+    let goalKm = parseFloat(goalInput?.value) || 3.0;
     if(goalKm <= 0) goalKm = 3.0;
 
-    loadingOverlay.classList.remove('hidden');
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
     try {
         await generateAndCheckRoute(goalKm);
@@ -253,18 +260,16 @@ document.getElementById('createCourseBtn').addEventListener('click', async () =>
         if(e.message && e.message.includes("403")) alert("API 오류(403): 키 할당량 초과");
         else alert("코스 생성 실패.\n(경로를 찾을 수 없거나 API 오류입니다)");
     } finally {
-        loadingOverlay.classList.add('hidden');
-        rotationCount++; // 다음 생성 시 모양 변경
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        rotationCount++;
     }
 });
 
-// [API] Generate Route
 async function generateAndCheckRoute(targetKm) {
     let scale = 1.0;
     let bestResult = null;
     let attempts = 0; 
 
-    // Accuracy Loop (정확도 보정 반복문)
     while (attempts < 3) {
         let waypoints = createWaypoints(targetKm, scale);
         let result = await fetchRouteData(waypoints);
@@ -275,9 +280,8 @@ async function generateAndCheckRoute(targetKm) {
         let errorRate = Math.abs(actualKm - targetKm) / targetKm;
         bestResult = result;
         
-        if (errorRate <= 0.1) break; // 오차 10% 이내면 성공
+        if (errorRate <= 0.1) break; 
 
-        // 보정 계수 조정
         let ratio = targetKm / (actualKm || 1);
         if (ratio > 1.5) ratio = 1.5; if (ratio < 0.6) ratio = 0.6;
         scale *= ratio;
@@ -286,20 +290,20 @@ async function generateAndCheckRoute(targetKm) {
 
     if (bestResult) {
         drawPolyline(bestResult.coords);
-        document.getElementById('actualDistDisplay').innerText = bestResult.dist + " km";
+        const actualDistDisp = document.getElementById('actualDistDisplay');
+        if (actualDistDisp) actualDistDisp.innerText = bestResult.dist + " km";
         routeCoords = bestResult.coords;
     } else {
         throw new Error("No Valid Route Found");
     }
 }
 
-// [Logic] Create Waypoints (Pattern Logic Preserved)
 function createWaypoints(goalKm, scale) {
-    const mode = document.querySelector('input[name="tripType"]:checked').value;
+    const checkedTrip = document.querySelector('input[name="tripType"]:checked');
+    const mode = checkedTrip ? checkedTrip.value : '편도';
     const geoKm = (goalKm / 1.3) * scale; 
 
     if (!endPoint) {
-        // [목적지 없음] 순환형
         const side = geoKm / 4;
         const baseBearing = 45 + (rotationCount * 45); 
         const p1 = getPointByBearing(startPoint, baseBearing, side);
@@ -307,7 +311,6 @@ function createWaypoints(goalKm, scale) {
         const p3 = getPointByBearing(p2, baseBearing + 90, side);
         return toCoords([startPoint, p1, p2, p3, startPoint]);
     } else {
-        // [목적지 있음]
         const straight = calcDist(startPoint.lat, startPoint.lng, endPoint.lat, endPoint.lng);
         const bear = getBearing(startPoint, endPoint);
         const midLat = (startPoint.lat + endPoint.lat) / 2;
@@ -319,40 +322,39 @@ function createWaypoints(goalKm, scale) {
         const pattern = rotationCount % 3; 
 
         if (mode === '편도') {
-            if (pattern === 0) { // ZigZag
+            if (pattern === 0) {
                 const p1_3 = getIntermediatePoint(startPoint, endPoint, 0.33);
                 const p2_3 = getIntermediatePoint(startPoint, endPoint, 0.66);
                 const z1 = getPointByBearing(p1_3, bear + 90, width);
                 const z2 = getPointByBearing(p2_3, bear - 90, width);
                 return toCoords([startPoint, z1, z2, endPoint]);
             }
-            else if (pattern === 1) { // Arch
+            else if (pattern === 1) {
                 const p1_3 = getIntermediatePoint(startPoint, endPoint, 0.33);
                 const p2_3 = getIntermediatePoint(startPoint, endPoint, 0.66);
                 const z1 = getPointByBearing(p1_3, bear + 90, width);
                 const z2 = getPointByBearing(p2_3, bear + 90, width);
                 return toCoords([startPoint, z1, z2, endPoint]);
             }
-            else { // Big Detour
+            else {
                 const h = Math.sqrt(Math.pow(geoKm/2, 2) - Math.pow(straight/2, 2)) || width;
                 const wp = getPointByBearing({lat:midLat, lng:midLng}, bear - 90, h);
                 return toCoords([startPoint, wp, endPoint]);
             }
         } else {
-            // 왕복/추천
-            if (pattern === 0) { // Diamond
+            if (pattern === 0) {
                 const wp1 = getPointByBearing({lat:midLat, lng:midLng}, bear + 90, width);
                 const wp2 = getPointByBearing({lat:midLat, lng:midLng}, bear - 90, width);
                 return toCoords([startPoint, wp1, endPoint, wp2, startPoint]);
             }
-            else if (pattern === 1) { // Box
+            else if (pattern === 1) {
                 const p1_3 = getIntermediatePoint(startPoint, endPoint, 0.33);
                 const p2_3 = getIntermediatePoint(startPoint, endPoint, 0.66);
                 const z1 = getPointByBearing(p1_3, bear + 90, width);
                 const z2 = getPointByBearing(p2_3, bear + 90, width);
                 return toCoords([startPoint, z1, z2, endPoint, startPoint]);
             }
-            else { // Complex
+            else {
                 const p1_3 = getIntermediatePoint(startPoint, endPoint, 0.33);
                 const p2_3 = getIntermediatePoint(startPoint, endPoint, 0.66);
                 const z1 = getPointByBearing(p1_3, bear + 90, width);
@@ -426,17 +428,17 @@ function deg2rad(d) { return d * (Math.PI/180); }
 function rad2deg(r) { return r * (180/Math.PI); }
 
 
-// --- SAVED LIST (Firebase Version) ---
+// --- SAVED LIST ---
 function renderSavedCourses() {
     if (!currentUser) return alert("로그인 정보가 없습니다.");
     
     const listEl = document.getElementById('savedList');
+    if (!listEl) return;
     listEl.innerHTML = '<li style="padding:15px;text-align:center;">불러오는 중...</li>';
 
     const coursesRef = ref(db, `users/${currentUser.uid}/myCourses`);
-    // onValue를 쓰면 데이터 변경 시 실시간 업데이트됨 (매우 좋음)
     onValue(coursesRef, (snapshot) => {
-        listEl.innerHTML = ''; // 초기화
+        listEl.innerHTML = ''; 
         const data = snapshot.val();
         
         if (!data) {
@@ -444,13 +446,11 @@ function renderSavedCourses() {
             return;
         }
 
-        // Firebase 객체 -> 배열로 변환
-        const list = Object.entries(data).map(([key, value]) => ({...value, key})); // key 포함
+        const list = Object.entries(data).map(([key, value]) => ({...value, key}));
 
         list.forEach(c => {
             const li = document.createElement('li'); li.className = 'saved-item';
             
-            // 미니맵 SVG 생성 로직 (그대로 유지)
             const lats=c.path.map(p=>p[0]), lngs=c.path.map(p=>p[1]);
             const minLat=Math.min(...lats), maxLat=Math.max(...lats), minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
             let d=""; c.path.forEach((p,i)=>{
@@ -463,25 +463,23 @@ function renderSavedCourses() {
             infoMapWrapper.style.display = 'flex'; infoMapWrapper.style.alignItems = 'center'; infoMapWrapper.style.flexGrow = '1'; infoMapWrapper.style.paddingRight = '10px';
             infoMapWrapper.innerHTML = `<div><div style="font-weight:bold;">${c.name}</div><div style="font-size:12px;color:#888;">${c.date} | ${c.dist}</div></div>${svg}`;
             
-            // 코스 선택 시 로드
             infoMapWrapper.onclick = () => {
                 if(polylineLayer) map.removeLayer(polylineLayer);
                 routeCoords = c.path;
                 polylineLayer = L.polyline(c.path, {color:'#3586ff', weight:6}).addTo(map);
                 map.fitBounds(polylineLayer.getBounds(), { padding:[40,40] });
-                document.getElementById('actualDistDisplay').innerText = c.dist;
-                loadModal.classList.add('hidden');
+                const actualDistDisp = document.getElementById('actualDistDisplay');
+                if (actualDistDisp) actualDistDisp.innerText = c.dist;
+                if (loadModal) loadModal.classList.add('hidden');
             };
             li.appendChild(infoMapWrapper);
 
-            // 삭제 버튼 (Firebase Remove)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-course-btn';
             deleteBtn.innerHTML = '<span class="material-icons">delete</span>';
             deleteBtn.onclick = (e) => {
                 e.stopPropagation(); 
                 if (confirm(`"${c.name}" 코스를 삭제하시겠습니까?`)) {
-                    // Firebase 삭제
                     const itemRef = ref(db, `users/${currentUser.uid}/myCourses/${c.key}`);
                     remove(itemRef)
                         .then(() => alert("삭제되었습니다."))
@@ -495,29 +493,28 @@ function renderSavedCourses() {
 }
 
 // --- BUTTONS ---
-document.getElementById('startRunningBtn').addEventListener('click', () => {
+document.getElementById('startRunningBtn')?.addEventListener('click', () => {
     if(routeCoords.length === 0) return alert("코스 생성 필요");
     
-    // [중요] 다음 페이지로 넘길 때는 localStorage가 가장 빠르고 간편함
-    // 여기서는 영구 저장이 아니라 '세션 이동' 개념이므로 유지
     localStorage.setItem('currentRunRoute', JSON.stringify(routeCoords));
-    localStorage.setItem('currentRunDist', document.getElementById('actualDistDisplay').innerText);
+    const actualDistDisp = document.getElementById('actualDistDisplay');
+    localStorage.setItem('currentRunDist', actualDistDisp ? actualDistDisp.innerText : '0.00 km');
     
     window.location.href = 'run_running.html';
 });
 
-// 코스 저장 (Firebase Push)
-document.getElementById('saveBtn').addEventListener('click', () => {
+document.getElementById('saveBtn')?.addEventListener('click', () => {
     if(!currentUser) return alert("로그인이 필요합니다.");
     if(routeCoords.length === 0) return alert("저장할 코스 없음");
     
     const name = prompt("코스 이름"); 
     if(!name) return;
 
+    const actualDistDisp = document.getElementById('actualDistDisplay');
     const newCourse = { 
         name, 
         date: new Date().toLocaleDateString(), 
-        dist: document.getElementById('actualDistDisplay').innerText, 
+        dist: actualDistDisp ? actualDistDisp.innerText : '0.00 km', 
         path: routeCoords,
         createdAt: Date.now()
     };
@@ -528,9 +525,11 @@ document.getElementById('saveBtn').addEventListener('click', () => {
         .catch((e) => alert("저장 실패: " + e.message));
 });
 
-document.getElementById('loadBtn').addEventListener('click', () => { 
-    renderSavedCourses(); // Firebase Load 호출
-    loadModal.classList.remove('hidden'); 
+document.getElementById('loadBtn')?.addEventListener('click', () => { 
+    renderSavedCourses(); 
+    if (loadModal) loadModal.classList.remove('hidden'); 
 });
 
-document.getElementById('closeLoadBtn').addEventListener('click', () => loadModal.classList.add('hidden'));
+document.getElementById('closeLoadBtn')?.addEventListener('click', () => {
+    if (loadModal) loadModal.classList.add('hidden');
+});
