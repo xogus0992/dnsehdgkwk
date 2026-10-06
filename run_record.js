@@ -3,21 +3,15 @@ import { ref, get, child, remove } from "https://www.gstatic.com/firebasejs/10.1
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RECORD LOGIC (FINAL v2.7 - Blue Route & Start/End Pins)
-   - Connection: Firebase Realtime Database ('users/{uid}/history')
-   - Map Tile: OpenStreetMap
-   - Feature: Blue Route Line, Start/End Speech Bubble Pins, Clean Fallbacks
+   POKERUN RECORD LOGIC (FINAL v2.8 - Full Target Course Line Render)
    ============================================================ */
 
-// State
 let popupMap = null;
 let popupPolyline = null;
-let startMarker = null;
-let endMarker = null;
+let userPolyline = null;
 let currentRecord = null;
 let currentUser = null;
 
-// [1. 초기화] 인증 상태 확인 후 데이터 로드
 window.addEventListener('load', () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -42,7 +36,6 @@ window.addEventListener('load', () => {
     if (shareBtn) shareBtn.addEventListener('click', shareRecord);
 });
 
-// [2. 좌표 데이터 배열 평탄화]
 function extractPoints(path) {
     if (!path) return [];
     let points = [];
@@ -64,7 +57,17 @@ function extractPoints(path) {
     return points;
 }
 
-// [3. Firebase 기록 데이터 로드]
+// 목표 코스선이 있으면 최우선으로 가져오고, 없으면 실제 이동선 가져오기
+function getBestCoursePoints(rec) {
+    const targetPts = extractPoints(rec.targetPath);
+    if (targetPts.length >= 2) return targetPts;
+    
+    const userPts = extractPoints(rec.path);
+    if (userPts.length >= 2) return userPts;
+    
+    return targetPts.length > 0 ? targetPts : userPts;
+}
+
 function loadRecordsAndRender(uid) {
     const dbRef = ref(db);
     
@@ -93,7 +96,6 @@ function loadRecordsAndRender(uid) {
     });
 }
 
-// [4. 주간 활동 통계]
 function renderStatistics(records) {
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     const today = new Date();
@@ -156,7 +158,7 @@ function renderStatistics(records) {
     });
 }
 
-// [5. 기록 리스트 렌더링 - 파란색 미니 코스 선형 보장]
+// [리스트 SVG 미니맵 - 파란색 코스 선으로 정규화하여 출력]
 function renderList(records) {
     const listEl = document.getElementById('recordList');
     if (!listEl) return;
@@ -176,11 +178,12 @@ function renderList(records) {
 
         let svgContent = "";
         try {
-            const allPoints = extractPoints(rec.path);
+            // ★ 목표 코스 경로를 가져옴
+            const coursePoints = getBestCoursePoints(rec);
 
-            if (allPoints.length >= 2) {
-                const lats = allPoints.map(p => p[0]);
-                const lngs = allPoints.map(p => p[1]);
+            if (coursePoints.length >= 2) {
+                const lats = coursePoints.map(p => p[0]);
+                const lngs = coursePoints.map(p => p[1]);
                 
                 const minLat = Math.min(...lats), maxLat = Math.max(...lats);
                 const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
@@ -188,16 +191,16 @@ function renderList(records) {
                 const lngRange = maxLng - minLng || 0.0001;
 
                 let svgPath = "";
-                allPoints.forEach((p, i) => {
+                coursePoints.forEach((p, i) => {
                     const y = 60 - ((p[0] - minLat) / latRange) * 60;
                     const x = ((p[1] - minLng) / lngRange) * 60;
                     if (!isNaN(x) && !isNaN(y)) {
                         svgPath += `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)} `;
                     }
                 });
+                // ★ 선명한 파란색 코스선 그리기
                 svgContent = `<path d="${svgPath.trim()}" fill="none" stroke="#3586ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
             } else {
-                // 경로 데이터가 없거나 1개만 있을 때: 위치 핀 아이콘 표시
                 svgContent = `
                     <circle cx="30" cy="30" r="8" fill="#3586ff" />
                     <circle cx="30" cy="30" r="15" fill="none" stroke="#3586ff" stroke-width="2" opacity="0.5"/>
@@ -224,7 +227,7 @@ function renderList(records) {
     });
 }
 
-// [6. 상세 팝업 지도 - 파란색 경로 + 출발지/목적지 말풍선 마커]
+// [팝업 모달 지도 - 목표 파란색 코스 전체를 화면에 맞춰 축소 노출]
 const modal = document.getElementById('recordModal');
 
 function openPopup(rec) {
@@ -279,47 +282,44 @@ function openPopup(rec) {
             }).addTo(popupMap);
         }
         
-        // 기존 레이어 및 핀 삭제
         if (popupPolyline) popupMap.removeLayer(popupPolyline);
-        if (startMarker) popupMap.removeLayer(startMarker);
-        if (endMarker) popupMap.removeLayer(endMarker);
+        if (userPolyline) popupMap.removeLayer(userPolyline);
 
-        const points = extractPoints(rec.path);
+        const targetPts = extractPoints(rec.targetPath);
+        const userPts = extractPoints(rec.path);
 
-        if (points.length >= 2) {
-            // ★ 파란색 경로선 그리기 (원하셨던 색상 #3586ff)
-            popupPolyline = L.polyline(points, { 
+        // 표시할 메인 코스 좌표 결정
+        const mainCoursePts = targetPts.length >= 2 ? targetPts : userPts;
+
+        // 1) 목표 코스선 (선명한 파란색 라인)
+        if (targetPts.length >= 2) {
+            popupPolyline = L.polyline(targetPts, { 
                 color: '#3586ff', 
                 weight: 6, 
                 lineCap: 'round', 
                 lineJoin: 'round',
                 opacity: 0.9
             }).addTo(popupMap);
+        }
 
-            // 출발점 말풍선 마커
-            startMarker = L.marker(points[0]).addTo(popupMap)
-                .bindPopup('<b>출발</b><br>내 위치', { autoClose: false, closeOnClick: false })
-                .openPopup();
+        // 2) 실제 이동 경로가 존재하면 위에 겹쳐서 표시 (빨간색 라인)
+        if (userPts.length >= 2) {
+            userPolyline = L.polyline(userPts, { 
+                color: '#ff4d4d', 
+                weight: 5, 
+                lineCap: 'round', 
+                lineJoin: 'round' 
+            }).addTo(popupMap);
+        }
 
-            // 도착점 마커 (출발점과 다를 때만)
-            if (points.length > 2) {
-                endMarker = L.marker(points[points.length - 1]).addTo(popupMap)
-                    .bindPopup('<b>도착</b>', { autoClose: false, closeOnClick: false });
-            }
-
-            // 지도 카메라 자동 맞춤 (최대 Zoom 16 제한)
-            popupMap.fitBounds(popupPolyline.getBounds(), { 
-                padding: [40, 40],
-                maxZoom: 16 
+        // ★ 핵심: 파란색 전체 코스선이 미니맵 상자에 꽉 차고 한눈에 쏙 들어오도록 비율 자동 조정
+        if (mainCoursePts.length >= 2) {
+            popupMap.fitBounds(L.polyline(mainCoursePts).getBounds(), { 
+                padding: [35, 35]
             });
-        } else if (points.length === 1) {
-            // 좌표가 1개만 있을 때 (테스트 러닝): 해당 위치에 바로 '출발' 핀 배치
-            popupMap.setView(points[0], 16);
-            startMarker = L.marker(points[0]).addTo(popupMap)
-                .bindPopup('<b>출발</b><br>내 위치', { autoClose: false, closeOnClick: false })
-                .openPopup();
+        } else if (mainCoursePts.length === 1) {
+            popupMap.setView(mainCoursePts[0], 16);
         } else {
-            // 위치 정보가 전혀 없을 경우 기본 위치 설정
             popupMap.setView([37.5665, 126.9780], 15);
         }
         
@@ -327,12 +327,10 @@ function openPopup(rec) {
     }, 200);
 }
 
-// [7. 팝업 닫기]
 function closePopup() {
     if (modal) modal.classList.add('hidden');
 }
 
-// [8. 삭제 기능]
 function deleteRecord() {
     if (!currentRecord || !currentUser) return;
 
@@ -349,7 +347,6 @@ function deleteRecord() {
     }
 }
 
-// [9. 공유 기능]
 function shareRecord() {
     if (!currentRecord) return;
     sessionStorage.setItem('shareData', JSON.stringify(currentRecord));
