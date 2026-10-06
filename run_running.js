@@ -3,15 +3,15 @@ import { ref, push } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-d
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RUNNING LOGIC (FINAL v2.6 - Pure OSM No-Key Navigation)
+   POKERUN RUNNING LOGIC (FINAL v2.7 - Blue Navigation Line)
    - Map Tile: Standard OpenStreetMap (100% Free & No API Key Required)
-   - Target Course: LocalStorage (Gray Dashed Line)
+   - Target Course: LocalStorage (Vivid Blue Line) ★ 파란색 변경
    - User Track: Realtime GPS (Red Solid Line & Moving Marker)
    - Database: Firebase Realtime Database ('users/{uid}/history')
    ============================================================ */
 
 let map, userMarker;
-let coursePolyline = null;    // 불러온 목표 코스 (회색 점선)
+let coursePolyline = null;    // 불러온 목표 코스 (파란색 가이드선)
 let userPathLines = [];     // 내가 실제 걸어간 경로들 (빨간선 배열)
 let currentSegment = [];     // 현재 이동 중인 구간 좌표 배열
 
@@ -68,11 +68,11 @@ window.addEventListener('load', () => {
     });
 });
 
-// [2. 지도 생성 및 완전 무료 OpenStreetMap 표준 타일 적용]
+// [2. 지도 생성 및 OpenStreetMap 타일 적용]
 function initMap() {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 17);
     
-    // ★ API 키가 절대로 필요 없는 100% 무료 OpenStreetMap 타일 서버
+    // 무료 OpenStreetMap 표준 타일
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
@@ -88,7 +88,7 @@ function initMap() {
     
     userMarker = L.marker([37.5665, 126.9780], { icon: icon, zIndexOffset: 1000 }).addTo(map);
 
-    // Flex 레이아웃 타일 깨짐 방지 처리
+    // Flex 레이아웃 타일 깨짐 방지
     setTimeout(() => { 
         if (map) {
             map.invalidateSize(); 
@@ -97,7 +97,7 @@ function initMap() {
     }, 250);
 }
 
-// [3. LocalStorage에서 가이드 코스 불러오기 (회색 점선)]
+// [3. LocalStorage에서 가이드 코스 불러오기 (선명한 파란색 선)]
 function checkLocalStorage() {
     const savedRoute = localStorage.getItem('currentRunRoute');
     const savedDist = localStorage.getItem('currentRunDist');
@@ -110,12 +110,14 @@ function checkLocalStorage() {
         if (latlngs && latlngs.length > 0) {
             if (coursePolyline) map.removeLayer(coursePolyline);
 
+            // ★ 내가 갈 코스 길: 선명하고 두꺼운 파란색 가이드선으로 변경
             coursePolyline = L.polyline(latlngs, {
-                color: '#717171', 
-                weight: 6, 
+                color: '#3586ff', 
+                weight: 7, 
                 dashArray: '8, 8', 
-                opacity: 0.7, 
-                lineCap: 'round'
+                opacity: 0.9, 
+                lineCap: 'round',
+                lineJoin: 'round'
             }).addTo(map);
 
             map.fitBounds(coursePolyline.getBounds(), { padding: [40, 40] });
@@ -180,7 +182,7 @@ function handleError(err) {
     }
 }
 
-// [6. 러닝 데이터 실시간 계산 & 이동 경로(빨간선) 그리기]
+// [6. 러닝 데이터 실시간 계산 & 내가 실제로 걸어간 경로(빨간선) 그리기]
 function processRunningData(pos) {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
@@ -268,6 +270,7 @@ els.btnStart?.addEventListener('click', () => {
     lastPos = [currentLatLng.lat, currentLatLng.lng];
     currentSegment = [lastPos]; 
     
+    // 내가 실제 걸을 때 그려지는 경로 (빨간선)
     const newPoly = L.polyline(currentSegment, { 
         color: '#ff4d4d', 
         weight: 6, 
