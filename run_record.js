@@ -3,15 +3,14 @@ import { ref, get, child, remove } from "https://www.gstatic.com/firebasejs/10.1
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RECORD LOGIC (FINAL v2.6 - Course Summary Mini-Map)
+   POKERUN RECORD LOGIC (FINAL v2.7 - Blue Route & Start/End Pins)
    - Connection: Firebase Realtime Database ('users/{uid}/history')
    - Map Tile: OpenStreetMap
-   - Feature: Course Summary View (Start/End Markers, MaxZoom Cap, Dual-layer Polyline)
+   - Feature: Blue Route Line, Start/End Speech Bubble Pins, Clean Fallbacks
    ============================================================ */
 
 // State
 let popupMap = null;
-let popupPolylineBg = null;
 let popupPolyline = null;
 let startMarker = null;
 let endMarker = null;
@@ -43,7 +42,7 @@ window.addEventListener('load', () => {
     if (shareBtn) shareBtn.addEventListener('click', shareRecord);
 });
 
-// [2. 다양한 구조의 경로 데이터를 [lat, lng] 표준 배열로 추출]
+// [2. 좌표 데이터 배열 평탄화]
 function extractPoints(path) {
     if (!path) return [];
     let points = [];
@@ -65,7 +64,7 @@ function extractPoints(path) {
     return points;
 }
 
-// [3. Firebase 데이터 로드]
+// [3. Firebase 기록 데이터 로드]
 function loadRecordsAndRender(uid) {
     const dbRef = ref(db);
     
@@ -157,7 +156,7 @@ function renderStatistics(records) {
     });
 }
 
-// [5. 기록 리스트 및 SVG 미니맵 경로]
+// [5. 기록 리스트 렌더링 - 파란색 미니 코스 선형 보장]
 function renderList(records) {
     const listEl = document.getElementById('recordList');
     if (!listEl) return;
@@ -175,7 +174,7 @@ function renderList(records) {
         const d = new Date(rec.timestamp || rec.id);
         const dateStr = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 
-        let svgPath = "";
+        let svgContent = "";
         try {
             const allPoints = extractPoints(rec.path);
 
@@ -188,6 +187,7 @@ function renderList(records) {
                 const latRange = maxLat - minLat || 0.0001;
                 const lngRange = maxLng - minLng || 0.0001;
 
+                let svgPath = "";
                 allPoints.forEach((p, i) => {
                     const y = 60 - ((p[0] - minLat) / latRange) * 60;
                     const x = ((p[1] - minLng) / lngRange) * 60;
@@ -195,11 +195,16 @@ function renderList(records) {
                         svgPath += `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)} `;
                     }
                 });
+                svgContent = `<path d="${svgPath.trim()}" fill="none" stroke="#3586ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
             } else {
-                svgPath = "M 30 30 L 30 30";
+                // 경로 데이터가 없거나 1개만 있을 때: 위치 핀 아이콘 표시
+                svgContent = `
+                    <circle cx="30" cy="30" r="8" fill="#3586ff" />
+                    <circle cx="30" cy="30" r="15" fill="none" stroke="#3586ff" stroke-width="2" opacity="0.5"/>
+                `;
             }
         } catch (e) {
-            svgPath = "M 30 30 L 30 30";
+            svgContent = `<circle cx="30" cy="30" r="8" fill="#3586ff"/>`;
         }
 
         li.innerHTML = `
@@ -210,7 +215,7 @@ function renderList(records) {
                 <div class="r-pace" style="text-align:right;">${rec.pace || "-'--\""} /km</div>
             </div>
             <svg class="record-map-preview" viewBox="-5 -5 70 70">
-                <path d="${svgPath.trim() || 'M 30 30 L 30 30'}" fill="none" stroke="#3586ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                ${svgContent}
             </svg>
         `;
 
@@ -219,7 +224,7 @@ function renderList(records) {
     });
 }
 
-// [6. 코스 요약 미니맵 팝업 모달]
+// [6. 상세 팝업 지도 - 파란색 경로 + 출발지/목적지 말풍선 마커]
 const modal = document.getElementById('recordModal');
 
 function openPopup(rec) {
@@ -274,8 +279,7 @@ function openPopup(rec) {
             }).addTo(popupMap);
         }
         
-        // 기존 요점 레이어 초기화
-        if (popupPolylineBg) popupMap.removeLayer(popupPolylineBg);
+        // 기존 레이어 및 핀 삭제
         if (popupPolyline) popupMap.removeLayer(popupPolyline);
         if (startMarker) popupMap.removeLayer(startMarker);
         if (endMarker) popupMap.removeLayer(endMarker);
@@ -283,48 +287,39 @@ function openPopup(rec) {
         const points = extractPoints(rec.path);
 
         if (points.length >= 2) {
-            // 1) 외각 테두리 흰색 선 (선명함 보장)
-            popupPolylineBg = L.polyline(points, { 
-                color: '#ffffff', 
-                weight: 8, 
+            // ★ 파란색 경로선 그리기 (원하셨던 색상 #3586ff)
+            popupPolyline = L.polyline(points, { 
+                color: '#3586ff', 
+                weight: 6, 
                 lineCap: 'round', 
                 lineJoin: 'round',
                 opacity: 0.9
             }).addTo(popupMap);
 
-            // 2) 내부 빨간색 메인 경로선
-            popupPolyline = L.polyline(points, { 
-                color: '#ff4d4d', 
-                weight: 5, 
-                lineCap: 'round', 
-                lineJoin: 'round' 
-            }).addTo(popupMap);
+            // 출발점 말풍선 마커
+            startMarker = L.marker(points[0]).addTo(popupMap)
+                .bindPopup('<b>출발</b><br>내 위치', { autoClose: false, closeOnClick: false })
+                .openPopup();
 
-            // 3) 출발점(초록 마커) & 도착점(빨간 마커) 미니 아이콘 생성
-            const startIcon = L.divIcon({
-                className: 'start-pin',
-                html: '<div style="width:12px;height:12px;background:#00cc66;border:2px solid white;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
-            const endIcon = L.divIcon({
-                className: 'end-pin',
-                html: '<div style="width:12px;height:12px;background:#ff4d4d;border:2px solid white;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
+            // 도착점 마커 (출발점과 다를 때만)
+            if (points.length > 2) {
+                endMarker = L.marker(points[points.length - 1]).addTo(popupMap)
+                    .bindPopup('<b>도착</b>', { autoClose: false, closeOnClick: false });
+            }
 
-            startMarker = L.marker(points[0], { icon: startIcon }).addTo(popupMap);
-            endMarker = L.marker(points[points.length - 1], { icon: endIcon }).addTo(popupMap);
-
-            // ★ 핵심: maxZoom: 16 설정으로 과도하게 확도되어 길 하나만 보이는 현상 방지 및 코스 전체 조망
+            // 지도 카메라 자동 맞춤 (최대 Zoom 16 제한)
             popupMap.fitBounds(popupPolyline.getBounds(), { 
-                padding: [25, 25],
+                padding: [40, 40],
                 maxZoom: 16 
             });
         } else if (points.length === 1) {
-            popupMap.setView(points[0], 15);
+            // 좌표가 1개만 있을 때 (테스트 러닝): 해당 위치에 바로 '출발' 핀 배치
+            popupMap.setView(points[0], 16);
+            startMarker = L.marker(points[0]).addTo(popupMap)
+                .bindPopup('<b>출발</b><br>내 위치', { autoClose: false, closeOnClick: false })
+                .openPopup();
         } else {
+            // 위치 정보가 전혀 없을 경우 기본 위치 설정
             popupMap.setView([37.5665, 126.9780], 15);
         }
         
