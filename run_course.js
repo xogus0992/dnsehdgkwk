@@ -3,7 +3,7 @@ import { ref, push, onValue, remove, get } from "https://www.gstatic.com/firebas
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-    POKERUN MAIN LOGIC (v17 - Fixed Location & Search Overlay)
+    POKERUN MAIN LOGIC (v18 - Destination Routing & Fallback Fixed)
     ============================================================ */
 
 const KEY_ORS = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0=';
@@ -38,7 +38,7 @@ window.addEventListener('load', () => {
             currentUser = user;
             console.log("Logged in:", user.email);
         } else {
-             console.log("No user logged in");
+            console.log("No user logged in");
         }
     });
 });
@@ -76,7 +76,7 @@ function getUserLocation(callback) {
     }
 }
 
-// 내 위치 버튼 이벤트
+// 내 위치 버튼
 document.getElementById('myLocationBtn')?.addEventListener('click', () => {
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
@@ -189,7 +189,6 @@ function setupAutocomplete(inputId, isStart) {
     });
 }
 
-// 추천/검색 오버레이 닫기 (외부 클릭 시)
 document.addEventListener('click', (e) => {
     const startIn = document.getElementById('startInput');
     const endIn = document.getElementById('endInput');
@@ -283,23 +282,62 @@ function selectPlace(place, isStart) {
     }
 }
 
+// 장소 텍스트를 좌표로 자동 변환 (목록에서 안 눌렀을 때 대응)
+async function resolvePlaceByName(query) {
+    return new Promise((resolve) => {
+        if (!ps || !query) return resolve(null);
+        ps.keywordSearch(query, (data, status) => {
+            if (status === kakao.maps.services.Status.OK && data.length > 0) {
+                const item = data[0];
+                resolve({
+                    name: item.place_name,
+                    address: item.address_name,
+                    lat: parseFloat(item.y),
+                    lng: parseFloat(item.x)
+                });
+            } else {
+                resolve(null);
+            }
+        });
+    });
+}
+
 // --- COURSE GENERATION ---
 document.getElementById('createCourseBtn')?.addEventListener('click', async () => {
-    if (!startPoint) {
-        startPoint = { ...userLoc, name: "내 위치" };
-        setMapMarker('start', userLoc.lat, userLoc.lng, "내 위치");
-    }
-    let goalKm = parseFloat(goalInput?.value) || 3.0;
-    if (goalKm <= 0) goalKm = 3.0;
-
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
     try {
+        const startVal = document.getElementById('startInput')?.value.trim();
+        const endVal = document.getElementById('endInput')?.value.trim();
+
+        // 1. 출발지가 지정되어 있지 않으면 입력값 또는 내 위치로 설정
+        if (!startPoint) {
+            if (startVal && startVal !== "내 위치 (GPS)") {
+                const res = await resolvePlaceByName(startVal);
+                if (res) startPoint = res;
+            }
+            if (!startPoint) {
+                startPoint = { ...userLoc, name: "내 위치" };
+            }
+            setMapMarker('start', startPoint.lat, startPoint.lng, startPoint.name);
+        }
+
+        // 2. 도착지 입력창에 글자가 써있는데 endPoint가 없을 경우 자동 조회
+        if (endVal && !endPoint) {
+            const res = await resolvePlaceByName(endVal);
+            if (res) {
+                endPoint = res;
+                setMapMarker('end', endPoint.lat, endPoint.lng, endPoint.name);
+            }
+        }
+
+        let goalKm = parseFloat(goalInput?.value) || 3.0;
+        if (goalKm <= 0) goalKm = 3.0;
+
         await generateAndCheckRoute(goalKm);
     } catch(e) {
         console.error("Course Error:", e);
-        if(e.message && e.message.includes("403")) alert("API 오류(403): 키 할당량 초과");
-        else alert("코스 생성 실패.\n(경로를 찾을 수 없거나 API 오류입니다)");
+        alert("코스 생성 실패.\n경로를 도보로 찾을 수 없거나 목적지 위치를 확인해주세요.");
     } finally {
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
         rotationCount++;
@@ -311,22 +349,30 @@ async function generateAndCheckRoute(targetKm) {
     let bestResult = null;
     let attempts = 0; 
 
+    // 1차 시도: 경유지 포함 러닝 코스 계산
     while (attempts < 3) {
         let waypoints = createWaypoints(targetKm, scale);
         let result = await fetchRouteData(waypoints);
 
-        if (!result) break; 
+        if (result) {
+            let actualKm = parseFloat(result.dist);
+            let errorRate = Math.abs(actualKm - targetKm) / targetKm;
+            bestResult = result;
+            
+            if (errorRate <= 0.1) break; 
 
-        let actualKm = parseFloat(result.dist);
-        let errorRate = Math.abs(actualKm - targetKm) / targetKm;
-        bestResult = result;
-        
-        if (errorRate <= 0.1) break; 
-
-        let ratio = targetKm / (actualKm || 1);
-        if (ratio > 1.5) ratio = 1.5; if (ratio < 0.6) ratio = 0.6;
-        scale *= ratio;
+            let ratio = targetKm / (actualKm || 1);
+            if (ratio > 1.5) ratio = 1.5; if (ratio < 0.6) ratio = 0.6;
+            scale *= ratio;
+        }
         attempts++;
+    }
+
+    // 2차 시도: 경유지가 보행 불가 구역에 걸려 실패한 경우, 단순 [출발지 -> 도착지] 직접 경로로 Fallback
+    if (!bestResult && endPoint) {
+        console.warn("경유지 코스 길찾기 실패 -> 단순 출발지-도착지 경로 연결 시도");
+        const directWaypoints = toCoords([startPoint, endPoint]);
+        bestResult = await fetchRouteData(directWaypoints);
     }
 
     if (bestResult) {
@@ -358,7 +404,7 @@ function createWaypoints(goalKm, scale) {
         const midLng = (startPoint.lng + endPoint.lng) / 2;
         
         const remain = Math.max(0, geoKm - straight); 
-        let width = Math.max(0.3, remain / 3);
+        let width = Math.max(0.2, remain / 3);
 
         const pattern = rotationCount % 3; 
 
@@ -378,7 +424,7 @@ function createWaypoints(goalKm, scale) {
                 return toCoords([startPoint, z1, z2, endPoint]);
             }
             else {
-                const h = Math.sqrt(Math.pow(geoKm/2, 2) - Math.pow(straight/2, 2)) || width;
+                const h = Math.sqrt(Math.max(0, Math.pow(geoKm/2, 2) - Math.pow(straight/2, 2))) || width;
                 const wp = getPointByBearing({lat:midLat, lng:midLng}, bear - 90, h);
                 return toCoords([startPoint, wp, endPoint]);
             }
@@ -417,24 +463,49 @@ function toCoords(points) {
     return points.map(p => [p.lng, p.lat]);
 }
 
+// ORS 및 OSRM 길찾기 API 연동 (이중화 처리)
 async function fetchRouteData(coords) {
-    try {
-        const isValid = coords.every(pt => !isNaN(pt[0]) && !isNaN(pt[1]));
-        if (!isValid) return null;
+    const isValid = coords.every(pt => !isNaN(pt[0]) && !isNaN(pt[1]));
+    if (!isValid) return null;
 
+    // 1차 시도: OpenRouteService (ORS)
+    try {
         const res = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
             method: 'POST',
             headers: { 'Authorization': KEY_ORS, 'Content-Type': 'application/json' },
             body: JSON.stringify({ coordinates: coords })
         });
         
-        if (!res.ok) return null;
-        const data = await res.json();
-        const lineCoords = data.features[0].geometry.coordinates.map(c => [c[1], c[0]]);
-        let distM = 0;
-        for (let i = 0; i < lineCoords.length - 1; i++) distM += map.distance(lineCoords[i], lineCoords[i+1]);
-        return { coords: lineCoords, dist: (distM / 1000).toFixed(2) };
-    } catch(e) { return null; }
+        if (res.ok) {
+            const data = await res.json();
+            const lineCoords = data.features[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            let distM = 0;
+            for (let i = 0; i < lineCoords.length - 1; i++) distM += map.distance(lineCoords[i], lineCoords[i+1]);
+            return { coords: lineCoords, dist: (distM / 1000).toFixed(2) };
+        }
+    } catch(e) {
+        console.warn("ORS API 실패, OSRM 대체 시도:", e);
+    }
+
+    // 2차 시도 (Fallback): OSRM (무료 / 인증키 불필요 도보 길찾기)
+    try {
+        const coordStr = coords.map(pt => `${pt[0]},${pt[1]}`).join(';');
+        const osrmUrl = `https://router.project-osrm.org/route/v1/foot/${coordStr}?overview=full&geometries=geojson`;
+        const res = await fetch(osrmUrl);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const lineCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                const distKm = (route.distance / 1000).toFixed(2);
+                return { coords: lineCoords, dist: distKm };
+            }
+        }
+    } catch(e) {
+        console.error("OSRM Routing Error:", e);
+    }
+
+    return null;
 }
 
 function drawPolyline(coords) {
