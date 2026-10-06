@@ -3,14 +3,12 @@ import { ref, push } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-d
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RUNNING LOGIC (FINAL v2.3 - GPS Tracking & Navigation)
-   - Map: V-World WMTS
+   POKERUN RUNNING LOGIC (FINAL v2.4 - OpenStreetMap & Navigation)
+   - Map: OpenStreetMap (회색 화면 방지 및 완벽 호환)
    - Target Course: LocalStorage (Gray Dashed Line)
    - User Track: Realtime GPS (Red Solid Line & Moving Marker)
    - Database: Firebase Realtime Database ('users/{uid}/history')
    ============================================================ */
-
-const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
 
 // Leaflet & Tracking Variables
 let map, userMarker;
@@ -72,12 +70,14 @@ window.addEventListener('load', () => {
     });
 });
 
-// [2. 지도 생성 및 마커 설정]
+// [2. 지도 생성 및 OpenStreetMap 타일 적용]
 function initMap() {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 17);
     
-    L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, {
-        maxZoom: 19
+    // ★ OpenStreetMap 타일 레이어 적용 (도메인 승인 없이 즉시 지도 표시 가능)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     
     // 내 위치 표시용 파란색 원형 마커
@@ -183,7 +183,7 @@ function processRunningData(pos) {
     if (lastPos) {
         const dist = map.distance(lastPos, currentLatLng); 
         
-        // 최소 0.8m 이상 움직였을 때만 궤적 추가 (오차로 인한 튀임 방지)
+        // 최소 0.8m 이상 움직였을 때만 궤적 추가 (오차로 인한 튐 방지)
         if (dist > 0.8) { 
             totalDistance += dist;
             currentSegment.push(currentLatLng);
@@ -308,7 +308,7 @@ els.btnResume.addEventListener('click', () => {
     els.paused.classList.add('hidden'); 
     els.running.classList.remove('hidden');
     
-    // 일시정지 해제 시 새로운 이동 구간(Segment) 생성 (직선 튐 방지)
+    // 일시정지 해제 시 새로운 이동 구간(Segment) 생성
     const currentLatLng = userMarker.getLatLng();
     lastPos = [currentLatLng.lat, currentLatLng.lng];
     currentSegment = [lastPos];
