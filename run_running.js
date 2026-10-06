@@ -3,33 +3,27 @@ import { ref, push } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-d
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RUNNING LOGIC (FINAL v2.7 - Blue Navigation Line)
-   - Map Tile: Standard OpenStreetMap (100% Free & No API Key Required)
-   - Target Course: LocalStorage (Vivid Blue Line) ★ 파란색 변경
-   - User Track: Realtime GPS (Red Solid Line & Moving Marker)
-   - Database: Firebase Realtime Database ('users/{uid}/history')
+   POKERUN RUNNING LOGIC (FINAL v3.0 - Target Course Path Saving)
    ============================================================ */
 
 let map, userMarker;
-let coursePolyline = null;    // 불러온 목표 코스 (파란색 가이드선)
-let userPathLines = [];     // 내가 실제 걸어간 경로들 (빨간선 배열)
-let currentSegment = [];     // 현재 이동 중인 구간 좌표 배열
+let coursePolyline = null;    
+let userPathLines = [];     
+let currentSegment = [];     
 
 let watchId = null;
 let timerId = null;
 let isRunning = false;
 let isPaused = false;
-let isFirstGpsLock = false;  // 첫 GPS 수신 여부
-let currentUser = null;       // 로그인 사용자 정보
+let isFirstGpsLock = false;  
+let currentUser = null;       
 
-// Data Variables
 let elapsedTime = 0; 
 let totalDistance = 0; 
 let targetDistance = 0; 
 let startTargetKm = 0;  
 let lastPos = null;
 
-// DOM Elements
 const els = {
     dist: document.getElementById('displayDist'),
     time: document.getElementById('valTime'),
@@ -39,11 +33,9 @@ const els = {
     avgSpeed: document.getElementById('valAvgSpeed'),
     cadence: document.getElementById('valCadence'),
     gpsStatus: document.getElementById('gpsStatus'),
-    
     ready: document.getElementById('controlReady'),
     running: document.getElementById('controlRunning'),
     paused: document.getElementById('controlPaused'),
-    
     btnStart: document.getElementById('btnStart'),
     btnPause: document.getElementById('btnPause'),
     btnResume: document.getElementById('btnResume'),
@@ -52,12 +44,10 @@ const els = {
     btnLoad: document.getElementById('btnLoad')
 };
 
-// [1. 초기화 실행]
 window.addEventListener('load', () => {
     initMap();
     setupGeolocation();
 
-    // 로그인 체크
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -68,17 +58,14 @@ window.addEventListener('load', () => {
     });
 });
 
-// [2. 지도 생성 및 OpenStreetMap 타일 적용]
 function initMap() {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 17);
     
-    // 무료 OpenStreetMap 표준 타일
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     
-    // 내 위치 표시용 파란색 원형 마커
     const icon = L.divIcon({
         className: 'user-marker',
         html: '<div style="width:20px;height:20px;background:#3586ff;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(0,0,0,0.4);"></div>',
@@ -88,7 +75,6 @@ function initMap() {
     
     userMarker = L.marker([37.5665, 126.9780], { icon: icon, zIndexOffset: 1000 }).addTo(map);
 
-    // Flex 레이아웃 타일 깨짐 방지
     setTimeout(() => { 
         if (map) {
             map.invalidateSize(); 
@@ -97,7 +83,6 @@ function initMap() {
     }, 250);
 }
 
-// [3. LocalStorage에서 가이드 코스 불러오기 (선명한 파란색 선)]
 function checkLocalStorage() {
     const savedRoute = localStorage.getItem('currentRunRoute');
     const savedDist = localStorage.getItem('currentRunDist');
@@ -110,7 +95,6 @@ function checkLocalStorage() {
         if (latlngs && latlngs.length > 0) {
             if (coursePolyline) map.removeLayer(coursePolyline);
 
-            // ★ 내가 갈 코스 길: 선명하고 두꺼운 파란색 가이드선으로 변경
             coursePolyline = L.polyline(latlngs, {
                 color: '#3586ff', 
                 weight: 7, 
@@ -130,7 +114,6 @@ function checkLocalStorage() {
     }
 }
 
-// [4. GPS 실시간 추적 바인딩]
 function setupGeolocation() {
     if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(
@@ -151,7 +134,6 @@ function setupGeolocation() {
     }
 }
 
-// [5. 내 위치 반영 & 지도가 나를 따라오기]
 function updatePosition(pos) {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
@@ -182,7 +164,6 @@ function handleError(err) {
     }
 }
 
-// [6. 러닝 데이터 실시간 계산 & 내가 실제로 걸어간 경로(빨간선) 그리기]
 function processRunningData(pos) {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
@@ -211,7 +192,6 @@ function updatePolyline() {
     }
 }
 
-// [7. UI 실시간 지표 수치 업데이트]
 function updateUI(currentSpeedMs) {
     if (targetDistance > 0) {
         let remainM = targetDistance - totalDistance;
@@ -257,11 +237,6 @@ function updateUI(currentSpeedMs) {
     if (els.cadence) els.cadence.innerText = speedKmh < 1 ? 0 : Math.floor(estCadence);
 }
 
-// ==========================================
-// 컨트롤 버튼 이벤트 (START / PAUSE / RESUME / STOP)
-// ==========================================
-
-// [RUN 시작]
 els.btnStart?.addEventListener('click', () => {
     isRunning = true; 
     isPaused = false; 
@@ -270,7 +245,6 @@ els.btnStart?.addEventListener('click', () => {
     lastPos = [currentLatLng.lat, currentLatLng.lng];
     currentSegment = [lastPos]; 
     
-    // 내가 실제 걸을 때 그려지는 경로 (빨간선)
     const newPoly = L.polyline(currentSegment, { 
         color: '#ff4d4d', 
         weight: 6, 
@@ -292,14 +266,12 @@ els.btnStart?.addEventListener('click', () => {
     }, 1000);
 });
 
-// [일시정지]
 els.btnPause?.addEventListener('click', () => {
     isPaused = true;
     els.running.classList.add('hidden'); 
     els.paused.classList.remove('hidden');
 });
 
-// [재개 (RESUME)]
 els.btnResume?.addEventListener('click', () => {
     isPaused = false;
     els.paused.classList.add('hidden'); 
@@ -320,7 +292,6 @@ els.btnResume?.addEventListener('click', () => {
     userPathLines.push(newPoly);
 });
 
-// [종료 및 Firebase 클라우드 저장]
 function stopRun() {
     if (!currentUser) {
         alert("로그인 정보가 없습니다. 저장할 수 없습니다.");
@@ -342,6 +313,9 @@ function stopRun() {
             return line.getLatLngs().map(ll => [ll.lat, ll.lng]);
         });
 
+        const targetRouteRaw = localStorage.getItem('currentRunRoute');
+        const targetPathData = targetRouteRaw ? JSON.parse(targetRouteRaw) : null;
+
         const record = {
             id: Date.now(),
             date: new Date().toLocaleString('ko-KR'),
@@ -350,17 +324,18 @@ function stopRun() {
             time: els.time ? els.time.innerText : "00:00",
             pace: els.pace ? els.pace.innerText : "-'--\"",
             cal: els.cal ? els.cal.innerText : "0",
-            path: pathData 
+            path: pathData,
+            targetPath: targetPathData // 선택했던 목표 코스 저장
         };
 
         const historyRef = ref(db, `users/${currentUser.uid}/history`);
         push(historyRef, record)
             .then(() => {
-                alert(`러닝 기록이 성공적으로 저장되었습니다! (${finalDist} km)`);
+                alert(`러닝 기록이 저장되었습니다! (${finalDist} km)`);
                 window.location.href = 'run_record.html'; 
             })
             .catch((err) => {
-                alert("기록 저장 중 오류가 발생했습니다: " + err.message);
+                alert("기록 저장 중 오류 발생: " + err.message);
             });
     }
 }
@@ -368,9 +343,6 @@ function stopRun() {
 els.btnStopRun?.addEventListener('click', stopRun);
 els.btnStopPaused?.addEventListener('click', stopRun);
 
-// ==========================================
-// 코스 불러오기 모달 (Modal)
-// ==========================================
 const loadModal = document.getElementById('loadModal');
 
 els.btnLoad?.addEventListener('click', () => {
