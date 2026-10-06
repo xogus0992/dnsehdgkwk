@@ -1,354 +1,401 @@
 import { db, auth } from './firebase-service.js';
-import { ref, get, child, remove } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+import { ref, push } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RECORD LOGIC (FINAL v2.8 - Full Target Course Line Render)
+   POKERUN RUNNING LOGIC (FINAL v2.8 - Save Target Course Path)
    ============================================================ */
 
-let popupMap = null;
-let popupPolyline = null;
-let userPolyline = null;
-let currentRecord = null;
-let currentUser = null;
+let map, userMarker;
+let coursePolyline = null;    
+let userPathLines = [];     
+let currentSegment = [];     
+
+let watchId = null;
+let timerId = null;
+let isRunning = false;
+let isPaused = false;
+let isFirstGpsLock = false;  
+let currentUser = null;       
+
+let elapsedTime = 0; 
+let totalDistance = 0; 
+let targetDistance = 0; 
+let startTargetKm = 0;  
+let lastPos = null;
+
+const els = {
+    dist: document.getElementById('displayDist'),
+    time: document.getElementById('valTime'),
+    pace: document.getElementById('valPace'),
+    cal: document.getElementById('valCal'),
+    speed: document.getElementById('valSpeed'),
+    avgSpeed: document.getElementById('valAvgSpeed'),
+    cadence: document.getElementById('valCadence'),
+    gpsStatus: document.getElementById('gpsStatus'),
+    ready: document.getElementById('controlReady'),
+    running: document.getElementById('controlRunning'),
+    paused: document.getElementById('controlPaused'),
+    btnStart: document.getElementById('btnStart'),
+    btnPause: document.getElementById('btnPause'),
+    btnResume: document.getElementById('btnResume'),
+    btnStopRun: document.getElementById('btnStopRun'),
+    btnStopPaused: document.getElementById('btnStopPaused'),
+    btnLoad: document.getElementById('btnLoad')
+};
 
 window.addEventListener('load', () => {
+    initMap();
+    setupGeolocation();
+
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            loadRecordsAndRender(user.uid);
+            console.log("Runner Logged in:", user.email);
         } else {
-            const listEl = document.getElementById('recordList');
-            if (listEl) {
-                listEl.innerHTML = 
-                    '<li style="text-align:center; padding:30px; color:#666;">로그인이 필요합니다.<br><a href="index.html" style="color:#3586ff; font-weight:bold; text-decoration:none; margin-top:8px; display:inline-block;">로그인 하러가기</a></li>';
-            }
+            alert("로그인이 필요합니다. 로그인 페이지로 이동해주세요.");
         }
     });
-
-    const closeBtn = document.getElementById('closePopupBtn');
-    if (closeBtn) closeBtn.addEventListener('click', closePopup);
-
-    const deleteBtn = document.getElementById('btnDeleteRecord');
-    if (deleteBtn) deleteBtn.addEventListener('click', deleteRecord);
-
-    const shareBtn = document.getElementById('btnShareRecord');
-    if (shareBtn) shareBtn.addEventListener('click', shareRecord);
 });
 
-function extractPoints(path) {
-    if (!path) return [];
-    let points = [];
+function initMap() {
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 17);
+    
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    
+    const icon = L.divIcon({
+        className: 'user-marker',
+        html: '<div style="width:20px;height:20px;background:#3586ff;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(0,0,0,0.4);"></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+    
+    userMarker = L.marker([37.5665, 126.9780], { icon: icon, zIndexOffset: 1000 }).addTo(map);
 
-    function traverse(item) {
-        if (!item) return;
-        if (Array.isArray(item)) {
-            if (item.length === 2 && typeof item[0] === 'number' && typeof item[1] === 'number') {
-                points.push([item[0], item[1]]);
+    setTimeout(() => { 
+        if (map) {
+            map.invalidateSize(); 
+            checkLocalStorage();
+        }
+    }, 250);
+}
+
+function checkLocalStorage() {
+    const savedRoute = localStorage.getItem('currentRunRoute');
+    const savedDist = localStorage.getItem('currentRunDist');
+
+    if (savedRoute && savedDist) {
+        startTargetKm = parseFloat(savedDist); 
+        targetDistance = startTargetKm * 1000; 
+        
+        const latlngs = JSON.parse(savedRoute);
+        if (latlngs && latlngs.length > 0) {
+            if (coursePolyline) map.removeLayer(coursePolyline);
+
+            coursePolyline = L.polyline(latlngs, {
+                color: '#3586ff', 
+                weight: 7, 
+                dashArray: '8, 8', 
+                opacity: 0.9, 
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(map);
+
+            map.fitBounds(coursePolyline.getBounds(), { padding: [40, 40] });
+        }
+        if (els.dist) els.dist.innerText = startTargetKm.toFixed(2);
+    } else {
+        startTargetKm = 0; 
+        targetDistance = 0;
+        if (els.dist) els.dist.innerText = "0.00";
+    }
+}
+
+function setupGeolocation() {
+    if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                updatePosition(pos);
+                if (isRunning && !isPaused) {
+                    processRunningData(pos);
+                }
+            }, 
+            handleError, 
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
+        );
+    } else {
+        if (els.gpsStatus) {
+            els.gpsStatus.innerText = "GPS 미지원";
+            els.gpsStatus.style.background = "rgba(255,50,50,0.8)";
+        }
+    }
+}
+
+function updatePosition(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const latlng = [lat, lng];
+
+    userMarker.setLatLng(latlng);
+
+    if (!isFirstGpsLock) {
+        isFirstGpsLock = true;
+        if (!coursePolyline) map.setView(latlng, 17);
+    }
+
+    if (isRunning) {
+        map.panTo(latlng, { animate: true, duration: 0.5 }); 
+    }
+
+    if (els.gpsStatus) {
+        els.gpsStatus.innerText = "GPS 수신중";
+        els.gpsStatus.style.background = "rgba(0,200,100,0.8)";
+    }
+}
+
+function handleError(err) {
+    console.warn('GPS Error:', err);
+    if (els.gpsStatus) {
+        els.gpsStatus.innerText = "GPS 신호 약함";
+        els.gpsStatus.style.background = "rgba(255,180,0,0.8)";
+    }
+}
+
+function processRunningData(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const currentLatLng = [lat, lng];
+    
+    if (lastPos) {
+        const dist = map.distance(lastPos, currentLatLng); 
+        if (dist > 0.8) { 
+            totalDistance += dist;
+            currentSegment.push(currentLatLng);
+            updatePolyline(); 
+            lastPos = currentLatLng;
+        }
+    } else {
+        lastPos = currentLatLng;
+        currentSegment.push(currentLatLng);
+    }
+
+    updateUI(pos.coords.speed);
+}
+
+function updatePolyline() {
+    if (userPathLines.length > 0 && currentSegment.length > 0) {
+        const activePolyline = userPathLines[userPathLines.length - 1];
+        activePolyline.setLatLngs(currentSegment);
+    }
+}
+
+function updateUI(currentSpeedMs) {
+    if (targetDistance > 0) {
+        let remainM = targetDistance - totalDistance;
+        if (remainM < 0) remainM = 0; 
+        if (els.dist) els.dist.innerText = (remainM / 1000).toFixed(2);
+    } else {
+        if (els.dist) els.dist.innerText = (totalDistance / 1000).toFixed(2);
+    }
+
+    const totalSeconds = Math.floor(elapsedTime / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (els.time) els.time.innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    const speedKmh = (currentSpeedMs || 0) * 3.6;
+    if (els.speed) els.speed.innerText = speedKmh.toFixed(1);
+    
+    const hours = totalSeconds / 3600;
+    const avgSpeed = hours > 0 ? (totalDistance / 1000) / hours : 0;
+    if (els.avgSpeed) els.avgSpeed.innerText = isNaN(avgSpeed) ? "0.0" : avgSpeed.toFixed(1);
+
+    if (els.pace) {
+        if (totalDistance > 5) {
+            const paceMin = (elapsedTime / 1000 / 60) / (totalDistance / 1000);
+            if (paceMin > 30 || isNaN(paceMin)) {
+                els.pace.innerText = "-'--\"";
             } else {
-                item.forEach(sub => traverse(sub));
+                const pm = Math.floor(paceMin);
+                const ps = Math.floor((paceMin - pm) * 60);
+                els.pace.innerText = `${pm}'${String(ps).padStart(2,'0')}"`;
             }
-        } else if (typeof item === 'object' && item.lat !== undefined && item.lng !== undefined) {
-            points.push([Number(item.lat), Number(item.lng)]);
-        }
-    }
-
-    traverse(path);
-    return points;
-}
-
-// 목표 코스선이 있으면 최우선으로 가져오고, 없으면 실제 이동선 가져오기
-function getBestCoursePoints(rec) {
-    const targetPts = extractPoints(rec.targetPath);
-    if (targetPts.length >= 2) return targetPts;
-    
-    const userPts = extractPoints(rec.path);
-    if (userPts.length >= 2) return userPts;
-    
-    return targetPts.length > 0 ? targetPts : userPts;
-}
-
-function loadRecordsAndRender(uid) {
-    const dbRef = ref(db);
-    
-    get(child(dbRef, `users/${uid}/history`)).then((snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            const records = Object.keys(data).map(key => ({
-                ...data[key],
-                firebaseKey: key
-            }));
-
-            records.sort((a, b) => (b.timestamp || b.id || 0) - (a.timestamp || a.id || 0));
-
-            renderStatistics(records);
-            renderList(records);
         } else {
-            renderList([]); 
-            renderStatistics([]);
+            els.pace.innerText = "-'--\"";
         }
-    }).catch((error) => {
-        console.error("Data Load Error:", error);
-        const listEl = document.getElementById('recordList');
-        if (listEl) {
-            listEl.innerHTML = '<li style="padding:30px; text-align:center; color:#999;">데이터를 불러오지 못했습니다.</li>';
-        }
-    });
-}
-
-function renderStatistics(records) {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const today = new Date();
-    const stats = new Array(7).fill(0);
-    const labels = new Array(7).fill('');
-
-    for(let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        labels[6 - i] = days[d.getDay()];
     }
 
-    records.forEach(rec => {
-        const recDate = new Date(rec.timestamp || rec.id);
-        const diffTime = today.setHours(0,0,0,0) - recDate.setHours(0,0,0,0);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const cal = (totalDistance / 1000) * 60; 
+    if (els.cal) els.cal.innerText = Math.floor(cal);
 
-        if (diffDays >= 0 && diffDays <= 6) {
-            stats[6 - diffDays] += parseFloat(rec.dist || 0);
-        }
-    });
-
-    const totalDist = stats.reduce((a, b) => a + b, 0).toFixed(1);
-    const totalDistEl = document.getElementById('totalWeeklyDist');
-    if (totalDistEl) totalDistEl.innerText = `${totalDist} km`;
-
-    const chartCanvas = document.getElementById('weeklyChart');
-    if (!chartCanvas) return;
-    const ctx = chartCanvas.getContext('2d');
-    
-    if (window.myWeeklyChart) window.myWeeklyChart.destroy();
-
-    window.myWeeklyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'km',
-                data: stats,
-                borderColor: '#3586ff',
-                backgroundColor: 'rgba(53, 134, 255, 0.1)',
-                borderWidth: 3,
-                tension: 0.3,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#3586ff',
-                pointRadius: 4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { display: false, beginAtZero: true },
-                x: { grid: { display: false }, ticks: { font: { family: 'Chakra Petch' } } }
-            },
-            layout: { padding: { left: 10, right: 10, top: 10, bottom: 0 } }
-        }
-    });
+    let estCadence = 0;
+    if (speedKmh > 2) estCadence = 120 + (speedKmh * 6);
+    if (estCadence > 200) estCadence = 200;
+    if (els.cadence) els.cadence.innerText = speedKmh < 1 ? 0 : Math.floor(estCadence);
 }
 
-// [리스트 SVG 미니맵 - 파란색 코스 선으로 정규화하여 출력]
-function renderList(records) {
-    const listEl = document.getElementById('recordList');
-    if (!listEl) return;
-    listEl.innerHTML = '';
+els.btnStart?.addEventListener('click', () => {
+    isRunning = true; 
+    isPaused = false; 
+    
+    const currentLatLng = userMarker.getLatLng();
+    lastPos = [currentLatLng.lat, currentLatLng.lng];
+    currentSegment = [lastPos]; 
+    
+    const newPoly = L.polyline(currentSegment, { 
+        color: '#ff4d4d', 
+        weight: 6, 
+        lineCap: 'round',
+        lineJoin: 'round',
+        opacity: 0.9 
+    }).addTo(map);
+    
+    userPathLines.push(newPoly);
+    
+    els.ready.classList.add('hidden'); 
+    els.running.classList.remove('hidden');
+    
+    timerId = setInterval(() => { 
+        if (!isPaused) { 
+            elapsedTime += 1000; 
+            updateUI(0); 
+        } 
+    }, 1000);
+});
 
-    if (records.length === 0) {
-        listEl.innerHTML = '<li style="text-align:center; padding:40px; color:#999;">아직 달린 기록이 없습니다.<br>러닝 탭에서 첫 달리기를 시작해보세요!</li>';
+els.btnPause?.addEventListener('click', () => {
+    isPaused = true;
+    els.running.classList.add('hidden'); 
+    els.paused.classList.remove('hidden');
+});
+
+els.btnResume?.addEventListener('click', () => {
+    isPaused = false;
+    els.paused.classList.add('hidden'); 
+    els.running.classList.remove('hidden');
+    
+    const currentLatLng = userMarker.getLatLng();
+    lastPos = [currentLatLng.lat, currentLatLng.lng];
+    currentSegment = [lastPos];
+    
+    const newPoly = L.polyline(currentSegment, { 
+        color: '#ff4d4d', 
+        weight: 6, 
+        lineCap: 'round',
+        lineJoin: 'round',
+        opacity: 0.9 
+    }).addTo(map);
+    
+    userPathLines.push(newPoly);
+});
+
+// [러닝 종료 및 저장 - 목표 코스(targetPath)까지 함께 저장]
+function stopRun() {
+    if (!currentUser) {
+        alert("로그인 정보가 없습니다. 저장할 수 없습니다.");
         return;
     }
 
-    records.forEach(rec => {
-        const li = document.createElement('li');
-        li.className = 'record-item';
-
-        const d = new Date(rec.timestamp || rec.id);
-        const dateStr = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-
-        let svgContent = "";
-        try {
-            // ★ 목표 코스 경로를 가져옴
-            const coursePoints = getBestCoursePoints(rec);
-
-            if (coursePoints.length >= 2) {
-                const lats = coursePoints.map(p => p[0]);
-                const lngs = coursePoints.map(p => p[1]);
-                
-                const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-                const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-                const latRange = maxLat - minLat || 0.0001;
-                const lngRange = maxLng - minLng || 0.0001;
-
-                let svgPath = "";
-                coursePoints.forEach((p, i) => {
-                    const y = 60 - ((p[0] - minLat) / latRange) * 60;
-                    const x = ((p[1] - minLng) / lngRange) * 60;
-                    if (!isNaN(x) && !isNaN(y)) {
-                        svgPath += `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)} `;
-                    }
-                });
-                // ★ 선명한 파란색 코스선 그리기
-                svgContent = `<path d="${svgPath.trim()}" fill="none" stroke="#3586ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
-            } else {
-                svgContent = `
-                    <circle cx="30" cy="30" r="8" fill="#3586ff" />
-                    <circle cx="30" cy="30" r="15" fill="none" stroke="#3586ff" stroke-width="2" opacity="0.5"/>
-                `;
-            }
-        } catch (e) {
-            svgContent = `<circle cx="30" cy="30" r="8" fill="#3586ff"/>`;
+    if (confirm("러닝을 종료하고 기록을 저장하시겠습니까?")) {
+        isRunning = false; 
+        isPaused = false;
+        clearInterval(timerId);
+        
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
         }
+        
+        const finalDist = (totalDistance / 1000).toFixed(2);
+        
+        const pathData = userPathLines.map(line => {
+            return line.getLatLngs().map(ll => [ll.lat, ll.lng]);
+        });
+
+        // ★ 불러와서 뛰었던 목표 코스 데이터 추출
+        const targetRouteRaw = localStorage.getItem('currentRunRoute');
+        const targetPathData = targetRouteRaw ? JSON.parse(targetRouteRaw) : null;
+
+        const record = {
+            id: Date.now(),
+            date: new Date().toLocaleString('ko-KR'),
+            timestamp: Date.now(),
+            dist: finalDist,
+            time: els.time ? els.time.innerText : "00:00",
+            pace: els.pace ? els.pace.innerText : "-'--\"",
+            cal: els.cal ? els.cal.innerText : "0",
+            path: pathData,           // 내가 실제 움직인 경로
+            targetPath: targetPathData // ★ 선택했던 목표 코스 경로
+        };
+
+        const historyRef = ref(db, `users/${currentUser.uid}/history`);
+        push(historyRef, record)
+            .then(() => {
+                alert(`러닝 기록이 성공적으로 저장되었습니다! (${finalDist} km)`);
+                window.location.href = 'run_record.html'; 
+            })
+            .catch((err) => {
+                alert("기록 저장 중 오류가 발생했습니다: " + err.message);
+            });
+    }
+}
+
+els.btnStopRun?.addEventListener('click', stopRun);
+els.btnStopPaused?.addEventListener('click', stopRun);
+
+const loadModal = document.getElementById('loadModal');
+
+els.btnLoad?.addEventListener('click', () => {
+    const list = JSON.parse(localStorage.getItem('myCourses') || "[]");
+    const listEl = document.getElementById('savedList');
+    if (!listEl) return;
+    listEl.innerHTML = ''; 
+
+    if (list.length === 0) {
+        listEl.innerHTML = '<li style="padding:20px;text-align:center;color:#999;">저장된 코스가 없습니다.<br>(코스 생성 화면에서 먼저 코스를 만들어보세요)</li>';
+    }
+
+    list.forEach(c => {
+        const li = document.createElement('li'); 
+        li.className = 'saved-item';
+        let d = "";
+        try {
+            const lats = c.path.map(p => p[0]), lngs = c.path.map(p => p[1]);
+            const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+            const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+            const latRange = maxLat - minLat || 0.001, lngRange = maxLng - minLng || 0.001;
+            
+            c.path.forEach((p, i) => { 
+                const y = 50 - ((p[0] - minLat) / latRange) * 50; 
+                const x = ((p[1] - minLng) / lngRange) * 50; 
+                d += `${i===0?'M':'L'} ${x} ${y} `; 
+            });
+        } catch(e) { d = "M 25 25 L 25 25"; }
 
         li.innerHTML = `
-            <div class="record-info">
-                <div class="r-date">${dateStr}</div>
-                <div class="r-dist">${rec.dist || '0.00'} km</div>
-                <div class="r-time">${rec.time || '00:00'}</div>
-                <div class="r-pace" style="text-align:right;">${rec.pace || "-'--\""} /km</div>
+            <div>
+                <div style="font-weight:bold; font-size:16px;">${c.name}</div>
+                <div style="font-size:13px;color:#888;">${c.dist}</div>
             </div>
-            <svg class="record-map-preview" viewBox="-5 -5 70 70">
-                ${svgContent}
+            <svg class="mini-map" viewBox="-5 -5 60 60">
+                <path d="${d}" fill="none" stroke="#3586ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-
-        li.addEventListener('click', () => openPopup(rec));
+        
+        li.onclick = () => {
+            localStorage.setItem('currentRunRoute', JSON.stringify(c.path));
+            localStorage.setItem('currentRunDist', c.dist.replace(' km',''));
+            checkLocalStorage();
+            if (loadModal) loadModal.classList.add('hidden');
+        };
         listEl.appendChild(li);
     });
-}
-
-// [팝업 모달 지도 - 목표 파란색 코스 전체를 화면에 맞춰 축소 노출]
-const modal = document.getElementById('recordModal');
-
-function openPopup(rec) {
-    currentRecord = rec;
     
-    const d = new Date(rec.timestamp || rec.id);
-    
-    const popupDate = document.getElementById('popupDate');
-    if (popupDate) popupDate.innerText = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    
-    const popupTime = document.getElementById('popupTime');
-    if (popupTime) popupTime.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    const popupDist = document.getElementById('popupDist');
-    if (popupDist) popupDist.innerText = rec.dist || '0.00';
-    
-    const popupDuration = document.getElementById('popupDuration');
-    if (popupDuration) popupDuration.innerText = rec.time || '00:00';
-    
-    const popupPace = document.getElementById('popupPace');
-    if (popupPace) popupPace.innerText = rec.pace || "-'--\"";
-    
-    const popupCal = document.getElementById('popupCal');
-    if (popupCal) popupCal.innerText = rec.cal || '0';
-    
-    const popupAvgSpeed = document.getElementById('popupAvgSpeed');
-    if (popupAvgSpeed) {
-        if (rec.dist && rec.time) {
-            const parts = rec.time.split(':');
-            const totalHours = (parseInt(parts[0] || 0) * 60 + parseInt(parts[1] || 0)) / 60;
-            const avgS = totalHours > 0 ? (parseFloat(rec.dist) / totalHours).toFixed(1) : "0.0";
-            popupAvgSpeed.innerText = avgS;
-        } else {
-            popupAvgSpeed.innerText = "0.0";
-        }
-    }
+    if (loadModal) loadModal.classList.remove('hidden');
+});
 
-    if (modal) modal.classList.remove('hidden');
-
-    setTimeout(() => {
-        const mapContainer = document.getElementById('popupMap');
-        if (!mapContainer) return;
-
-        if (!popupMap) {
-            popupMap = L.map('popupMap', { 
-                zoomControl: false, 
-                attributionControl: false
-            });
-            
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                maxZoom: 19 
-            }).addTo(popupMap);
-        }
-        
-        if (popupPolyline) popupMap.removeLayer(popupPolyline);
-        if (userPolyline) popupMap.removeLayer(userPolyline);
-
-        const targetPts = extractPoints(rec.targetPath);
-        const userPts = extractPoints(rec.path);
-
-        // 표시할 메인 코스 좌표 결정
-        const mainCoursePts = targetPts.length >= 2 ? targetPts : userPts;
-
-        // 1) 목표 코스선 (선명한 파란색 라인)
-        if (targetPts.length >= 2) {
-            popupPolyline = L.polyline(targetPts, { 
-                color: '#3586ff', 
-                weight: 6, 
-                lineCap: 'round', 
-                lineJoin: 'round',
-                opacity: 0.9
-            }).addTo(popupMap);
-        }
-
-        // 2) 실제 이동 경로가 존재하면 위에 겹쳐서 표시 (빨간색 라인)
-        if (userPts.length >= 2) {
-            userPolyline = L.polyline(userPts, { 
-                color: '#ff4d4d', 
-                weight: 5, 
-                lineCap: 'round', 
-                lineJoin: 'round' 
-            }).addTo(popupMap);
-        }
-
-        // ★ 핵심: 파란색 전체 코스선이 미니맵 상자에 꽉 차고 한눈에 쏙 들어오도록 비율 자동 조정
-        if (mainCoursePts.length >= 2) {
-            popupMap.fitBounds(L.polyline(mainCoursePts).getBounds(), { 
-                padding: [35, 35]
-            });
-        } else if (mainCoursePts.length === 1) {
-            popupMap.setView(mainCoursePts[0], 16);
-        } else {
-            popupMap.setView([37.5665, 126.9780], 15);
-        }
-        
-        popupMap.invalidateSize();
-    }, 200);
-}
-
-function closePopup() {
-    if (modal) modal.classList.add('hidden');
-}
-
-function deleteRecord() {
-    if (!currentRecord || !currentUser) return;
-
-    if (confirm("이 기록을 클라우드에서 완전히 삭제하시겠습니까?")) {
-        const recordRef = ref(db, `users/${currentUser.uid}/history/${currentRecord.firebaseKey}`);
-        
-        remove(recordRef).then(() => {
-            alert("기록이 삭제되었습니다.");
-            closePopup();
-            loadRecordsAndRender(currentUser.uid);
-        }).catch(err => {
-            alert("삭제 실패: " + err.message);
-        });
-    }
-}
-
-function shareRecord() {
-    if (!currentRecord) return;
-    sessionStorage.setItem('shareData', JSON.stringify(currentRecord));
-    window.location.href = 'upload.html';
-}
+document.getElementById('closeLoadBtn')?.addEventListener('click', () => {
+    if (loadModal) loadModal.classList.add('hidden');
+});
