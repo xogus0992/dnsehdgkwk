@@ -3,8 +3,8 @@ import { ref, push } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-d
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN RUNNING LOGIC (FINAL v2.5 - Fixed Map Tile & Navigation)
-   - Map Tile: OpenStreetMap CartoDB Voyager (CORS/도메인 문제 완벽 해결)
+   POKERUN RUNNING LOGIC (FINAL v2.6 - Pure OSM No-Key Navigation)
+   - Map Tile: Standard OpenStreetMap (100% Free & No API Key Required)
    - Target Course: LocalStorage (Gray Dashed Line)
    - User Track: Realtime GPS (Red Solid Line & Moving Marker)
    - Database: Firebase Realtime Database ('users/{uid}/history')
@@ -68,14 +68,13 @@ window.addEventListener('load', () => {
     });
 });
 
-// [2. 지도 생성 및 오픈소스 타일 적용]
+// [2. 지도 생성 및 완전 무료 OpenStreetMap 표준 타일 적용]
 function initMap() {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 17);
     
-    // API 키나 도메인 승인이 필요 없는 고성능 타일 레이어
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // ★ API 키가 절대로 필요 없는 100% 무료 OpenStreetMap 타일 서버
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     
