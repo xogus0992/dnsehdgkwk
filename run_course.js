@@ -3,15 +3,12 @@ import { ref, push, onValue, remove, get } from "https://www.gstatic.com/firebas
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-    POKERUN MAIN LOGIC (FINAL v16 - Firebase Integrated)
-    - Mobile Search Fix: Added 'click' listener to inputs
-    - Storage: LocalStorage (Temp) -> Firebase (Permanent)
+    POKERUN MAIN LOGIC (v17 - Fixed Location & Search Overlay)
     ============================================================ */
 
 const KEY_ORS = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijk3NTU2OTk1ODQ1NjQ0YWE5NzA3ZTM1OWExMGE3NTU4IiwiaCI6Im11cm11cjY0In0=';
 
 const ALL_LANDMARKS = [];
-// 데이터 로드 대기 (HTML 상단에서 로드되었다고 가정)
 if (typeof STATIONS_DATA !== 'undefined') ALL_LANDMARKS.push(...STATIONS_DATA);
 if (typeof CAMPUS_DATA !== 'undefined') ALL_LANDMARKS.push(...CAMPUS_DATA);
 
@@ -21,20 +18,21 @@ let userLoc = { lat: 37.5665, lng: 126.9780 };
 let startPoint = null;
 let endPoint = null;
 let routeCoords = [];
-let rotationCount = 0; // 모양 변경용 인덱스
-let currentUser = null; // Firebase User
-let ps; // 카카오 Places 객체 전역 선언
+let rotationCount = 0;
+let currentUser = null;
+let ps;
 
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadModal = document.getElementById('loadModal'); 
 const goalInput = document.getElementById('goalDistInput');
+const searchOverlay = document.getElementById('searchOverlay');
+const searchSuggestions = document.getElementById('searchSuggestions');
 
 // --- INITIALIZATION ---
 window.addEventListener('load', () => {
     initMap();
     getUserLocation();
     
-    // Auth Check
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -48,26 +46,59 @@ window.addEventListener('load', () => {
 function initMap() {
     map = L.map('map', { zoomControl: false }).setView([userLoc.lat, userLoc.lng], 14);
     
-    // 오픈스트리트맵(OSM)으로 변경 (인증키 및 도메인 제약 없음)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
     kakao.maps.load(() => {
         ps = new kakao.maps.services.Places();
-        setupAutocomplete('startInput', 'startSuggestions', true);
-        setupAutocomplete('endInput', 'endSuggestions', false);
+        setupAutocomplete('startInput', true);
+        setupAutocomplete('endInput', false);
     });
 }
 
-function getUserLocation() {
+function getUserLocation(callback) {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            map.setView([userLoc.lat, userLoc.lng], 15);
-        }, err => console.log(err));
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                map.setView([userLoc.lat, userLoc.lng], 15);
+                if (callback) callback(userLoc);
+            },
+            err => {
+                console.warn("GPS 수신 실패:", err);
+                if (callback) callback(null);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    } else {
+        if (callback) callback(null);
     }
 }
+
+// 내 위치 버튼 이벤트
+document.getElementById('myLocationBtn')?.addEventListener('click', () => {
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+
+    getUserLocation((loc) => {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+
+        if (!loc) {
+            alert("내 위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
+            return;
+        }
+
+        const startIn = document.getElementById('startInput');
+        if (startIn) startIn.value = "내 위치 (GPS)";
+
+        startPoint = { lat: loc.lat, lng: loc.lng, name: "내 위치" };
+
+        const startBadge = document.getElementById('startDistBadge');
+        if (startBadge) startBadge.style.display = 'none';
+
+        setMapMarker('start', loc.lat, loc.lng, "내 위치");
+    });
+});
 
 // 리셋 버튼
 document.getElementById('resetBtn')?.addEventListener('click', () => {
@@ -107,25 +138,15 @@ function setMapMarker(type, lat, lng, name) {
     }
 }
 
-// --- SEARCH LOGIC ---
-document.getElementById('myLocationBtn')?.addEventListener('click', () => {
-    getUserLocation();
-    const startIn = document.getElementById('startInput');
-    if(startIn) startIn.value = "내 위치 (GPS)";
-    startPoint = { lat: userLoc.lat, lng: userLoc.lng, name: "내 위치" };
-    const startBadge = document.getElementById('startDistBadge');
-    if(startBadge) startBadge.style.display = 'none';
-    setMapMarker('start', userLoc.lat, userLoc.lng, "내 위치");
-});
-
-function setupAutocomplete(inputId, listId, isStart) {
+// --- SEARCH & AUTOCOMPLETE ---
+function setupAutocomplete(inputId, isStart) {
     const input = document.getElementById(inputId);
-    const list = document.getElementById(listId);
-    
-    if (!input) return; // input이 없으면 실행 중단
+    if (!input) return;
 
     const openHandler = () => {
-        if(input.value.trim() === "" && list) showLandmarkRecommendations(list, isStart);
+        if (input.value.trim() === "") {
+            showLandmarkRecommendations(isStart);
+        }
     };
 
     input.addEventListener('focus', openHandler);
@@ -139,32 +160,51 @@ function setupAutocomplete(inputId, listId, isStart) {
                 return lm.name.includes(val) && dist <= 30.0;
             }).map(lm => ({...lm, source: 'landmark', dist: calcDist(userLoc.lat, userLoc.lng, lm.lat, lm.lng)}));
 
-            const searchOptions = { location: new kakao.maps.LatLng(userLoc.lat, userLoc.lng), radius: 20000, sort: kakao.maps.services.SortBy.DISTANCE };
-            ps.keywordSearch(val, (data, status) => {
-                let kakaoMatches = [];
-                if (status === kakao.maps.services.Status.OK) {
-                    kakaoMatches = data.map(item => ({
-                        name: item.place_name, address: item.address_name, lat: parseFloat(item.y), lng: parseFloat(item.x),
-                        source: 'kakao', dist: calcDist(userLoc.lat, userLoc.lng, parseFloat(item.y), parseFloat(item.x))
-                    }));
-                }
-                if (list) mergeAndRenderList(list, localMatches, kakaoMatches, isStart);
-            }, searchOptions);
+            if (ps) {
+                const searchOptions = { 
+                    location: new kakao.maps.LatLng(userLoc.lat, userLoc.lng), 
+                    radius: 20000, 
+                    sort: kakao.maps.services.SortBy.DISTANCE 
+                };
+                ps.keywordSearch(val, (data, status) => {
+                    let kakaoMatches = [];
+                    if (status === kakao.maps.services.Status.OK) {
+                        kakaoMatches = data.map(item => ({
+                            name: item.place_name, 
+                            address: item.address_name, 
+                            lat: parseFloat(item.y), 
+                            lng: parseFloat(item.x),
+                            source: 'kakao', 
+                            dist: calcDist(userLoc.lat, userLoc.lng, parseFloat(item.y), parseFloat(item.x))
+                        }));
+                    }
+                    mergeAndRenderList(localMatches, kakaoMatches, isStart);
+                }, searchOptions);
+            } else {
+                renderList(localMatches, isStart);
+            }
         } else {
-            if (list) showLandmarkRecommendations(list, isStart);
-        }
-    });
-
-    // 외부 클릭 시 닫기 (안전하게 list 존재 여부 확인)
-    document.addEventListener('click', (e) => {
-        if (list && e.target !== input && e.target !== list && !list.contains(e.target)) {
-            list.classList.remove('active');
+            showLandmarkRecommendations(isStart);
         }
     });
 }
 
-function showLandmarkRecommendations(listEl, isStart) {
-    if (!listEl) return;
+// 추천/검색 오버레이 닫기 (외부 클릭 시)
+document.addEventListener('click', (e) => {
+    const startIn = document.getElementById('startInput');
+    const endIn = document.getElementById('endInput');
+    if (
+        searchOverlay && 
+        e.target !== startIn && 
+        e.target !== endIn && 
+        !searchOverlay.contains(e.target)
+    ) {
+        searchOverlay.classList.add('hidden');
+    }
+});
+
+function showLandmarkRecommendations(isStart) {
+    if (!searchSuggestions) return;
     const candidates = ALL_LANDMARKS.map(lm => ({ ...lm, source: 'landmark', dist: calcDist(userLoc.lat, userLoc.lng, lm.lat, lm.lng) }));
     const filtered = candidates.filter(lm => lm.dist <= 30.0);
     
@@ -173,49 +213,49 @@ function showLandmarkRecommendations(listEl, isStart) {
         if(aPri !== bPri) return aPri - bPri; return a.dist - b.dist;
     });
 
-    if(filtered.length > 0) renderList(listEl, filtered, isStart);
-    else listEl.classList.remove('active');
+    if (filtered.length > 0) renderList(filtered, isStart);
+    else if (searchOverlay) searchOverlay.classList.add('hidden');
 }
 
-function mergeAndRenderList(listEl, localItems, kakaoItems, isStart) {
-    if (!listEl) return;
+function mergeAndRenderList(localItems, kakaoItems, isStart) {
     const combined = [...localItems, ...kakaoItems];
     combined.sort((a, b) => {
         const aPri = (a.source === 'landmark' && a.dist <= 5.0) ? 0 : 1;
         const bPri = (b.source === 'landmark' && b.dist <= 5.0) ? 0 : 1;
         if(aPri !== bPri) return aPri - bPri; return a.dist - b.dist;
     });
-    renderList(listEl, combined, isStart);
+    renderList(combined, isStart);
 }
 
-function renderList(listEl, items, isStart) {
-    if (!listEl) return;
-    listEl.innerHTML = ''; 
-    listEl.classList.add('active'); 
+function renderList(items, isStart) {
+    if (!searchSuggestions) return;
+    searchSuggestions.innerHTML = ''; 
+    if (searchOverlay) searchOverlay.classList.remove('hidden'); 
     
-    if(items.length === 0) { 
-        listEl.innerHTML = '<li class="suggestion-item" style="color:#999">검색 결과 없음</li>'; 
+    if (items.length === 0) { 
+        searchSuggestions.innerHTML = '<li class="suggestion-item" style="color:#999">검색 결과 없음</li>'; 
         return; 
     }
 
     items.forEach(item => {
         const isPriority = (item.source === 'landmark' && item.dist <= 5.0);
-        const li = document.createElement('li'); li.className = 'suggestion-item';
+        const li = document.createElement('li'); 
+        li.className = 'suggestion-item';
         const tag = isPriority ? `<span class="landmark-tag">추천</span>` : ``;
-        const addr = item.address || (item.type==='station'?'지하철역':'캠퍼스');
+        const addr = item.address || (item.type === 'station' ? '지하철역' : '캠퍼스');
         
         li.innerHTML = `<div><div class="sug-name">${tag}${item.name}</div><div class="sug-addr">${addr}</div></div><div class="sug-dist">${item.dist.toFixed(1)}km</div>`;
         
         li.addEventListener('click', (e) => {
-             e.stopPropagation();
-             selectPlace(item, isStart, listEl);
+            e.stopPropagation();
+            selectPlace(item, isStart);
         });
         
-        listEl.appendChild(li);
+        searchSuggestions.appendChild(li);
     });
 }
 
-function selectPlace(place, isStart, listEl) {
+function selectPlace(place, isStart) {
     const input = document.getElementById(isStart ? 'startInput' : 'endInput');
     const badge = document.getElementById(isStart ? 'startDistBadge' : 'endDistBadge');
     
@@ -226,7 +266,7 @@ function selectPlace(place, isStart, listEl) {
         badge.style.display = 'block';
     }
     
-    if (listEl) listEl.classList.remove('active');
+    if (searchOverlay) searchOverlay.classList.add('hidden');
 
     if (isStart) { 
         startPoint = place; 
@@ -236,7 +276,7 @@ function selectPlace(place, isStart, listEl) {
         setMapMarker('end', place.lat, place.lng, place.name); 
     }
     
-    if(startPoint && endPoint) {
+    if (startPoint && endPoint) {
         const d = calcDist(startPoint.lat, startPoint.lng, endPoint.lat, endPoint.lng);
         const searchDistDisp = document.getElementById('searchDistDisplay');
         if (searchDistDisp) searchDistDisp.innerText = d.toFixed(2) + ' km';
@@ -245,12 +285,12 @@ function selectPlace(place, isStart, listEl) {
 
 // --- COURSE GENERATION ---
 document.getElementById('createCourseBtn')?.addEventListener('click', async () => {
-    if(!startPoint) {
+    if (!startPoint) {
         startPoint = { ...userLoc, name: "내 위치" };
         setMapMarker('start', userLoc.lat, userLoc.lng, "내 위치");
     }
     let goalKm = parseFloat(goalInput?.value) || 3.0;
-    if(goalKm <= 0) goalKm = 3.0;
+    if (goalKm <= 0) goalKm = 3.0;
 
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
@@ -367,11 +407,9 @@ function createWaypoints(goalKm, scale) {
 }
 
 function getIntermediatePoint(start, end, fraction) {
-    const latDiff = end.lat - start.lat;
-    const lngDiff = end.lng - start.lng;
     return {
-        lat: start.lat + (latDiff * fraction),
-        lng: start.lng + (lngDiff * fraction)
+        lat: start.lat + ((end.lat - start.lat) * fraction),
+        lng: start.lng + ((end.lng - start.lng) * fraction)
     };
 }
 
@@ -390,22 +428,22 @@ async function fetchRouteData(coords) {
             body: JSON.stringify({ coordinates: coords })
         });
         
-        if(!res.ok) return null;
+        if (!res.ok) return null;
         const data = await res.json();
         const lineCoords = data.features[0].geometry.coordinates.map(c => [c[1], c[0]]);
         let distM = 0;
-        for(let i=0; i<lineCoords.length-1; i++) distM += map.distance(lineCoords[i], lineCoords[i+1]);
+        for (let i = 0; i < lineCoords.length - 1; i++) distM += map.distance(lineCoords[i], lineCoords[i+1]);
         return { coords: lineCoords, dist: (distM / 1000).toFixed(2) };
     } catch(e) { return null; }
 }
 
 function drawPolyline(coords) {
-    if(polylineLayer) map.removeLayer(polylineLayer);
+    if (polylineLayer) map.removeLayer(polylineLayer);
     polylineLayer = L.polyline(coords, { color: '#3586ff', weight: 6, opacity: 0.8 }).addTo(map);
     const bounds = polylineLayer.getBounds();
-    if(startMarker) bounds.extend(startMarker.getLatLng());
-    if(endMarker) bounds.extend(endMarker.getLatLng());
-    map.fitBounds(bounds, { padding:[40,40] });
+    if (startMarker) bounds.extend(startMarker.getLatLng());
+    if (endMarker) bounds.extend(endMarker.getLatLng());
+    map.fitBounds(bounds, { padding: [40, 40] });
 }
 
 // Math Utils
@@ -427,7 +465,6 @@ function getBearing(start, end) {
 }
 function deg2rad(d) { return d * (Math.PI/180); }
 function rad2deg(r) { return r * (180/Math.PI); }
-
 
 // --- SAVED LIST ---
 function renderSavedCourses() {
