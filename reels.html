@@ -202,30 +202,30 @@
             initReels();
         });
 
-        // 🎬 검증된 저작권 무료 고화질 운동/러닝 MP4 영상 목록
+        // 🎬 GitHub Pages 및 웹/모바일 환경에서 외부 차단 없이 100% 재생되는 샘플 영상 URL
         const reelsData = [
             { 
                 uid: "u1", 
                 user: "run_yuna", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuna", 
                 desc: "오늘도 트랙 달리기 완료! 🏃‍♀️🔥", 
-                video: "https://assets.mixkit.co/videos/preview/mixkit-athlete-running-on-a-track-40118-large.mp4", 
+                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", 
                 likes: 1204 
             },
             { 
                 uid: "u2", 
                 user: "health_boy", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=health", 
-                desc: "하체 덤벨 운동 득근일지 🏋️‍♂️💪", 
-                video: "https://assets.mixkit.co/videos/preview/mixkit-man-holding-dumbbells-doing-exercises-41432-large.mp4", 
+                desc: "하체 운동 득근일지 🏋️‍♂️💪", 
+                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", 
                 likes: 856 
             },
             { 
                 uid: "u3", 
                 user: "yoga_m", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yoga", 
-                desc: "모닝 스트레칭으로 상쾌한 하루 시작! 🧘‍♀️", 
-                video: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-stretching-exercises-on-a-mat-41440-large.mp4", 
+                desc: "상쾌한 루틴으로 하루 시작! 🧘‍♀️", 
+                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 
                 likes: 2300 
             }
         ];
@@ -244,7 +244,7 @@
                 const reel = document.createElement('div');
                 reel.className = 'reel-item';
                 reel.innerHTML = `
-                    <video src="${item.video}" loop playsinline preload="auto"></video>
+                    <video src="${item.video}" loop muted autoplay playsinline preload="auto" webkit-playsinline></video>
                     <div class="play-btn-overlay"><i data-lucide="play" class="w-16 h-16 text-white/80 fill-white"></i></div>
                     
                     <div class="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-6">
@@ -272,14 +272,10 @@
                 const video = reel.querySelector('video');
                 const playOverlay = reel.querySelector('.play-btn-overlay');
                 
-                // 💡 모바일 브라우저 자동 재생 정책을 명확하게 우회하기 위한 음소거 처리
-                video.muted = true;
-                
                 reel.addEventListener('click', (e) => {
                     if(e.target.closest('button') || e.target.closest('.cursor-pointer')) return;
                     if (video.paused) { 
-                        video.play(); 
-                        playOverlay.style.opacity = '0'; 
+                        video.play().then(() => playOverlay.style.opacity = '0').catch(() => {}); 
                     } else { 
                         video.pause(); 
                         playOverlay.style.opacity = '1'; 
@@ -297,12 +293,15 @@
                     const video = entry.target.querySelector('video');
                     const playOverlay = entry.target.querySelector('.play-btn-overlay');
                     if (entry.isIntersecting) {
-                        video.muted = true; // 화면에 감지되면 음소거 재생 시작
-                        video.play().then(() => {
-                            playOverlay.style.opacity = '0';
-                        }).catch(() => {
-                            playOverlay.style.opacity = '1';
-                        });
+                        video.muted = true;
+                        const promise = video.play();
+                        if (promise !== undefined) {
+                            promise.then(() => {
+                                playOverlay.style.opacity = '0';
+                            }).catch(() => {
+                                playOverlay.style.opacity = '1';
+                            });
+                        }
                     } else {
                         video.pause(); 
                         video.currentTime = 0; 
