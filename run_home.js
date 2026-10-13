@@ -1,12 +1,13 @@
 import { db, auth } from './firebase-service.js';
-import { ref, get, child } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+import { ref, get, child, set } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 /* ============================================================
-   POKERUN HOME LOGIC (FINAL v2.3 Firebase + Modules)
+   POKERUN HOME LOGIC (FINAL v2.4 Firebase + Modules + Missions)
    - Connection: Firebase Realtime Database
    - Calendar: Fetches user history and aggregates by date.
-   - Feed: Uses dummy data (since friend system DB is not set up)
+   - Feed: Uses dummy data
+   - Missions: Distance-based running missions with coins
    ============================================================ */
 
 const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
@@ -15,16 +16,35 @@ const KEY_VWORLD = '0E603DDF-E18F-371F-96E8-ECD87D4CA088';
 let currDate = new Date();
 let selectedDay = null; 
 let currentUser = null;
-let userRecords = []; // 메모리에 저장된 전체 기록 (매번 요청 방지)
+let userRecords = []; // 메모리에 저장된 전체 기록
 
-// Dummy Data (친구 피드용 - 실제 DB 구현 시 이 부분만 교체하면 됨)
+// 미션 및 코인 변수
+let userCoins = 0;
+let claimedRunMissions = {};
+let userRunStats = { todayDist: 0, totalDist: 0, todayRunCount: 0 };
+
+// 🏃‍♂️ 거리별 난이도 10개 러닝 미션 (3km, 5km, 10km, 15km, 30km, 50km, 100km 등)
+const RUNNING_MISSIONS = [
+    { id: 'rm1', title: '[초급] 첫 달리기', desc: '오늘 1km 이상 러닝 달성', reward: 1000, check: (s) => s.todayDist >= 1.0 },
+    { id: 'rm2', title: '[초급] 3K 도전', desc: '오늘 3km 이상 러닝 달성', reward: 1200, check: (s) => s.todayDist >= 3.0 },
+    { id: 'rm3', title: '[초급] 5K 러너', desc: '오늘 5km 이상 러닝 달성', reward: 1500, check: (s) => s.todayDist >= 5.0 },
+    { id: 'rm4', title: '[중급] 10K 러너', desc: '오늘 10km 이상 러닝 달성', reward: 2000, check: (s) => s.todayDist >= 10.0 },
+    { id: 'rm5', title: '[중급] 15K 누적', desc: '누적 러닝 거리 15km 달성', reward: 2500, check: (s) => s.totalDist >= 15.0 },
+    { id: 'rm6', title: '[중급] 하프 도전', desc: '오늘 15km 이상 러닝 달성', reward: 3000, check: (s) => s.todayDist >= 15.0 },
+    { id: 'rm7', title: '[상급] 30K 누적', desc: '누적 러닝 거리 30km 달성', reward: 3500, check: (s) => s.totalDist >= 30.0 },
+    { id: 'rm8', title: '[상급] 50K 누적', desc: '누적 러닝 거리 50km 달성', reward: 4000, check: (s) => s.totalDist >= 50.0 },
+    { id: 'rm9', title: '[마스터] 80K 누적', desc: '누적 러닝 거리 80km 달성', reward: 4500, check: (s) => s.totalDist >= 80.0 },
+    { id: 'rm10', title: '[마스터] 100K 전설', desc: '누적 러닝 거리 100km 달성', reward: 5000, check: (s) => s.totalDist >= 100.0 }
+];
+
+// Dummy Data (친구 피드용)
 const DUMMY_FRIENDS = [
     { id: 1, name: "김철수", date: "어제", dist: "5.12", time: "32:10", pace: "6'15\"", cadence: "170", path: [[37.5665, 126.9780], [37.5675, 126.9800], [37.5655, 126.9820]] },
     { id: 2, name: "RunQueen", date: "2일 전", dist: "10.05", time: "55:40", pace: "5'32\"", cadence: "180", path: [[37.5547, 126.9707], [37.5560, 126.9720], [37.5530, 126.9750]] },
 ];
 
 window.addEventListener('load', () => {
-    // 1. 친구 피드 먼저 렌더링 (데이터 없어도 보임)
+    // 1. 친구 피드 먼저 렌더링
     renderFriendFeed();
 
     // 2. 인증 체크 후 내 기록 로드
@@ -32,8 +52,8 @@ window.addEventListener('load', () => {
         if (user) {
             currentUser = user;
             loadUserHistory(user.uid);
+            loadUserCoinsAndMissions(user.uid);
         } else {
-            // 비로그인 상태면 캘린더 비움
             document.getElementById('currentMonthLabel').innerText = "Login Required";
         }
     });
@@ -56,6 +76,15 @@ window.addEventListener('load', () => {
         renderCalendar(); 
         closeDailyRecord();
     });
+
+    // 미션 모달 이벤트
+    document.getElementById('btnOpenMission').addEventListener('click', () => {
+        renderMissions();
+        document.getElementById('missionModal').classList.remove('hidden');
+    });
+    document.getElementById('closeMissionBtn').addEventListener('click', () => {
+        document.getElementById('missionModal').classList.add('hidden');
+    });
 });
 
 // --- 1. Firebase 데이터 로드 ---
@@ -64,15 +93,42 @@ function loadUserHistory(uid) {
     get(child(dbRef, `users/${uid}/history`)).then((snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.val();
-            // 객체를 배열로 변환
             userRecords = Object.values(data);
         } else {
             userRecords = [];
         }
+        calculateRunStats(); // 러닝 통계 계산 (미션용)
         renderCalendar(); // 데이터 로드 완료 후 캘린더 그리기
     }).catch((error) => {
         console.error("Home Data Load Error:", error);
     });
+}
+
+// 러닝 통계 집계 (오늘 거리 및 누적 거리)
+function calculateRunStats() {
+    const today = new Date();
+    let todayD = 0;
+    let totalD = 0;
+    let todayCount = 0;
+
+    userRecords.forEach(rec => {
+        const d = new Date(rec.id);
+        const dist = parseFloat(rec.dist || 0);
+        totalD += dist;
+
+        if(d.getFullYear() === today.getFullYear() && 
+           d.getMonth() === today.getMonth() && 
+           d.getDate() === today.getDate()) {
+            todayD += dist;
+            todayCount++;
+        }
+    });
+
+    userRunStats = {
+        todayDist: todayD,
+        totalDist: totalD,
+        todayRunCount: todayCount
+    };
 }
 
 // --- 2. 캘린더 로직 ---
@@ -82,13 +138,12 @@ function renderCalendar() {
     
     document.getElementById('currentMonthLabel').innerText = `${year}. ${String(month+1).padStart(2,'0')}`;
 
-    const firstDay = new Date(year, month, 1).getDay(); // 이번 달 1일의 요일 (0:일 ~ 6:토)
-    const lastDate = new Date(year, month + 1, 0).getDate(); // 이번 달 마지막 날짜
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
 
-    // 이번 달 기록 집계
     const dailySum = {};
     userRecords.forEach(rec => {
-        const d = new Date(rec.id); // rec.id는 timestamp
+        const d = new Date(rec.id);
         if(d.getFullYear() === year && d.getMonth() === month) {
             const dayKey = d.getDate();
             if(!dailySum[dayKey]) dailySum[dayKey] = 0;
@@ -99,30 +154,25 @@ function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
     grid.innerHTML = '';
 
-    // 앞쪽 빈 칸
     for(let i=0; i<firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
         grid.appendChild(empty);
     }
 
-    // 날짜 생성
     const today = new Date();
     for(let day=1; day<=lastDate; day++) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
         
-        // 오늘 표시
         if(year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
             cell.classList.add('today');
         }
 
-        // 선택된 날짜 표시
         if(selectedDay === day) {
             cell.classList.add('selected-day');
         }
 
-        // 뛴 거리 표시
         let distHtml = '';
         if(dailySum[day]) {
             distHtml = `<div class="day-dist">${dailySum[day].toFixed(1)}</div>`;
@@ -130,25 +180,22 @@ function renderCalendar() {
 
         cell.innerHTML = `<span class="day-num">${day}</span>${distHtml}`;
         
-        // 클릭 이벤트
         cell.onclick = () => {
             if(selectedDay === day) {
-                // 이미 선택된거 누르면 닫기
                 selectedDay = null;
                 closeDailyRecord();
             } else {
-                // 새로운 날짜 선택
                 selectedDay = day;
                 openDailyRecord(day, year, month);
             }
-            renderCalendar(); // UI 갱신 (선택 스타일 적용)
+            renderCalendar();
         };
 
         grid.appendChild(cell);
     }
 }
 
-// --- 3. 일별 상세 기록 (SVG 포함) ---
+// --- 3. 일별 상세 기록 ---
 function openDailyRecord(day, year, month) {
     const container = document.getElementById('dailyRecordSection');
     const label = document.getElementById('selectedDateLabel');
@@ -157,13 +204,11 @@ function openDailyRecord(day, year, month) {
     label.innerText = `${month+1}월 ${day}일의 활동`;
     listEl.innerHTML = '';
     
-    // 메모리에 있는 데이터에서 필터링
     const targetRecords = userRecords.filter(rec => {
         const d = new Date(rec.id);
         return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     });
 
-    // 최신순 정렬
     targetRecords.sort((a,b) => b.id - a.id);
 
     if(targetRecords.length === 0) {
@@ -173,11 +218,9 @@ function openDailyRecord(day, year, month) {
             const li = document.createElement('li');
             li.className = 'record-item'; 
 
-            // SVG 미니맵 경로 생성 (run_record.js와 동일 로직)
             let svgPath = "";
             let allPoints = [];
             if(rec.path) {
-                // 중첩 배열 평탄화
                 if(Array.isArray(rec.path)) {
                     rec.path.forEach(seg => {
                         if(Array.isArray(seg)) allPoints.push(...seg);
@@ -203,7 +246,6 @@ function openDailyRecord(day, year, month) {
                  svgPath = "M 30 30 L 30 30";
             }
 
-            // 시간 포맷 (오전/오후 HH:MM)
             const timeStr = new Date(rec.id).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
             li.innerHTML = `
@@ -216,8 +258,6 @@ function openDailyRecord(day, year, month) {
                     <path d="${svgPath}" fill="none" stroke="#3586ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             `;
-            // 클릭 시 run_record.html의 상세 팝업을 띄우려면 복잡해지므로, 
-            // 여기서는 단순 리스트 확인 용도로만 둡니다.
             
             listEl.appendChild(li);
         });
@@ -258,7 +298,6 @@ function renderFriendFeed() {
 
         listEl.appendChild(li);
 
-        // Leaflet 지도 초기화 (타임아웃으로 DOM 생성 후 실행)
         setTimeout(() => {
             const mapId = `friendMap${index}`;
             const mapEl = document.getElementById(mapId);
@@ -270,10 +309,76 @@ function renderFriendFeed() {
                 L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${KEY_VWORLD}/Base/{z}/{y}/{x}.png`, { maxZoom: 19 }).addTo(fMap);
                 const polyline = L.polyline(friend.path, { color: '#3586ff', weight: 4 }).addTo(fMap);
                 fMap.fitBounds(polyline.getBounds(), { padding: [20,20] });
-                
-                // 지도 클릭 시 확대/이동 방지
                 fMap.dragging.disable();
             }
         }, 150);
     });
 }
+
+// --- 5. 미션 & 코인 로직 (Firebase) ---
+async function loadUserCoinsAndMissions(uid) {
+    if(!uid) return;
+    try {
+        const coinSnap = await get(child(ref(db), `users/${uid}/coins`));
+        userCoins = coinSnap.exists() ? coinSnap.val() : 0;
+        document.getElementById('userCoinDisplay').innerText = `🪙 ${userCoins.toLocaleString()}`;
+
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const missionSnap = await get(child(ref(db), `users/${uid}/claimedRunMissions/${todayStr}`));
+        claimedRunMissions = missionSnap.exists() ? missionSnap.val() : {};
+    } catch(e) { console.error("Coin/Mission Load Error:", e); }
+}
+
+function renderMissions() {
+    const listEl = document.getElementById('missionList');
+    if(!listEl) return;
+    listEl.innerHTML = '';
+
+    RUNNING_MISSIONS.forEach(m => {
+        const isCompleted = m.check(userRunStats);
+        const isClaimed = !!claimedRunMissions[m.id];
+
+        const li = document.createElement('li');
+        li.className = 'mission-item';
+
+        let btnHtml = '';
+        if (isClaimed) {
+            btnHtml = `<button class="btn-claim completed" disabled>완료됨</button>`;
+        } else if (isCompleted) {
+            btnHtml = `<button class="btn-claim" onclick="claimRunMission('${m.id}', ${m.reward})">보상 받기</button>`;
+        } else {
+            btnHtml = `<button class="btn-claim" disabled>진행 중</button>`;
+        }
+
+        li.innerHTML = `
+            <div class="m-info">
+                <div class="m-title">${m.title}</div>
+                <div class="m-desc">${m.desc}</div>
+                <div class="m-reward">+🪙 ${m.reward.toLocaleString()} 코인</div>
+            </div>
+            <div>${btnHtml}</div>
+        `;
+        listEl.appendChild(li);
+    });
+}
+
+window.claimRunMission = async (missionId, reward) => {
+    if(!currentUser) return;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    try {
+        userCoins += reward;
+        await set(ref(db, `users/${currentUser.uid}/coins`), userCoins);
+
+        claimedRunMissions[missionId] = true;
+        await set(ref(db, `users/${currentUser.uid}/claimedRunMissions/${todayStr}/${missionId}`), true);
+
+        document.getElementById('userCoinDisplay').innerText = `🪙 ${userCoins.toLocaleString()}`;
+        alert(`🎉 ${reward.toLocaleString()} 코인을 받았습니다!`);
+        renderMissions();
+    } catch(e) {
+        console.error("Claim Error:", e);
+    }
+};
