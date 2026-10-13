@@ -38,6 +38,12 @@
                     <div id="calendarGrid" class="days-grid"></div>
                 </div>
 
+                <!-- 🎯 러닝 미션 버튼 -->
+                <button id="btnOpenMission" class="mission-banner-btn">
+                    <span>🎯 러닝 미션 목록</span>
+                    <span class="coin-badge" id="userCoinDisplay">🪙 0</span>
+                </button>
+
                 <div id="dailyRecordSection" class="daily-record-container hidden">
                     <div class="section-header">
                         <span id="selectedDateLabel">날짜 선택</span>
@@ -53,7 +59,18 @@
                 <div class="feed-container">
                     <div class="feed-title">친구들의 활동</div>
                     <ul id="friendList" class="feed-list">
-                        </ul>
+                    </ul>
+                </div>
+
+                <!-- 🎯 러닝 미션 모달 -->
+                <div id="missionModal" class="modal hidden">
+                    <div class="modal-content small-content" style="max-height: 450px;">
+                        <div class="modal-header">
+                            <span>🎯 러닝 미션</span>
+                            <button class="close-btn" id="closeMissionBtn"><span class="material-icons">close</span></button>
+                        </div>
+                        <ul id="missionList" class="mission-list"></ul>
+                    </div>
                 </div>
 
             </div>
