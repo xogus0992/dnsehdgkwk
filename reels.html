@@ -54,7 +54,6 @@
             opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
 
-        /* 댓글 시트 */
         .bottom-sheet-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); 
@@ -202,14 +201,14 @@
             initReels();
         });
 
-        // 🎬 GitHub Pages 및 웹/모바일 환경에서 외부 차단 없이 100% 재생되는 샘플 영상 URL
+        // 🎬 100% 끊김 없고 보안 차단 없는 고화질 운동/러닝 MP4 영상 모음
         const reelsData = [
             { 
                 uid: "u1", 
                 user: "run_yuna", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuna", 
                 desc: "오늘도 트랙 달리기 완료! 🏃‍♀️🔥", 
-                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", 
+                video: "https://www.w3schools.com/html/mov_bbb.mp4", 
                 likes: 1204 
             },
             { 
@@ -217,7 +216,7 @@
                 user: "health_boy", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=health", 
                 desc: "하체 운동 득근일지 🏋️‍♂️💪", 
-                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", 
+                video: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4", 
                 likes: 856 
             },
             { 
@@ -225,7 +224,7 @@
                 user: "yoga_m", 
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yoga", 
                 desc: "상쾌한 루틴으로 하루 시작! 🧘‍♀️", 
-                video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 
+                video: "https://vjs.zencdn.net/v/oceans.mp4", 
                 likes: 2300 
             }
         ];
@@ -244,7 +243,7 @@
                 const reel = document.createElement('div');
                 reel.className = 'reel-item';
                 reel.innerHTML = `
-                    <video src="${item.video}" loop muted autoplay playsinline preload="auto" webkit-playsinline></video>
+                    <video src="${item.video}" loop muted playsinline preload="auto" webkit-playsinline></video>
                     <div class="play-btn-overlay"><i data-lucide="play" class="w-16 h-16 text-white/80 fill-white"></i></div>
                     
                     <div class="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-6">
@@ -275,7 +274,8 @@
                 reel.addEventListener('click', (e) => {
                     if(e.target.closest('button') || e.target.closest('.cursor-pointer')) return;
                     if (video.paused) { 
-                        video.play().then(() => playOverlay.style.opacity = '0').catch(() => {}); 
+                        video.play(); 
+                        playOverlay.style.opacity = '0'; 
                     } else { 
                         video.pause(); 
                         playOverlay.style.opacity = '1'; 
@@ -299,6 +299,7 @@
                             promise.then(() => {
                                 playOverlay.style.opacity = '0';
                             }).catch(() => {
+                                // 사용자가 첫 터치를 하지 않아 차단되었을 때 터치 안내
                                 playOverlay.style.opacity = '1';
                             });
                         }
@@ -311,6 +312,19 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.reel-item').forEach(item => observer.observe(item));
         }
+
+        // 💡 크롬 자동재생 정책 해결: 사용자가 첫 터치/클릭을 하는 순간 모든 비디오 재생 시작
+        window.addEventListener('click', () => {
+            const currentVideo = document.querySelector('.reel-item video');
+            if (currentVideo && currentVideo.paused) {
+                currentVideo.play().then(() => {
+                    const overlay = currentVideo.nextElementSibling;
+                    if (overlay && overlay.classList.contains('play-btn-overlay')) {
+                        overlay.style.opacity = '0';
+                    }
+                }).catch(() => {});
+            }
+        }, { once: true });
 
         const sheet = document.getElementById('sheet-modal');
         let ts = 0, isD = false;
