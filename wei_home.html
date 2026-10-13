@@ -36,10 +36,16 @@
                         </div>
                     </div>
 
+                    <!-- 🎯 미션 버튼 -->
+                    <button id="btnOpenMission" class="mission-banner-btn">
+                        <span>🎯 득근 미션 목록</span>
+                        <span class="coin-badge" id="userCoinDisplay">🪙 0</span>
+                    </button>
+
                     <div class="feed-section">
                         <div class="section-title">친구들의 득근 인증</div>
                         <ul id="friendFeedList" class="feed-list">
-                            </ul>
+                        </ul>
                     </div>
 
                     <div style="height: 100px;"></div>
@@ -68,6 +74,17 @@
                     </div>
                 </div>
 
+                <!-- 🎯 미션 모달 -->
+                <div id="missionModal" class="modal hidden">
+                    <div class="modal-content small-content" style="max-height: 450px;">
+                        <div class="modal-header">
+                            <span>🎯 웨이트 미션</span>
+                            <button class="close-btn" id="closeMissionBtn"><span class="material-icons">close</span></button>
+                        </div>
+                        <ul id="missionList" class="mission-list"></ul>
+                    </div>
+                </div>
+
                 <div id="sessionModal" class="modal hidden" style="z-index: 3000;">
                     <div class="modal-content fullscreen-content">
                         
@@ -93,7 +110,7 @@
                         </div>
 
                         <div id="sessionExerciseList" class="session-body">
-                            </div>
+                        </div>
 
                         <div class="session-footer">
                             <button id="btnFinishSession" class="finish-btn">운동 완료 및 저장</button>
