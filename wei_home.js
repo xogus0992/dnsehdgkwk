@@ -1,7 +1,8 @@
 /* ============================================================
-   POKERUN WEIGHT HOME LOGIC (Firebase Version)
+   POKERUN WEIGHT HOME LOGIC (Firebase Version + Missions & Coins)
    - Weekly Summary & Streak Calculation (Realtime DB)
    - Quick Start: Routine Fetch -> Session -> Save to Firebase
+   - Mission & Coin Reward System
    ============================================================ */
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -26,6 +27,25 @@ let restTime = 60;
 let timerInterval = null;
 let currentRest = 0;    
 
+// 미션 및 코인 변수
+let userCoins = 0;
+let claimedMissions = {};
+let userCurrentStats = { todayVolume: 0, todaySets: 0, todaySessionCount: 0, weeklyVolume: 0, streak: 0 };
+
+// 난이도별 10개 미션 (1,000 ~ 5,000 코인)
+const WEIGHT_MISSIONS = [
+    { id: 'm1', title: '[초급] 첫 걸음', desc: '오늘 운동 1회 완료', reward: 1000, check: (s) => s.todaySessionCount >= 1 },
+    { id: 'm2', title: '[초급] 라이트급', desc: '오늘 총 볼륨 1,000kg 달성', reward: 1200, check: (s) => s.todayVolume >= 1000 },
+    { id: 'm3', title: '[초급] 세트 정복자', desc: '오늘 총 10세트 완료', reward: 1500, check: (s) => s.todaySets >= 10 },
+    { id: 'm4', title: '[중급] 웰터급', desc: '오늘 총 볼륨 3,000kg 달성', reward: 2000, check: (s) => s.todayVolume >= 3000 },
+    { id: 'm5', title: '[중급] 꾸준함', desc: '연속 운동(Streak) 3일 달성', reward: 2500, check: (s) => s.streak >= 3 },
+    { id: 'm6', title: '[중급] 미들급', desc: '오늘 총 볼륨 5,000kg 달성', reward: 3000, check: (s) => s.todayVolume >= 5000 },
+    { id: 'm7', title: '[상급] 헤비급', desc: '오늘 총 볼륨 10,000kg 달성', reward: 3500, check: (s) => s.todayVolume >= 10000 },
+    { id: 'm8', title: '[상급] 주간 챔피언', desc: '이번 주 총 볼륨 20,000kg 달성', reward: 4000, check: (s) => s.weeklyVolume >= 20000 },
+    { id: 'm9', title: '[마스터] 철인', desc: '연속 운동(Streak) 5일 달성', reward: 4500, check: (s) => s.streak >= 5 },
+    { id: 'm10', title: '[마스터] 몬스터', desc: '오늘 총 볼륨 20,000kg 달성', reward: 5000, check: (s) => s.todayVolume >= 20000 }
+];
+
 // Dummy Friends (소셜 기능은 나중에 구현)
 const DUMMY_FEED = [
     { name: "헬창김씨", avatar: "김", date: "방금 전", volume: "12,400kg", photo: "운동사진 예시", exercises: [{ name: "벤치 프레스", detail: "80kg x 8회 x 5세트" }] },
@@ -37,6 +57,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         updateHomeStats(); // 통계 로드
+        loadUserCoinsAndMissions(); // 코인 및 미션 로드
     } else {
         // 로그인 안되어 있으면 로그인 페이지로? (여기선 일단 알림만)
         // alert("로그인이 필요합니다.");
@@ -53,6 +74,15 @@ window.onload = function() {
     });
     document.getElementById('btnStartEmpty').addEventListener('click', () => {
         startSession([], "자유 운동");
+    });
+
+    // 미션 모달 열기/닫기 이벤트
+    document.getElementById('btnOpenMission').addEventListener('click', () => {
+        renderMissions();
+        document.getElementById('missionModal').classList.remove('hidden');
+    });
+    document.getElementById('closeMissionBtn').addEventListener('click', () => {
+        document.getElementById('missionModal').classList.add('hidden');
     });
 
     document.getElementById('closeSessionBtn').addEventListener('click', () => {
@@ -82,7 +112,7 @@ window.onload = function() {
 async function updateHomeStats() {
     if(!currentUser) return;
 
-    // 1) 이번주 볼륨 계산
+    // 1) 이번주 볼륨 및 오늘 기록 계산
     const now = new Date();
     // 이번주 월요일 찾기
     const day = now.getDay(); 
@@ -92,23 +122,36 @@ async function updateHomeStats() {
     monday.setHours(0,0,0,0);
 
     // 이번달 키 (YYYY-MM)
-    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    // 만약 월요일이 지난달이면 지난달 데이터도 가져와야 함 (간소화를 위해 이번달만 체크하거나, 필요시 확장)
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const todayStr = `${yearMonth}-${String(now.getDate()).padStart(2,'0')}`;
     
     let weeklyVol = 0;
+    let todayVol = 0;
+    let todaySetsCount = 0;
+    let todaySessions = 0;
     let records = [];
 
     // 이번달 기록 가져오기
     try {
-        const snapshot = await get(ref(db, `users/${currentUser.uid}/records/${currentMonthKey}`));
+        const snapshot = await get(ref(db, `users/${currentUser.uid}/records/${yearMonth}`));
         if(snapshot.exists()) {
             const data = snapshot.val();
             // data structure: { "2023-12-15": { pushId: {...} }, ... }
-            Object.values(data).forEach(dayRecords => {
+            Object.keys(data).forEach(dateKey => {
+                const dayRecords = data[dateKey];
                 Object.values(dayRecords).forEach(rec => {
-                    const recDate = new Date(rec.id);
+                    const recDate = new Date(rec.date || rec.id);
                     if(recDate >= monday) {
                         weeklyVol += parseFloat(rec.totalVolume || 0);
+                    }
+                    if(dateKey === todayStr) {
+                        todayVol += parseFloat(rec.totalVolume || 0);
+                        todaySessions++;
+                        if(rec.exercises) {
+                            rec.exercises.forEach(ex => {
+                                todaySetsCount += (ex.sets || (ex.setsData ? ex.setsData.length : 0));
+                            });
+                        }
                     }
                     records.push(rec); // 스트릭 계산용
                 });
@@ -118,16 +161,23 @@ async function updateHomeStats() {
 
     document.getElementById('weeklyVolume').innerText = weeklyVol.toLocaleString() + " kg";
 
-    // 2) 스트릭 계산 (단순화: 이번달 데이터 내에서만 체크하거나, 별도 stats 노드 관리 권장)
-    // 여기서는 간단히 로드된 records 기반으로 계산
-    calculateStreak(records);
+    // 2) 스트릭 및 미션용 통계 계산
+    const currentStreak = calculateStreak(records);
+
+    userCurrentStats = {
+        todayVolume: todayVol,
+        todaySets: todaySetsCount,
+        todaySessionCount: todaySessions,
+        weeklyVolume: weeklyVol,
+        streak: currentStreak
+    };
 }
 
 function calculateStreak(records) {
     // 기록이 있는 날짜들을 Set으로 만듦 (YYYY-MM-DD)
     const recordDates = new Set();
     records.forEach(r => {
-        const d = new Date(r.id);
+        const d = new Date(r.date || r.id);
         const dateStr = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
         recordDates.add(dateStr);
     });
@@ -145,10 +195,6 @@ function calculateStreak(records) {
         if(recordDates.has(key)) {
             streak++;
         } else {
-            // 오늘 기록이 없어도, 어제 기록이 있으면 스트릭 유지?
-            // 보통 오늘 안했으면 아직 0은 아니고, 어제까지의 스트릭을 보여줌.
-            // 하지만 여기선 연속된 날짜가 끊기면 멈춤.
-            // 만약 오늘이고 기록이 없으면 -> 아직 안한거니까 넘어가고 어제부터 체크? (복잡하므로 단순 로직: 오늘 포함 연속)
             if (i === 0 && !recordDates.has(key)) {
                 // 오늘 안함. 어제 확인해봐야 함. 일단 pass
             } else {
@@ -158,6 +204,7 @@ function calculateStreak(records) {
         checkDate.setDate(checkDate.getDate() - 1);
     }
     document.getElementById('streakDays').innerText = streak + " Day";
+    return streak;
 }
 
 // --- 2. 루틴 불러오기 (Firebase) ---
@@ -325,7 +372,6 @@ async function finishSession() {
 
         // 2. Firebase 저장
         // 경로: users/{uid}/records/{YYYY-MM}/{YYYY-MM-DD}/{pushId}
-        // 날짜별로 그루핑해서 저장하면 조회하기 편함
         try {
             const recordsRef = ref(db, `users/${currentUser.uid}/records/${yearMonth}/${dateStr}`);
             const newRef = push(recordsRef);
@@ -334,7 +380,7 @@ async function finishSession() {
             alert(`저장 완료! 오늘 볼륨: ${totalVolume.toLocaleString()}kg 🔥`);
             document.getElementById('sessionModal').classList.add('hidden');
             stopTimer();
-            updateHomeStats(); // 홈 통계 갱신
+            await updateHomeStats(); // 홈 통계 및 미션 조건 즉시 갱신
 
         } catch(e) {
             console.error(e);
@@ -361,3 +407,71 @@ function renderFriendFeed() {
         listEl.appendChild(li);
     });
 }
+
+// --- 5. 미션 및 코인 처리 로직 ---
+async function loadUserCoinsAndMissions() {
+    if(!currentUser) return;
+    try {
+        const coinSnap = await get(ref(db, `users/${currentUser.uid}/coins`));
+        userCoins = coinSnap.exists() ? coinSnap.val() : 0;
+        document.getElementById('userCoinDisplay').innerText = `🪙 ${userCoins.toLocaleString()}`;
+
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const missionSnap = await get(ref(db, `users/${currentUser.uid}/claimedMissions/${todayStr}`));
+        claimedMissions = missionSnap.exists() ? missionSnap.val() : {};
+    } catch(e) { console.error("Coin Load Error:", e); }
+}
+
+function renderMissions() {
+    const listEl = document.getElementById('missionList');
+    if(!listEl) return;
+    listEl.innerHTML = '';
+
+    WEIGHT_MISSIONS.forEach(m => {
+        const isCompleted = m.check(userCurrentStats);
+        const isClaimed = !!claimedMissions[m.id];
+
+        const li = document.createElement('li');
+        li.className = 'mission-item';
+
+        let btnHtml = '';
+        if (isClaimed) {
+            btnHtml = `<button class="btn-claim completed" disabled>완료됨</button>`;
+        } else if (isCompleted) {
+            btnHtml = `<button class="btn-claim" onclick="claimMission('${m.id}', ${m.reward})">보상 받기</button>`;
+        } else {
+            btnHtml = `<button class="btn-claim" disabled>진행 중</button>`;
+        }
+
+        li.innerHTML = `
+            <div class="m-info">
+                <div class="m-title">${m.title}</div>
+                <div class="m-desc">${m.desc}</div>
+                <div class="m-reward">+🪙 ${m.reward.toLocaleString()} 코인</div>
+            </div>
+            <div>${btnHtml}</div>
+        `;
+        listEl.appendChild(li);
+    });
+}
+
+window.claimMission = async (missionId, reward) => {
+    if(!currentUser) return;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    try {
+        userCoins += reward;
+        await set(ref(db, `users/${currentUser.uid}/coins`), userCoins);
+
+        claimedMissions[missionId] = true;
+        await set(ref(db, `users/${currentUser.uid}/claimedMissions/${todayStr}/${missionId}`), true);
+
+        document.getElementById('userCoinDisplay').innerText = `🪙 ${userCoins.toLocaleString()}`;
+        alert(`🎉 ${reward.toLocaleString()} 코인을 받았습니다!`);
+        renderMissions();
+    } catch(e) {
+        console.error("Claim Error:", e);
+    }
+};
